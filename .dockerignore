@@ -1,0 +1,9 @@
+.git
+samples
+work
+.venv
+**/__pycache__
+*.epub
+*.azw3
+*.kfx
+*.kpf

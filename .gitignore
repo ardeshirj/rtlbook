@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Book files may be copyrighted/private: never commit them
+samples/
+work/
+*.epub
+*.azw3
+*.kfx
+*.kpf
+*.kpf.log.csv
+*.kfx.log
+.kpf-*/

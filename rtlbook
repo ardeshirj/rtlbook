@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Run the rtlbook CLI inside Docker. The current directory is mounted at /work, so
+# input/output paths must be relative to (and inside) it. Local src/ is mounted over
+# the image's copy, so code changes apply without a rebuild.
+#
+# Special case: `./rtlbook kfx book.epub [options]` first runs Kindle Previewer on this Mac
+# (it only exists for macOS/Windows) to make book.kpf, then packages it as book.kfx in the
+# container. Everything stays local.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE="${RTLBOOK_IMAGE:-rtlbook:dev}"
+
+find_previewer() {
+  if [ -n "${KINDLE_PREVIEWER_CLI:-}" ]; then echo "$KINDLE_PREVIEWER_CLI"; return; fi
+  local c
+  for c in "/Applications/Kindle Previewer 4.app/Contents/MacOS/KindlePreviewer4CLI" \
+           "$HOME/Applications/Kindle Previewer 4.app/Contents/MacOS/KindlePreviewer4CLI"; do
+    if [ -x "$c" ]; then echo "$c"; return; fi
+  done
+}
+
+if [ "${1:-}" = "kfx" ] && [[ "${2:-}" == *.epub ]]; then
+  epub="$2"; shift 2
+  [ -f "$epub" ] || { echo "No such file: $epub" >&2; exit 1; }
+  kp="$(find_previewer)"
+  [ -n "$kp" ] || { echo "Kindle Previewer 4 not found (install it, or set KINDLE_PREVIEWER_CLI)" >&2; exit 1; }
+
+  dir="$(cd "$(dirname "$epub")" && pwd)"; stem="$(basename "$epub" .epub)"
+  tmp="$dir/.kpf-$stem"; rm -rf "$tmp"; mkdir -p "$tmp"
+  echo "Kindle Previewer: converting $epub (runs locally, ~1 min)..."
+  if ! "$kp" "$dir/$stem.epub" --convert --output "$tmp" --locale en >"$tmp/previewer.txt" 2>&1; then
+    cat "$tmp/previewer.txt" >&2; exit 1
+  fi
+  kpf="$(ls "$tmp"/KPF/*.kpf 2>/dev/null | head -1 || true)"
+  if [ -z "$kpf" ]; then
+    echo "Kindle Previewer made no KPF (Enhanced Typesetting not supported?):" >&2
+    cat "$tmp/Summary_Log.csv" "$tmp"/Logs/*.csv >&2 2>/dev/null || true
+    exit 1
+  fi
+  mv "$kpf" "$dir/$stem.kpf"
+  cp "$tmp"/Logs/*.csv "$dir/$stem.kpf.log.csv" 2>/dev/null || true
+  rm -rf "$tmp"
+  echo "KPF: ${epub%.epub}.kpf (open it in Kindle Previewer to preview)"
+  set -- kfx "${epub%.epub}.kpf" "$@"
+fi
+
+TTY=(); [ -t 1 ] && TTY=(-t)
+exec docker run --rm -i ${TTY[@]+"${TTY[@]}"} \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD":/work \
+  -v "$ROOT/src":/app/src:ro \
+  "$IMAGE" "$@"

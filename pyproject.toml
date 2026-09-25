@@ -1,0 +1,21 @@
+[project]
+name = "rtlbook"
+version = "0.1.0"
+description = "Convert RTL-language PDF books (typed, scanned, typewriter) into EPUB"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "pypdfium2>=5",
+    "pillow>=10",
+]
+
+[project.scripts]
+rtlbook = "rtlbook.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
