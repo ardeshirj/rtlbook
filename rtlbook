@@ -10,6 +10,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IMAGE="${RTLBOOK_IMAGE:-rtlbook:dev}"
 
+# Working folders for books; git-ignored, so create them on use rather than committing them
+mkdir -p "$ROOT/input" "$ROOT/output"
+
 find_previewer() {
   if [ -n "${KINDLE_PREVIEWER_CLI:-}" ]; then echo "$KINDLE_PREVIEWER_CLI"; return; fi
   local c

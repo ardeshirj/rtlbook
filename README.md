@@ -12,7 +12,8 @@ born-digital PDFs with broken text layers, scans, and (later) typewritten books.
 ```bash
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
-mkdir -p input && cp ~/Downloads/book.pdf input/
+./rtlbook version                              # first run creates input/ and output/
+cp ~/Downloads/book.pdf input/
 ./rtlbook inspect input/book.pdf               # which pages need OCR?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
 ./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
@@ -26,11 +27,12 @@ mounted too, so code changes apply without a rebuild.
 
 | Folder | What goes there | In git? |
 |---|---|---|
-| `input/` | PDFs to convert. Create it with `mkdir -p input` | No, fully ignored |
-| `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder. Created automatically | No, fully ignored |
+| `input/` | PDFs to convert | No, fully ignored |
+| `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
 | `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
 
-Books can be copyrighted or private, so `input/` and `output/` are git-ignored entirely and never committed.
+`./rtlbook` creates both folders on every run, so they always exist while you use it. Books can be
+copyrighted or private, so the folders and everything in them are git-ignored and never committed.
 `convert` writes to `output/<pdf name>.epub` unless you pass `-o`. It reuses the OCR cache in
 `output/<name>.rtlbook/`, so re-running with different text or EPUB options takes seconds.
 
