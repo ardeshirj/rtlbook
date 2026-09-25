@@ -18,6 +18,8 @@ from rich.table import Table
 from rtlbook import __version__, pdf
 from rtlbook.classify import LayerStats, PageClass, classify
 
+DEFAULT_OUTPUT_DIR = Path("output")  # relative to the directory ./rtlbook is run from
+
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Convert RTL-language PDF books to EPUB.")
 console = Console()
 
@@ -89,7 +91,7 @@ def inspect(
 @app.command()
 def convert(
     pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Input PDF")],
-    output: Annotated[Path, typer.Option("-o", "--output", help="Output .epub path")],
+    output: Annotated[Optional[Path], typer.Option("-o", "--output", help="Output .epub (default: output/<pdf name>.epub)")] = None,
     title: Annotated[Optional[str], typer.Option(help="Book title (default: file name)")] = None,
     author: Annotated[str, typer.Option(help="Author")] = "",
     lang: Annotated[str, typer.Option(help="Tesseract language(s), e.g. fas or fas+ara")] = "fas",
@@ -115,6 +117,7 @@ def convert(
     from rtlbook.validate import epubcheck
 
     timings: dict[str, float] = {}
+    output = output or DEFAULT_OUTPUT_DIR / f"{pdf_path.stem}.epub"
     work = work or output.with_name(output.stem + ".rtlbook")
     work.mkdir(parents=True, exist_ok=True)
 

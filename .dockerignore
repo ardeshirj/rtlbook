@@ -1,6 +1,6 @@
 .git
-samples
-work
+input
+output
 .venv
 **/__pycache__
 *.epub

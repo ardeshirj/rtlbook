@@ -12,14 +12,36 @@ born-digital PDFs with broken text layers, scans, and (later) typewritten books.
 ```bash
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
-./rtlbook inspect book.pdf                     # which pages need OCR?
-./rtlbook convert book.pdf -o book.epub --title "…" --author "…"
-./rtlbook kfx book.epub                        # Kindle version (macOS + Kindle Previewer 4)
+mkdir -p input && cp ~/Downloads/book.pdf input/
+./rtlbook inspect input/book.pdf               # which pages need OCR?
+./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
+./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
 ```
 
-`./rtlbook` runs the CLI in the container, with the current directory mounted at `/work`.
-Paths must be relative to it and inside it. Your local `src/` is mounted too, so code changes
-apply without a rebuild.
+Run `./rtlbook` from the repository root. It runs the CLI in the container with the current
+directory mounted at `/work`, so paths must be relative to it and inside it. Your local `src/` is
+mounted too, so code changes apply without a rebuild.
+
+## Folders
+
+| Folder | What goes there | In git? |
+|---|---|---|
+| `input/` | PDFs to convert. Create it with `mkdir -p input` | No, fully ignored |
+| `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder. Created automatically | No, fully ignored |
+| `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
+
+Books can be copyrighted or private, so `input/` and `output/` are git-ignored entirely and never committed.
+`convert` writes to `output/<pdf name>.epub` unless you pass `-o`. It reuses the OCR cache in
+`output/<name>.rtlbook/`, so re-running with different text or EPUB options takes seconds.
+
+Convert a whole folder:
+
+```bash
+for pdf in input/*.pdf; do
+  name=$(basename "$pdf" .pdf)
+  ./rtlbook convert "$pdf" && ./rtlbook kfx "output/$name.epub"
+done
+```
 
 Useful `convert` options:
 
@@ -33,7 +55,8 @@ Useful `convert` options:
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
 | `--force-ocr` | OCR even when the text layer looks usable |
-| `--work DIR` | Cache directory. Re-runs reuse per-page OCR results |
+| `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
+| `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |
 
 What `convert` does automatically:
 - **Checks the PDF's text layer** for garbled glyph mappings, reversed (visual) word order, and split words. If it's unusable (so far, every book tested), the pages are OCR'd.
@@ -45,13 +68,13 @@ What `convert` does automatically:
 Typical real-world run (site credits on the title pages, extra front pages):
 
 ```bash
-./rtlbook convert samples/Gandom.pdf -o out/Gandom.epub --title "گندم" --author "م. مودب‌پور" \
+./rtlbook convert input/Gandom.pdf --title "گندم" --author "م. مودب‌پور" \
   --drop-lines 'کتابخانه مجازی|تهیه و تنظیم' --pages 2-557
-./rtlbook kfx out/Gandom.epub
+./rtlbook kfx output/Gandom.epub
 ```
 
-The work directory (`<output>.rtlbook/`) keeps `pages/*.json` (per-page OCR with boxes and
-confidence), `pages.txt`, `paragraphs.txt`, `report.json` and `epubcheck.txt` for review.
+`output/<name>.rtlbook/` keeps `pages/*.json` (per-page OCR with boxes and confidence),
+`pages.txt`, `paragraphs.txt`, `report.json` and `epubcheck.txt` for review.
 
 ## Reading the output
 

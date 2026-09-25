@@ -2,9 +2,10 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
-# Book files may be copyrighted/private: never commit them
-samples/
-work/
+# Book files may be copyrighted/private: never commit them.
+# input/ holds PDFs to convert, output/ holds EPUB/KFX results and OCR caches.
+input/
+output/
 *.epub
 *.azw3
 *.kfx

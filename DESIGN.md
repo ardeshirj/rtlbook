@@ -278,6 +278,8 @@ rtlbook/
 ├─ assets/fonts/             # OFL fonts + license files
 ├─ web/                      # FastAPI app, templates, static (Phase 2)
 ├─ groundtruth/              # benchmark pages + transcriptions
+├─ input/                    # PDFs to convert (git-ignored)
+├─ output/                   # EPUB/KFX + per-book OCR caches (git-ignored)
 ├─ tests/
 └─ docker/
 ```
@@ -342,7 +344,7 @@ rtlbook/
 - **Font-specific OCR quirks:** the Persian comma is read as `»`/`ء`, and closing parentheses come out mirrored. Both are fixed in post-processing, gated on book-level detection so books that OCR correctly aren't changed.
 - **Paragraph rebuilding:** uses dialogue markers (`Name- …`), sentence-final punctuation, full-width lines (the RTL line end reaches the left margin), and large vertical gaps. Paragraphs join across page breaks.
 - **Output:** a valid EPUB 3.3 (epubcheck: 0 errors, 0 warnings) with RTL page progression, the embedded font, a cover, and a print page list.
-- Detailed log and all intermediate outputs: `work/poc/NOTES.md` (git-ignored because it contains book text).
+- Detailed log and all intermediate outputs: `output/poc/NOTES.md` (git-ignored because it contains book text).
 
 **Batch of 8 novels (3,231 pages).** All 8 converted to valid EPUB and KFX, about 13 minutes of OCR in total.
 - **Not one had a usable text layer.** 3 had garbled glyph mappings. 5 stored words in **reversed (visual) order**: sentence punctuation started 28–52% of lines and ended ≤4%. One also split words at glyph boundaries. The per-page function-word score misses reversed order, so the checks now also run at the **book level** (punctuation position, share of one-letter words).
