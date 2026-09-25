@@ -48,6 +48,7 @@ Not yet done or known to be weak:
 - **No web app yet.** The CLI is the only interface.
 
 See [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and next steps.
+Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [docs/LESSONS.md](docs/LESSONS.md).
 
 ## Folders
 

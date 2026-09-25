@@ -356,8 +356,14 @@ rtlbook/
 - Remaining quirk: a bold font where `!` without a following space OCRs as `ا` (Shirin). Fixable with corpus word statistics.
 
 **Next steps**
-1. ✅ Kindle tested on the device: KFX is good. Still to test: Apple Books, Kobo/KOReader.
-2. Hand-correct 3–5 pages as ground truth, and add a `bench` command that measures CER (§4.5).
-3. Try **repairing the broken text layer** (§4.1): learn the glyph→letter substitution by aligning OCR output with the garbled text on a few pages, then decode the whole book with no OCR errors.
-4. Get a real scanned book and a typewriter book to exercise preprocessing (§4.3).
-5. Header/footer detection, and optional ZWNJ normalization (`می گویم` → `می‌گویم`).
+1. ✅ Kindle tested on the device: KFX is good (AZW3 too slow). Still to test: Apple Books, Kobo/KOReader.
+2. ✅ Running header/footer removal and OCR-tolerant chapter headings.
+3. Hand-correct 3–5 pages as ground truth, and add a `bench` command that measures CER (§4.5).
+4. Get a real **scanned** book and a **typewriter** book to exercise preprocessing (§4.3). Everything so far was born-digital.
+5. Fix the bold-font `!` → `ا` merges using corpus word statistics.
+6. Extract **title and author** from the title page. Drop junk front-matter pages (low confidence, catalogue records).
+7. Try **repairing broken text layers** (§4.1): reverse visual word order, or learn the glyph→letter substitution by aligning with OCR. That could skip OCR for some books.
+8. Optional ZWNJ normalization (`می گویم` → `می‌گویم`). Author display order on Kindle (OPF `file-as`).
+9. Repo hygiene: a license, and CI that builds the image and runs the tests.
+
+Practical lessons and troubleshooting: [docs/LESSONS.md](docs/LESSONS.md).
