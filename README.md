@@ -4,6 +4,9 @@ Convert PDF books in right-to-left languages (Persian first) into reflowable EPU
 born-digital PDFs with broken text layers, scans, and (later) typewritten books. See
 [DESIGN.md](DESIGN.md) for the full plan.
 
+> **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
+> [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
+
 ## Quick start (Docker)
 
 ```bash
@@ -71,3 +74,16 @@ confidence), `pages.txt`, `paragraphs.txt`, `report.json` and `epubcheck.txt` fo
 docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app \
   --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
 ```
+
+## Credits
+
+- **Code and design:** written by Claude Opus 5.5 (Anthropic) using Claude Code, with the project
+  maintainer supplying the test books, checking every output on real devices, and making the product
+  decisions (Docker, local-only, KFX for Kindle).
+- **Built on:** [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and its
+  `tessdata_best` models (Apache-2.0) · [PDFium](https://pdfium.googlesource.com/pdfium/) via
+  [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) · [W3C EPUBCheck](https://github.com/w3c/epubcheck)
+  · [Vazirmatn](https://github.com/rastikerdar/vazirmatn) font by Saber Rastikerdar (SIL OFL 1.1),
+  embedded in the EPUBs · [calibre](https://calibre-ebook.com/) and the
+  [KFX Output plugin](https://www.mobileread.com/forums/showthread.php?t=272407) by jhowell ·
+  Amazon's Kindle Previewer (installed separately; not bundled).
