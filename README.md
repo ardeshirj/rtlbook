@@ -1,8 +1,11 @@
 # rtlbook
 
-Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. It handles
-born-digital PDFs with broken text layers, scans, and (later) typewritten books. See
-[DESIGN.md](DESIGN.md) for the full plan.
+> ⚠️ **Status: proof of concept.** This works end to end, but it has only been tested on a small set of
+> Persian novels on one Mac. Expect rough edges and breaking changes. See [Status](#status).
+
+Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 and Kindle KFX.
+So far it handles born-digital PDFs, including ones whose text layer is broken. Scanned and
+typewritten books are planned but untested. See [DESIGN.md](DESIGN.md) for the full plan.
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
 > [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
@@ -22,6 +25,29 @@ cp ~/Downloads/book.pdf input/
 Run `./rtlbook` from the repository root. It runs the CLI in the container with the current
 directory mounted at `/work`, so paths must be relative to it and inside it. Your local `src/` is
 mounted too, so code changes apply without a rebuild.
+
+## Status
+
+This is a **proof of concept (v0.1)**, not a finished tool.
+
+What has been verified:
+- 8 Persian novels (3,231 pages, born-digital PDFs from Word, pdfFactory, iText and others) converted to
+  EPUB 3 that passes epubcheck, and to KFX that was read on a real Kindle (firmware 5.19).
+- Apple Silicon Mac (M2) with Docker Desktop. Kindle KFX output needs macOS, because Kindle Previewer
+  only runs on macOS/Windows.
+
+Not yet done or known to be weak:
+- **Scanned and typewritten books** haven't been tested. Everything so far was born-digital, and every
+  PDF's text layer was unusable, so all pages were OCR'd.
+- **No measured accuracy:** quality is judged by OCR confidence and text checks, not against
+  hand-corrected ground truth.
+- **Persian only:** Arabic, Urdu and Hebrew profiles from [DESIGN.md](DESIGN.md) aren't built.
+- **Known OCR quirks:** in some bold fonts, `!` without a following space is read as `ا`, which merges
+  words. Front pages (catalogue records, site banners) can come out as junk text.
+- **Titles and authors** must be passed by hand (`--title`, `--author`).
+- **No web app yet.** The CLI is the only interface.
+
+See [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and next steps.
 
 ## Folders
 

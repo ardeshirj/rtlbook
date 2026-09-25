@@ -1,6 +1,9 @@
 # RTL PDF → E-book Converter: Design Plan
 
-**Status:** Draft v0.2 (POC done, see §11) · **Date:** 2026-09-24
+**Status:** Proof of concept. The CLI engine works end to end (§11). The web app and non-Persian languages aren't started. · **Plan version:** v0.2 · **Date:** 2026-09-24
+
+> This document is the plan for the full product. What exists today is a **proof of concept** covering
+> Phase 0–1 and parts of Phase 2 (§8). The actual state, decisions and results are in §11.
 
 ## 1. Goal
 
