@@ -16,7 +16,7 @@ typewritten books are planned but untested. See [DESIGN.md](DESIGN.md) for the f
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
 ./rtlbook version                              # first run creates input/ and output/
-cp ~/Downloads/book.pdf input/
+# put your PDF in input/, e.g. input/book.pdf
 ./rtlbook inspect input/book.pdf               # which pages need OCR?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
 ./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
