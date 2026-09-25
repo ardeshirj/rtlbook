@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Run the rtlbook CLI inside Docker. The current directory is mounted at /work, so
-# input/output paths must be relative to (and inside) it. Local src/ is mounted over
-# the image's copy, so code changes apply without a rebuild.
+# Run the rtlbook CLI inside Docker. Only this repository folder is mounted (read-write, at the
+# same path as on the host), so input PDFs must be inside it — put them in input/. Results go to
+# output/ by default. Local src/ is mounted over the image's copy, so code changes apply without
+# a rebuild.
 #
 # Special case: `./rtlbook kfx book.epub [options]` first runs Kindle Previewer on this Mac
 # (it only exists for macOS/Windows) to make book.kpf, then packages it as book.kfx in the
@@ -48,8 +49,15 @@ if [ "${1:-}" = "kfx" ] && [[ "${2:-}" == *.epub ]]; then
 fi
 
 TTY=(); [ -t 1 ] && TTY=(-t)
+# The container sees only the repo, at the same path, so relative and absolute paths inside
+# the repo both work (also from a subfolder). Nothing else on the host is visible to it.
+case "$PWD/" in
+  "$ROOT"/*) ;;
+  *) echo "Run ./rtlbook from inside $ROOT (the container can only see that folder)" >&2; exit 1 ;;
+esac
 exec docker run --rm -i ${TTY[@]+"${TTY[@]}"} \
   --user "$(id -u):$(id -g)" \
-  -v "$PWD":/work \
+  -v "$ROOT":"$ROOT" \
+  -w "$PWD" \
   -v "$ROOT/src":/app/src:ro \
   "$IMAGE" "$@"

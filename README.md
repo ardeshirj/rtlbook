@@ -22,9 +22,12 @@ cp ~/Downloads/book.pdf input/
 ./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
 ```
 
-Run `./rtlbook` from the repository root. It runs the CLI in the container with the current
-directory mounted at `/work`, so paths must be relative to it and inside it. Your local `src/` is
-mounted too, so code changes apply without a rebuild.
+`./rtlbook` runs the CLI in Docker. **Only this repository folder is shared with the container**,
+so the tool can't see or change anything else on your machine. Input PDFs must therefore be inside the
+repo. Copy them into `input/`, since a path like `~/Downloads/book.pdf` isn't visible to it. Paths work
+the same inside and outside the container, relative or absolute, including when you run from a
+subfolder. Running it from outside the repo stops with an error. Your local `src/` is mounted too, so
+code changes apply without a rebuild.
 
 ## Status
 
@@ -54,7 +57,7 @@ Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [doc
 
 | Folder | What goes there | In git? |
 |---|---|---|
-| `input/` | PDFs to convert | No, fully ignored |
+| `input/` | PDFs to convert. Copy them here, because the container can only see the repo folder | No, fully ignored |
 | `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
 | `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
 
