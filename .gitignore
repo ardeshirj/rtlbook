@@ -13,3 +13,5 @@ output/
 *.kpf.log.csv
 *.kfx.log
 .kpf-*/
+# Local working plan, kept out of git on purpose.
+/PLAN.md
