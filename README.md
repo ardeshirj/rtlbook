@@ -57,7 +57,7 @@ Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [doc
 
 | Folder | What goes there | In git? |
 |---|---|---|
-| `input/` | PDFs to convert. Copy them here, because the container can only see the repo folder | No, fully ignored |
+| `input/` | PDFs to convert, or folders of page images. Copy them here, because the container can only see the repo folder | No, fully ignored |
 | `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
 | `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
 
@@ -65,6 +65,15 @@ Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [doc
 copyrighted or private, so the folders and everything in them are git-ignored and never committed.
 `convert` writes to `output/<pdf name>.epub` unless you pass `-o`. It reuses the OCR cache in
 `output/<name>.rtlbook/`, so re-running with different text or EPUB options takes seconds.
+
+**Page images instead of a PDF:** `convert` and `inspect` also take a folder with one image per page
+(PNG, JPEG, TIFF or JP2), for example an Internet Archive "JP2 ZIP" unpacked into `input/<name>/`.
+Pages are read in natural file-name order (`page2` before `page10`), at the images' own resolution
+(`--dpi` only applies to PDFs). The first page becomes the cover unless you pass `--cover`.
+
+```bash
+./rtlbook convert input/buf-e-kur/ --title "بوف کور" --author "صادق هدایت"   # → output/buf-e-kur.epub
+```
 
 Convert a whole folder:
 

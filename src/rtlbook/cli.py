@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import hashlib
 import json
 import os
 import re
@@ -19,6 +18,7 @@ from rtlbook import __version__, pdf
 from rtlbook.classify import LayerStats, PageClass, classify
 
 DEFAULT_OUTPUT_DIR = Path("output")  # relative to the directory ./rtlbook is run from
+INPUT_HELP = "Input PDF, or a folder of page images (PNG, JPEG, TIFF, JP2), one per page"
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Convert RTL-language PDF books to EPUB.")
 console = Console()
@@ -35,7 +35,7 @@ def parse_pages(spec: str | None, total: int) -> list[int]:
 
 
 def classify_pages(pdf_path: Path, pages: str | None, force_ocr: bool = False) -> list[PageClass]:
-    doc = pdf.open_pdf(pdf_path)
+    doc = pdf.open_book(pdf_path)
     classes, stats = [], LayerStats()
     for n in parse_pages(pages, len(doc)):
         info = pdf.page_info(doc, n - 1)
@@ -75,7 +75,7 @@ def version() -> None:
 
 @app.command()
 def inspect(
-    pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Input PDF")],
+    pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20,35")] = None,
     json_out: Annotated[Optional[Path], typer.Option("--json", help="Write per-page results as JSON")] = None,
 ) -> None:
@@ -90,13 +90,13 @@ def inspect(
 
 @app.command()
 def convert(
-    pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Input PDF")],
+    pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
     output: Annotated[Optional[Path], typer.Option("-o", "--output", help="Output .epub (default: output/<pdf name>.epub)")] = None,
     title: Annotated[Optional[str], typer.Option(help="Book title (default: file name)")] = None,
     author: Annotated[str, typer.Option(help="Author")] = "",
     lang: Annotated[str, typer.Option(help="Tesseract language(s), e.g. fas or fas+ara")] = "fas",
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20")] = None,
-    dpi: Annotated[int, typer.Option(help="Render resolution for OCR")] = 300,
+    dpi: Annotated[int, typer.Option(help="Render resolution for OCR (PDFs; page images keep their own)")] = 300,
     psm: Annotated[int, typer.Option(help="Tesseract page segmentation mode")] = 3,
     binarize: Annotated[bool, typer.Option(help="Otsu-binarize pages before OCR")] = True,
     crop: Annotated[float, typer.Option(help="Fraction to cut off each page edge (e.g. 0.075 for framed pages)")] = 0.0,
@@ -111,7 +111,7 @@ def convert(
     min_line_conf: Annotated[float, typer.Option(help="Drop OCR lines below this confidence (0 keeps all)")] = 0.0,
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
 ) -> None:
-    """Convert a PDF into an RTL EPUB 3."""
+    """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
     from rtlbook import epub, kindle, ocr, text
     from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
     from rtlbook.validate import epubcheck
@@ -160,9 +160,9 @@ def convert(
     if cover:
         cover_img = (cover.read_bytes(), "image/png" if cover.suffix.lower() == ".png" else "image/jpeg")
     else:
-        cover_img = pdf.largest_image(pdf.open_pdf(pdf_path), 0)
+        cover_img = pdf.largest_image(pdf.open_book(pdf_path), 0)
 
-    digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+    digest = pdf.digest(pdf_path)
     fonts_dir = Path(os.environ.get("RTLBOOK_FONTS", "/opt/fonts"))
     meta = epub.BookMeta(
         title=title or pdf_path.stem,

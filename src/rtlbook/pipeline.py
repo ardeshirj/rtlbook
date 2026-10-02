@@ -14,7 +14,7 @@ from rtlbook.classify import PageClass
 from rtlbook.model import Line, Page, Paragraph, Section
 from rtlbook.text import normalize_text
 
-_DOC = None  # PDF handle opened once per worker process
+_DOC = None  # PDF or image folder, opened once per worker process
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class OcrSettings:
 
 def _init_worker(pdf_path: str) -> None:
     global _DOC
-    _DOC = pdf.open_pdf(Path(pdf_path))
+    _DOC = pdf.open_book(Path(pdf_path))
 
 
 def _process_page(number: int, route: str, settings: dict) -> dict:
