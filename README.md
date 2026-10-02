@@ -4,8 +4,9 @@
 > Persian novels on one Mac. Expect rough edges and breaking changes. See [Status](#status).
 
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 and Kindle KFX.
-So far it handles born-digital PDFs, including ones whose text layer is broken. Scanned and
-typewritten books are planned but untested. See [DESIGN.md](DESIGN.md) for the full plan.
+So far it supports PDFs exported from a word processor (born-digital). Scanned and typewritten books
+are planned: they convert, but with more errors. `inspect` tells you which kind you have. See
+[DESIGN.md](DESIGN.md) for the full plan.
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
 > [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
@@ -17,7 +18,7 @@ docker build -f docker/Dockerfile -t rtlbook:dev .
 
 ./rtlbook version                              # first run creates input/ and output/
 # put your PDF in input/, e.g. input/book.pdf
-./rtlbook inspect input/book.pdf               # which pages need OCR?
+./rtlbook inspect input/book.pdf               # exported PDF or scan?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
 ./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
 ```
@@ -40,10 +41,10 @@ What has been verified:
   only runs on macOS/Windows.
 
 Not yet done or known to be weak:
-- **Scanned and typewritten books** haven't been tested. Everything so far was born-digital, and every
-  PDF's text layer was unusable, so all pages were OCR'd.
-- **No measured accuracy:** quality is judged by OCR confidence and text checks, not against
-  hand-corrected ground truth.
+- **Scanned and typewritten books** aren't supported yet. They convert, but on a 1932 letterpress scan
+  6–8% of letters were misread, against under 1% on an exported PDF (measured with `rtlbook eval`).
+- **Accuracy is measured on few books so far:** one exported story against its own stored text, and two
+  hand-checked pages of a scanned book (`tests/data/`).
 - **Persian only:** Arabic, Urdu and Hebrew profiles from [DESIGN.md](DESIGN.md) aren't built.
 - **Known OCR quirks:** in some bold fonts, `!` without a following space is read as `ا`, which merges
   words. Front pages (catalogue records, site banners) can come out as junk text.
@@ -88,19 +89,17 @@ Useful `convert` options:
 
 | Option | Purpose |
 |---|---|
-| `--formats epub,azw3` | Outputs (default: `epub`). `azw3` is the older Kindle format. Prefer `kfx` |
 | `--digits keep` | Keep digits as printed (default `auto`: Persian ۰–۹ for `fas`) |
 | `--pages 1-120` | Convert part of a book |
 | `-j 8` | Pages OCR'd in parallel (default: all CPUs) |
 | `--crop 0.075` | Cut page frames/borders before OCR |
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
-| `--force-ocr` | OCR even when the text layer looks usable |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |
 
 What `convert` does automatically:
-- **Checks the PDF's text layer** for garbled glyph mappings, reversed (visual) word order, and split words. If it's unusable (so far, every book tested), the pages are OCR'd.
+- **OCRs every page.** The text stored inside Persian PDFs is rarely usable as is: wrong character codes, words in reversed (visual) order, missing spaces. On an exported story whose stored text could be rebuilt, OCR still got over 99% of letters right.
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
@@ -119,13 +118,11 @@ Typical real-world run (site credits on the title pages, extra front pages):
 
 ## Measuring OCR accuracy
 
-`eval` compares OCR output with a correct text of the same pages: hand-corrected, or for poetry,
-downloaded from [Ganjoor](https://ganjoor.net) with `ganjoor`. Spelling conventions that differ between
+`eval` compares OCR output with a correct text of the same pages, e.g. hand-corrected. Spelling conventions that differ between
 an old printing and a modern transcription (Arabic `ي`/`ك`, digits, half-spaces, vowel marks) count as
 equal.
 
 ```bash
-./rtlbook ganjoor hafez/ghazal/sh16 -o output/ref.txt                 # reference text, one half-line per line
 ./rtlbook eval output/book.rtlbook output/ref.txt --pages 24 --diff output/diff.txt
 ```
 
@@ -133,7 +130,7 @@ It reports the character error rate (CER, spaces ignored), the word error rate (
 words appear anywhere in the OCR text, and a CER that matches each reference line to its closest OCR line.
 When the last two are much better than the first, the words were read correctly but in the wrong order,
 which is a layout problem (e.g. two-column verse) rather than misread letters. A reference longer than
-the pages (a whole poem for a page that shows only its end) is trimmed to the part the OCR covers.
+the pages (a whole chapter for a page that shows only its end) is trimmed to the part the OCR covers.
 
 ## Reading the output
 
@@ -147,8 +144,8 @@ the pages (a whole poem for a page that shows only its end) is trimmed to the pa
   3. Copy `book.kfx` into the Kindle's `documents/` folder over USB. Newer USB-C Kindles on macOS need
      [OpenMTP](https://openmtp.ganeshrvel.com/). On macOS, run `dot_clean -m /Volumes/Kindle/documents`
      to remove `._*` files, then eject. Nothing is uploaded to Amazon.
-  - AZW3 (`--formats epub,azw3`) also works but renders Persian slowly on the device.
-  - Build the image with `--build-arg WITH_CALIBRE=0` to leave Calibre out, which saves about 700 MB. This removes AZW3/KFX support.
+  - Build with `--target core` (`docker build -f docker/Dockerfile --target core -t rtlbook:dev .`) to leave
+    calibre out, which makes the image about 680 MB smaller. This removes KFX support.
 
 ## Tests
 

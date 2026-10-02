@@ -6,13 +6,14 @@ which records the decisions and results. Book text is deliberately not quoted he
 
 ## PDFs and text layers
 
-- **Don't trust a Persian text layer just because it renders.** Across 8 books, none had a usable one:
+- **Don't trust a Persian text layer just because it renders.** Across 8 books, none had a usable one
+  (3 more in October: same story). Outcome: rtlbook now OCRs every page and ignores the text layer:
   - **Garbled glyph maps:** Word 2007/2010 exports. Every letter maps to the wrong Unicode code point, and the
     substitution depends on the letter's contextual form.
   - **Visual (reversed) word order:** pdfFactory, iText, Nitro and PScript exports. Letters within a word are
     correct, but words run right-to-left as displayed. A per-page "are common words present?" score *passes*
     these pages. Only a line-level check catches them: in reversed text, sentence punctuation starts a line
-    instead of ending it (28–52% vs ≤4%). That's why the checks run per book (`LayerStats` in `classify.py`).
+    instead of ending it (28–52% vs ≤4%). (These checks ran per book until the text layer was dropped.)
   - **Split words** at glyph boundaries, where the share of one-letter words is 15–20% instead of <10%.
   - **Odd code points:** `ھ` (U+06BE) instead of `ه`, and a Cyrillic `ѧ` used as justification stretching.
 - **Some headers exist only in the text layer** (invisible), so OCR never sees them. Others are real text on
@@ -23,6 +24,12 @@ which records the decisions and results. Book text is deliberately not quoted he
 - **Binarize first.** Tinted page backgrounds make Tesseract's own thresholding fail on some lines, which
   produces garbage at ~25% confidence. Otsu binarization fixed this, and a fixed threshold works equally well.
 - **300 DPI is enough** for born-digital pages. 400 DPI was slower, with no gain.
+- **Use `--psm 4`, not the automatic layout (`--psm 3`).** The automatic layout silently dropped lines set in
+  larger type. `--psm 4` merges two-column verse into one line, which rtlbook splits again at aligned gaps.
+- **Decorative fonts defeat Tesseract** (confidence ~55%, dots dropped). Check the mean confidence in
+  `report.json`: 80–87 is normal for exported PDFs.
+- **Measure, don't eyeball.** Misread Persian words often look like real words: a first hand-correction pass
+  of OCR text missed about half the errors. Compare against a checked reference with `rtlbook eval`.
 - **One thread per page, several pages in parallel** (`OMP_THREAD_LIMIT=1`). About 2 s per page on one M2 core,
   and ~2 min for a 500-page book with 8 workers.
 - **Font-specific misreads** are consistent within a book, so fix them at the book level, and only when the

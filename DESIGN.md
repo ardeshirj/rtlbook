@@ -1,334 +1,263 @@
-# RTL PDF → E-book Converter: Design Plan
+# RTL PDF → E-book Converter: Design
 
-**Status:** Proof of concept. The CLI engine works end to end (§11). The web app and non-Persian languages aren't started. · **Plan version:** v0.2 · **Date:** 2026-09-24
+**Status:** proof of concept. Exported Persian PDFs convert end to end to EPUB 3 and Kindle KFX; scans convert
+with more errors and aren't supported yet. · **Version:** v0.3 · **Date:** 2026-10-02
 
-> This document is the plan for the full product. What exists today is a **proof of concept** covering
-> Phase 0–1 and parts of Phase 2 (§8). The actual state, decisions and results are in §11.
+> Each section says what is **built**, what is **planned**, and what was **dropped**. The dated decisions and
+> measurements behind it are in §11 (POC, 2026-09-24) and §12 (2026-10-01 – 10-02).
 
 ## 1. Goal
 
-Take a PDF of a book written in a right-to-left (RTL) language and produce a clean, reflowable e-book that reads correctly on common e-readers.
+Take a PDF of a book written in a right-to-left (RTL) language and produce a clean, reflowable e-book that reads
+correctly on common e-readers. Persian first; Arabic, Urdu and Hebrew later, as configuration where possible.
 
-Input PDFs fall into three groups:
+Support grows **one document type at a time**. Each type is finished, with measured accuracy, before the next:
 
-| Kind | What it looks like | Main difficulty |
+| Type | What it is | Status |
 |---|---|---|
-| **Born-digital** | Typeset PDF with a text layer | The text layer is often *broken* for RTL: glyphs stored in visual (reversed) order, Arabic presentation forms, missing `ToUnicode` maps, or custom font encodings. A text layer that looks fine on screen may copy out as garbage. |
-| **Scanned print** | Page images, maybe with a poor OCR layer already added | OCR quality, skew, noise, two-page spreads, headers/footers, footnotes |
-| **Scanned typewriter** | Monospaced, uneven ink, broken or filled-in letters, sometimes carbon copies | Stock OCR models are trained on typeset fonts. Typewriters for Arabic script often used simplified letter forms and joins. This is the hardest group. |
+| **Exported PDF** | Made by a word processor or layout tool: the PDF draws the text | **Supported** (phase 1) |
+| **Scan of modern print** | Page images of a 1970s+ book | Converts; to be measured and supported (phase 3) |
+| **Scan of old letterpress** | Page images of a 1900–1960s book | Converts with many errors; needs another engine (phase 4) |
+| **Typewritten** | Uneven ink, broken letters | Later |
+| Handwriting, lithographs (چاپ سنگی) | Calligraphy, not type | Out of scope |
 
-**Delivery plan:** build a **core engine + CLI** first, then put a **simple web app** on top of the same engine.
+Content types follow the same idea: prose first, then verse (couplets), mixed prose and verse, heavy footnotes.
 
-### Non-goals (for v1)
-- Keeping the exact visual layout (that's what the PDF is for). The output is *reflowable text*.
+**Why OCR even for exported PDFs:** their stored text looks right on screen but rarely copies out right in
+Persian: wrong character codes, words in reversed (visual) order, missing spaces, each PDF tool scrambling
+differently. rtlbook therefore OCRs every page (§4.1, §12).
+
+### Non-goals (for now)
+- Keeping the exact visual layout (that's what the PDF is for). The output is reflowable text.
 - Handwriting recognition.
-- Complex tables, math, and multi-column magazine layouts. Detect them and fall back to page images.
-
-### Target languages
-Persian (fa), Arabic (ar), Urdu (ur), Hebrew (he), and Yiddish (yi). Each language is a config profile (OCR model, normalization rules, digit style, heading keywords, default font), so adding one means adding config, not code.
+- Complex tables, math, and multi-column magazine layouts.
+- A hosted, multi-user web service (§6).
 
 ---
 
 ## 2. Output formats
 
-| Format | Role | Notes |
+| Format | Status | Notes |
 |---|---|---|
-| **EPUB 3** | **Primary** | Open standard. Supported by Apple Books, Google Play Books, Kobo, KOReader, Thorium, and Moon+ Reader. Handles RTL through `page-progression-direction="rtl"` plus `dir`/`lang` attributes. Kindle accepts EPUB through Send-to-Kindle, which converts it. |
-| **KEPUB** | Optional | Kobo's EPUB variant, with better page and stats handling. Produced from EPUB by `kepubify`. |
-| **AZW3 / KFX** | Optional | Only for side-loading onto Kindle via Calibre `ebook-convert`. Send-to-Kindle with EPUB is the preferred route. Arabic-script support on Kindle must be tested per device and firmware. |
-| **Searchable PDF (PDF/A)** | Secondary | The original page images with an invisible OCR text layer (OCRmyPDF). Keeps the exact look and makes the text searchable and copyable. Cheap to produce as a side output. |
-| **Fixed-layout EPUB** | Fallback | Page images with hidden text, for books where reflow fails (heavy illustrations, poetry laid out in columns). |
-| **Markdown / HTML / DOCX / TXT** | Editing and export | For people who want to proofread or edit in a word processor. DOCX via Pandoc. |
-| **hOCR / ALTO XML** | Interchange | Standard OCR formats that keep coordinates and confidence scores. Useful for archives and outside correction tools. |
-
-Recommendation: always produce **EPUB 3**. Offer searchable PDF and Markdown as options. Leave Kindle formats to Calibre.
+| **EPUB 3** | **Built** | `page-progression-direction="rtl"`, `dir`/`lang` on every document, embedded Vazirmatn font, cover, chapter TOC and print page list. Opens in Apple Books, Kobo, KOReader, PocketBook, Boox. |
+| **KFX (Kindle)** | **Built** | Kindle Previewer (on the Mac) makes a KPF, calibre's KFX Output plugin (in the container) packages it. All local; nothing is uploaded to Amazon. Fast, with Persian reflow and real page numbers. |
+| AZW3 | Dropped | Tested on a Kindle: renders Persian with heavy lag (§11). |
+| KEPUB | Planned | Kobo's EPUB variant via `kepubify`. |
+| Searchable PDF, Markdown/HTML/DOCX, hOCR/ALTO | Later | Side outputs for archiving and editing. |
+| Fixed-layout EPUB | Later | Fallback for books where reflow fails. |
 
 ---
 
-## 3. Pipeline overview
+## 3. Pipeline
+
+Solid boxes are built; dashed ones are planned.
 
 ```mermaid
 flowchart TD
-    A[PDF upload] --> B[Inspect and classify<br/>per page]
-    B -->|good text layer| C1[Extract text layer<br/>+ font and position info]
-    B -->|no or broken text layer| C2[Render page image<br/>300–400 DPI]
-    C2 --> D[Preprocess<br/>deskew · denoise · binarize · crop · split spreads]
-    D --> E[Layout analysis<br/>blocks · reading order · header/footer/footnote]
-    E --> F[OCR engine<br/>pluggable]
-    C1 --> G[Unified document model<br/>pages → blocks → lines → words]
-    F --> G
-    G --> H[Text post-processing<br/>Unicode normalization · language fixes · join paragraphs]
-    H --> I[Optional: LLM correction<br/>for low-confidence pages]
-    I --> J[Structure detection<br/>chapters · TOC · footnotes · page numbers]
-    J --> K[Human review<br/>optional, web app]
-    K --> L[Builders<br/>EPUB3 · PDF/A · MD · DOCX]
-    L --> M[Validate<br/>epubcheck + RTL smoke tests]
+    A[PDF, or a folder of page images] --> B[Inspect<br/>exported PDF or scan]
+    B --> C[Render each page<br/>300 DPI, grayscale]
+    C --> D[Preprocess<br/>binarize · optional crop]
+    D --> E[OCR: Tesseract fas<br/>single-column mode]
+    E --> F[Layout<br/>split lines at column gaps · read rows right to left]
+    F --> G[Text clean-up<br/>letters · digits · commas · parentheses · headers/footers]
+    G --> H[Structure<br/>paragraphs · dialogue · chapter headings · page markers]
+    H --> I[EPUB 3 builder]
+    I --> J[epubcheck]
+    I --> K[KFX via Kindle Previewer]
+    D -.-> D2[Deskew · split spreads · denoise]
+    E -.-> E2[Other engines for scans:<br/>Kraken · AI vision]
+    H -.-> H2[Front matter · TOC · footnotes · couplets in the EPUB]
 ```
 
-Every stage reads and writes to a **per-job working directory** and caches its results per page. Re-running with different settings only redoes the stages that changed, and a crashed job can resume.
+Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
+settings. Re-running with other text or EPUB options takes seconds. Pages are OCR'd in parallel.
 
 ---
 
 ## 4. Stage details
 
-### 4.1 Inspect and classify (per page)
-For each page, decide which route it takes:
-- **Text-layer route:** the page has text *and* passes quality checks.
-- **OCR route:** there's no text, the text is only a transparent layer over an image, or the quality checks fail.
+### 4.1 Inspect: document type — built
+`inspect` reports whether a PDF is an **exported PDF** (supported) or a **scan** (page images; converts, not
+supported yet), with the scan resolution. A page counts as a scan if images cover most of it, or a good part of it
+while the text layer holds almost no Persian letters (scanned strips pasted into Word, or a scan with an English
+header). `convert` prints the same verdict and warns on scans. Correct on all 10 test PDFs.
 
-Text-layer quality checks, the key step for RTL:
-1. **Presentation-form ratio:** a high share of characters in U+FB50–U+FDFF / U+FE70–U+FEFF (Arabic) or U+FB1D–U+FB4F (Hebrew) means the text is shaped glyphs, not logical text. These can often be fixed by normalization.
-2. **Visual-order detection:** check each word against a word list in both normal and reversed character order. If reversed words match better, the text layer is stored in visual order. Reverse it per line, and treat numbers and Latin runs carefully.
-3. **Garbage ratio:** a high share of Private Use Area characters, Latin-1 junk where Arabic or Hebrew is expected, or `U+FFFD`. Usually means a custom font encoding that can't be recovered, so the page goes to OCR.
-4. **Dictionary hit rate** after the fixes above. Below a threshold, the page goes to OCR.
+*Dropped:* a text-layer route that read the PDF's own text when quality checks passed (presentation forms,
+visual-order detection, garbage ratio, common-word score). None of 11 exported Persian PDFs had a text layer
+usable as is; rebuilding it needed rules per PDF tool, while OCR misread about 0.5% of letters (§12).
 
-The CLI command `inspect` prints this report without converting anything.
-
-### 4.2 Rendering
-- Render pages to images at **300 DPI** (400 for small type or typewriter). Use `pypdfium2` (permissive license) or PyMuPDF (AGPL, see §9).
-- When the page is a single embedded scan, extract the original image instead of re-rendering it. That avoids resampling.
+### 4.2 Rendering — built
+- Pages render at **300 DPI** with `pypdfium2` (permissive license). 400 DPI was slower with no gain (§11).
+- A **folder of page images** (PNG, JPEG, TIFF, JP2; e.g. an unpacked Internet Archive JP2 ZIP) is read in natural
+  file-name order at the images' own resolution.
 
 ### 4.3 Image preprocessing
-OpenCV and scikit-image, with some steps optionally done by `unpaper`:
-- Deskew (Hough transform or projection profile) and correct orientation (Tesseract OSD).
-- Denoise, remove background, and apply contrast normalization (CLAHE).
-- Binarize with an adaptive method (Sauvola) rather than a global threshold. Critical for typewriter text and uneven ink.
-- Remove borders and punch holes, and crop to content.
-- Detect and split **two-page spreads**. The right-hand page comes first in RTL books.
-- Typewriter tuning: light morphological closing to fill broken strokes, and a dilate/erode option for over-inked or faded pages.
+- **Built:** grayscale and **Otsu binarization** (essential for tinted page backgrounds), optional edge crop for framed pages.
+- **Planned, for scans:** deskew, two-page spread splitting (right-hand page first), denoise, adaptive
+  binarization, low-resolution warnings.
 
-Every setting can be changed through a profile (`--profile typewriter`, `--profile clean-print`).
+### 4.4 Layout and reading order — built for single-column pages and two-column verse
+- Tesseract runs in **single-column mode (`--psm 4`)**. Its automatic layout (`--psm 3`) silently dropped lines set
+  in larger type.
+- In that mode two-column verse comes back as one line. Lines are **split at wide word gaps that line up across
+  the page** (wide spaces in prose fall at random places, so prose is left alone).
+- Lines that sit **side by side are read as one row**, rows top to bottom, each row right to left, so a couplet's
+  two half-lines stay together.
+- **Running headers, footers and watermarks** repeated in the top/bottom 15% of many pages are removed.
+- *Planned:* footnotes, page furniture in Latin script, multi-column prose.
 
-### 4.4 Layout analysis and reading order
-- Find text blocks, headers, footers, page numbers, footnotes, images, and tables.
-- **Reading order in RTL:** columns run right to left, and blocks within a column run top to bottom.
-- Remove running headers and footers by matching repeated text or positions across pages.
-- Record page numbers (convert Persian and Arabic-Indic digits) so a page list can be built later.
-- Tools: Surya layout, the built-in layout in Tesseract/Kraken, or simple heuristics (projection profiles, whitespace analysis) for plain single-column books. Start with heuristics plus the OCR engine's own layout, and add a learned model only if it's needed.
+### 4.5 OCR engines and accuracy
+- **Built:** Tesseract 5 with `tessdata_best` (`fas`). About 1–2 s per page per core.
+- **Measured** with `rtlbook eval` (character and word error rates against a checked text; spelling conventions
+  such as ي/ی, digits, half-spaces and vowel marks count as equal):
 
-### 4.5 OCR engines (pluggable)
-Everything sits behind a single interface:
+| Material | Tesseract | Kraken (OpenITI Persian) | AI vision |
+|---|---|---|---|
+| Exported PDF (a 1946 story) | **0.8%** letters wrong (~0.5% real misreads) | — | — |
+| 1932 letterpress | 6–8% | **1.9%** | — |
+| 1960s poetry print | **6–12%** | 20–30% | — |
+| Two-column verse, narrow gutter | ~46% of words found | ~77% | **~89%**, layout handled |
 
-```python
-class OcrEngine(Protocol):
-    name: str
-    def supports(self, lang: str) -> bool: ...
-    def recognize(self, image: Image, lang: list[str], hints: LayoutHints) -> PageResult: ...
-    # PageResult = blocks → lines → words, each with bbox, text, confidence
+- **Planned (phase 4):** a small engine interface when a second engine is added; choose the engine per book from
+  a reviewed sample page; where two engines disagree, a person decides (a scan crop with the candidate readings).
+- An AI vision engine would send page images to an outside service: opt-in only, never the default.
+
+### 4.6 Document model — built
 ```
-
-Candidate engines:
-
-| Engine | Pros | Cons |
-|---|---|---|
-| **Tesseract 5** (`tessdata_best`: fas, ara, urd, heb, yid) | Free, offline, mature, fine-tunable, used by OCRmyPDF | Middling on degraded scans and typewriter text. Often mishandles ZWNJ in Persian. |
-| **Kraken** (eScriptorium ecosystem) | Built with Arabic script and RTL in mind. Very trainable, which suits typewriter fonts. Handles baselines well. | Needs trained models. Steeper learning curve. |
-| **Surya OCR** | Modern, multilingual, includes layout and reading order | Needs a GPU for speed. Check its license for commercial use. |
-| **PaddleOCR** | Arabic models, fast | Weaker Persian and Hebrew coverage |
-| **Cloud: Google Document AI / Cloud Vision, Azure Document Intelligence** | Usually the strongest on hard scans | Costs money, sends book content to a third party, needs internet |
-| **Vision LLM (e.g. Claude)** | Handles strange fonts and typewriter text well, understands context | Can "hallucinate" plausible text, costs per page. Best as a **second opinion or corrector**, not the only source. |
-
-**Plan:** default to **Tesseract**, benchmark Kraken and Surya during Phase 0, and allow a cloud or LLM engine as an opt-in.
-
-**Choosing engines by data:** create a small **ground-truth set** of roughly 30–50 pages covering each input kind and language, transcribed by hand. Measure **character error rate (CER)** and **word error rate (WER)** for every engine and preprocessing profile. Choose defaults from these numbers, and rerun the benchmark in CI whenever the pipeline changes.
-
-**Typewriter strategy:**
-1. Try the best stock engine with the typewriter preprocessing profile.
-2. If CER is too high, **fine-tune** Tesseract or Kraken on a few hundred corrected lines from that typewriter. The review UI (§6) doubles as a ground-truth collector for this.
-3. Optionally, a vision LLM transcribes low-confidence lines, checked against the OCR output.
-
-### 4.6 Unified document model
-Every route (text layer or any OCR engine) produces the same model, stored as JSON:
-
+Page:      number, width, height, settings (OCR cache key), lines[]
+Line:      text, bbox (pixels on the rendered page), confidence
+Paragraph: segments (text, plus markers where a printed page starts), heading flag
+Section:   title, paragraphs[]  → one XHTML file in the EPUB
 ```
-Document
- ├─ metadata: title, author, language, direction, source file hash
- └─ pages[]
-     ├─ number (physical), label (printed page number, if found)
-     ├─ image_ref, route (text-layer | ocr:<engine>)
-     └─ blocks[]  type: heading|paragraph|footnote|header|footer|pagenum|image|table|poetry
-         └─ lines[] → words[]  {text, bbox, confidence, dir}
-```
+*Planned:* block types (footnote, verse, table), printed page labels.
 
-Exporting this model to hOCR or ALTO is a cheap addition.
+### 4.7 Text clean-up
+- **Built:** Arabic `ي`/`ك` → Persian `ی`/`ک`; tatweel removed; Persian digits by default (`--digits`); the Persian
+  comma misread as `»` (a `»` with no open `«` in its paragraph) or as a word-final `ء`; mirrored parentheses;
+  OCR debris lines; dropping lines by regex (`--drop-lines`) or below a confidence (`--min-line-conf`).
+- **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
+  dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
+- **Planned:** half-space (ZWNJ) normalization (`می گویم` → `می‌گویم`), a warning when a book's OCR confidence is
+  low (a decorative font scored ~55% against the usual 80–87%).
+- Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.
 
-### 4.7 Text post-processing
-Split into shared rules plus per-language rules:
+### 4.8 AI correction — planned, opt-in
+Correct low-confidence lines with a vision model, compared back to the OCR output; large edits are flagged, not
+accepted. Off by default.
 
-- **Unicode:** NFC, plus *targeted* mapping of presentation forms to base letters. Avoid blanket NFKC, which also changes other characters.
-- **Persian:** Arabic `ي`/`ك` → Persian `ی`/`ک`. Fix **ZWNJ (U+200C, the "half space")** in prefixes and suffixes such as `می‌`, `ها`, `ای`, `تر`. Remove tatweel (`ـ`). Choose a consistent digit style (Persian `۰–۹` vs Arabic-Indic `٠–٩` vs Latin). The `hazm` and `parsivar` libraries can help here; check their licenses.
-- **Arabic:** optionally keep or strip harakat (diacritics). Normalize alef and hamza variants only when the user asks for it.
-- **Hebrew/Yiddish:** keep niqqud. Handle final letter forms and geresh/gershayim.
-- **Paragraph rebuilding:** join lines into paragraphs using indentation, line-end position, and punctuation. Join paragraphs that continue across a page break. Remove hyphenation, which is rare in RTL scripts but appears in Latin text inside the book.
-- **Mixed direction (bidi):** store text in *logical order* and let the reader apply the Unicode Bidi Algorithm. Wrap embedded Latin or number runs in `<span dir="ltr">`/`<bdi>` only where needed. Don't sprinkle RLM/LRM marks throughout the text.
-- **Dictionary spell-check** marks suspicious words for review. It doesn't change them automatically.
+### 4.9 Structure
+- **Built:** chapter headings, tolerant of OCR errors (edit distance on `فصل` + ordinals); books without chapters
+  are split into ~20-page sections; cover from the first page image; EPUB page list from the PDF pages.
+- **Planned:** title/author from the title page; front matter (credits, catalogue pages) kept out of the first
+  paragraph; the book's own table of contents; footnotes (`noteref` → `footnote`); couplets laid out as verse.
 
-### 4.8 Optional LLM correction
-- Runs only on lines or pages whose confidence is below a threshold, or when the user asks for it.
-- Sends the page image and the OCR text, and asks for a **minimal-edit** correction. Output is compared back to the original. Changes beyond a set edit distance are rejected or flagged, which guards against hallucination.
-- Off by default, since it sends book content to an API. Needs an explicit flag and an API key. The model is configurable; the default is a current Claude model.
+### 4.10 EPUB 3 builder — built
+Written directly (a ZIP of XHTML, CSS and an OPF manifest), keeping full control of RTL details and avoiding
+AGPL dependencies. One XHTML file per section, `nav.xhtml` with TOC and page list plus `toc.ncx`, the
+Vazirmatn font (OFL) embedded by default (`--no-embed-font` to leave it to the reader).
 
-### 4.9 Structure detection
-- **Chapters and headings:**
-  - Born-digital: font size and weight.
-  - OCR: line height, centering, short lines, extra whitespace, and keyword lists (`فصل`, `بخش`, `باب`, `گفتار`, `פרק`, …).
-  - The book's own printed table of contents, if found, can be matched against detected headings.
-- **Footnotes:** detect by position, small type, and marker numbers. Link each marker to its note (EPUB 3 `epub:type="noteref"` → `<aside epub:type="footnote">`).
-- **Front matter:** title page, copyright page, dedication. Use the first page image as the cover unless the user supplies one.
-- **Page list:** keep the printed page numbers as an EPUB 3 `page-list`, so readers can cite the print edition.
-- **Poetry:** detect two-column verse (hemistichs, common in Persian and Arabic books) and render it with a dedicated CSS layout instead of merging it into prose.
-
-### 4.10 EPUB 3 builder
-Write the EPUB directly (it's a ZIP with XHTML, CSS, and an OPF manifest) using Jinja2 templates. This keeps full control over the RTL details and avoids AGPL dependencies. Pandoc is another option for other formats.
-
-Required for RTL:
-- `package.opf`: `<spine page-progression-direction="rtl">`, `<dc:language>fa</dc:language>`, and `xml:lang`.
-- Every XHTML file: `<html lang="fa" xml:lang="fa" dir="rtl">`.
-- CSS: `direction: rtl; unicode-bidi: embed; text-align: justify;` (or `start`). Use logical properties (`margin-inline-start`). Avoid `text-align: right/left`.
-- **Embedded fonts** under the OFL license: e.g. **Vazirmatn** (Persian), **Noto Naskh Arabic**, **Noto Nastaliq Urdu**, **Noto Sans/Serif Hebrew**. Embedded fonts matter because many e-readers lack good Arabic-script fonts. Readers can still override them.
-- Navigation: `nav.xhtml` with a TOC and page list, plus `toc.ncx` for older EPUB 2 readers.
-- One XHTML file per chapter, to keep things fast on low-power e-readers.
-- Accessibility metadata (`schema:accessMode`, etc.).
-
-### 4.11 Validation
-- Run **epubcheck** (Java) and treat any error as a build failure.
-- RTL smoke tests: page direction attribute present, `dir`/`lang` set on every document, no leftover presentation forms, no visual-order text, fonts embedded and referenced.
-- Optional: render the EPUB headlessly (Thorium CLI or a Chromium-based renderer) and take screenshots of sample pages for visual regression tests.
+### 4.11 Validation — built
+- **epubcheck** on every build; any error fails `convert`.
+- **Accuracy:** `rtlbook eval` against checked text, and `tests/test_ground_truth.py`, which fails if accuracy on
+  the public-domain pages in `tests/data/` drops below the baseline.
 
 ---
 
-## 5. CLI design (Phase 1)
+## 5. CLI
 
-Python package `rtlbook` (working name). The CLI is built with **Typer**.
+Runs in Docker through the `./rtlbook` wrapper, which only shares the repository folder with the container.
 
 ```bash
-# See what's inside before converting
-rtlbook inspect book.pdf
-#  → pages: 312 | text-layer OK: 0 | broken text layer: 12 | image-only: 300
-#  → detected language: fa (0.97) | suggested profile: scanned-print
-
-# One-shot conversion
-rtlbook convert book.pdf -o book.epub \
-    --lang fa --profile typewriter --engine tesseract \
-    --formats epub,pdfa,md --cover cover.jpg \
-    --title "…" --author "…"
-
-# Step by step (resumable, each stage cached in ./book.rtlbook/)
-rtlbook ocr     book.pdf --pages 1-20 --engine kraken
-rtlbook review  book.rtlbook/           # opens a local review UI (later phase)
-rtlbook build   book.rtlbook/ --formats epub
-
-# Benchmark engines against ground truth
-rtlbook bench   groundtruth/ --engines tesseract,kraken,surya
+./rtlbook inspect input/book.pdf                       # exported PDF or scan?
+./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
+./rtlbook kfx output/book.epub                         # → output/book.kfx (macOS + Kindle Previewer)
+./rtlbook eval output/book.rtlbook ref.txt --pages 24  # accuracy against a checked text
 ```
 
-Other behavior:
-- Config: a `rtlbook.toml` file per project, overridable with flags. Language profiles live in `profiles/*.toml`.
-- Parallel processing per page (`--jobs N`, using a process pool).
-- Progress bar and a structured log. The JSON log is reused by the web app for progress reporting.
-- Exit codes reflect validation results, so the CLI works in scripts.
+Main `convert` options: `--pages`, `-j/--jobs`, `--drop-lines REGEX`, `--min-line-conf`, `--crop`, `--digits`,
+`--cover`, `--psm`, `--dpi`, `-o`, `--work`. Full list in the README.
+
+*Dropped from the original plan:* `bench` (replaced by `eval`), and separate `ocr`/`review`/`build` steps (not
+needed while each book is one `convert` with a page cache).
 
 ---
 
-## 6. Web app (Phase 2+)
+## 6. Web app — deferred
 
-The same engine in a thin shell. The web layer contains no conversion logic.
-
-```mermaid
-flowchart LR
-    U[Browser] -->|upload| API[FastAPI]
-    API --> S[(Storage<br/>local disk → S3-compatible)]
-    API -->|enqueue| Q[(Redis queue)]
-    Q --> W[Worker(s)<br/>rtlbook engine]
-    W --> S
-    W -->|progress events| API
-    API -->|SSE| U
-```
-
-- **Backend:** FastAPI. Uploads stream to disk, with a size limit (e.g. 500 MB).
-- **Job queue:** start with **RQ or arq + Redis**, or even FastAPI background tasks for single-user use. Workers run the pipeline.
-- **Frontend:** server-rendered HTML with **HTMX** plus a little JavaScript. No SPA is needed at first.
-- **Pages:**
-  1. *Upload:* drop the PDF, choose language and profile (or auto-detect), set metadata and cover.
-  2. *Job status:* live per-page progress over Server-Sent Events, and the inspection report.
-  3. *Review (key feature):* page image beside the extracted text. Low-confidence words are highlighted. Users can edit inline, adjust chapter breaks and the TOC, and accept or reject LLM corrections. Every edit is saved as ground truth for fine-tuning (§4.5).
-  4. *Download:* EPUB and the other formats, the validation report, and a preview in the browser (epub.js or Readium, set up for RTL).
-- **Privacy and retention:** files are deleted automatically after N days. Cloud and LLM engines are opt-in per job, with a clear notice. Anyone other than a single local user needs authentication.
-- **Deployment:** one **Docker image** containing Tesseract with `tessdata_best`, fonts, a Java runtime for epubcheck, and optionally Calibre and kepubify. Use `docker compose` for app, worker, and Redis. Add a GPU worker variant if Surya or Kraken prove worth using.
+A hosted upload-and-convert service is not planned for now: it needs servers to run OCR, the Kindle step needs
+macOS or Windows, and it would handle other people's files. If it comes back, it stays a thin shell over the same
+engine (upload → job queue → worker → download). A **local review page** is the part worth building: a scan crop
+next to the text, with choices for the person to make, saving the decisions as a file. A prototype already proved
+useful for checking OCR against scans.
 
 ---
 
-## 7. Proposed repository layout
+## 7. Repository layout
 
 ```
 rtlbook/
-├─ DESIGN.md
-├─ pyproject.toml            # uv-managed; Python 3.12+
+├─ rtlbook                   # wrapper: runs the CLI in Docker; `kfx` runs Kindle Previewer on the host
+├─ docker/Dockerfile         # Tesseract, epubcheck, calibre + KFX Output plugin, fonts, Python deps
 ├─ src/rtlbook/
-│  ├─ cli.py                 # Typer entry point
-│  ├─ pipeline.py            # stage orchestration, caching, resume
-│  ├─ model.py               # document model (pydantic)
-│  ├─ inspect/               # page classification, text-layer checks
-│  ├─ render/                # PDF → images
-│  ├─ preprocess/            # deskew, binarize, split spreads, profiles
-│  ├─ layout/                # blocks, reading order, header/footer removal
-│  ├─ ocr/                   # engine interface + tesseract/kraken/surya/cloud/llm
-│  ├─ text/                  # normalization, per-language rules, paragraphs
-│  ├─ structure/             # chapters, TOC, footnotes, page list, poetry
-│  ├─ build/                 # epub3, pdfa, markdown, docx builders + templates
-│  └─ validate/              # epubcheck wrapper, RTL checks
-├─ profiles/                 # fa.toml, ar.toml, he.toml, typewriter.toml, …
-├─ assets/fonts/             # OFL fonts + license files
-├─ web/                      # FastAPI app, templates, static (Phase 2)
-├─ groundtruth/              # benchmark pages + transcriptions
+│  ├─ cli.py                 # Typer commands: inspect, convert, kfx, eval
+│  ├─ doctype.py             # exported PDF or scan
+│  ├─ pdf.py                 # PDFs and image folders: rendering, page info, cover image
+│  ├─ preprocess.py          # binarize, crop
+│  ├─ ocr.py                 # Tesseract, line boxes, column-gap splitting
+│  ├─ pipeline.py            # parallel OCR with a per-page cache; sections
+│  ├─ layout.py              # reading order (rows, right to left)
+│  ├─ text.py                # normalization, OCR fixes, headers/footers, paragraphs
+│  ├─ headings.py            # chapter headings
+│  ├─ model.py               # Page, Line, Paragraph, Section
+│  ├─ epub.py                # EPUB 3 writer
+│  ├─ kindle.py              # KPF → KFX
+│  ├─ evaluate.py            # accuracy against a checked text
+│  └─ validate.py            # epubcheck
+├─ tests/                    # unit tests; tests/data/ = public-domain ground truth
+├─ docs/LESSONS.md           # practical lessons and troubleshooting
 ├─ input/                    # PDFs to convert (git-ignored)
-├─ output/                   # EPUB/KFX + per-book OCR caches (git-ignored)
-├─ tests/
-└─ docker/
+└─ output/                   # EPUB/KFX, per-book OCR caches, experiment notes (git-ignored)
 ```
 
 ---
 
-## 8. Milestones
+## 8. Phases
 
 | Phase | Scope | Done when |
 |---|---|---|
-| **0: Spike and benchmark** (≈1 week) | Collect 30–50 sample pages (born-digital, scanned, typewriter). Transcribe ground truth. Run Tesseract/Kraken/Surya with 2–3 preprocessing variants. Build a hand-made EPUB and test it on the target readers. | CER table per engine and input kind. Engine defaults chosen. RTL EPUB template confirmed on Apple Books, Kobo/KOReader, Google Play Books, and Kindle via Send-to-Kindle. |
-| **1: CLI MVP** | `inspect`, `convert`. Text-layer route with RTL fixes. Tesseract OCR route. Basic preprocessing. Paragraph rebuilding. Simple chapter detection. EPUB 3 builder with epubcheck. | A scanned Persian book and a born-digital one each become a valid EPUB that reads correctly on 3+ readers. |
-| **2: Quality** | Layout analysis, header/footer removal, footnotes, page list, poetry. Typewriter profile. Per-language normalization. Searchable PDF and Markdown outputs. `bench` command in CI. | CER on typewriter pages below the target set in Phase 0. No regressions in CI. |
-| **3: Web app MVP** | Upload → job → download. Queue and worker. SSE progress. Docker compose. | A non-technical user converts a book from the browser. |
-| **4: Review and correction** | Side-by-side review UI, TOC editor, ground-truth capture, optional LLM correction, optional cloud engines. | A user can fix a book to publishable quality without leaving the app. |
-| **5: Fine-tuning loop** | Train Tesseract/Kraken models from reviewed pages, and choose a model per book or typewriter. | Measurable CER drop on the typewriter set. |
+| **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning, title pages / Latin footers / TOC pages kept out of the text, chapters, title and author from the PDF, an exported-PDF regression test | Every exported prose book converts to an EPUB/KFX you'd read without noticing errors, with measured accuracy on sample pages |
+| **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization, KEPUB; tested on Kindle, KOReader, Apple Books and an Android reader | One complete book you'd happily recommend |
+| **3: Scans of modern print, then verse** | Deskew, spreads, low-resolution warnings; couplets laid out as verse in the EPUB | Measured accuracy on scanned pages; verse reads correctly |
+| **4: Old letterpress** | Second engine (Kraken and/or opt-in AI vision), engine choice per book, a review step for disagreements | A 1930s book converts with errors only a review can catch |
+| Later | Typewriter, other languages, searchable PDF / Markdown outputs | — |
 
 ---
 
-## 9. Risks and decisions to make
+## 9. Risks and decisions
 
-- **Licenses:** PyMuPDF and `ebooklib` are **AGPL**. That's fine for personal use, but a public web service would have to release its source. Prefer `pypdfium2` and a custom EPUB writer. Check Surya/Kraken model licenses and the `hazm` license before relying on them.
-- **Typewriter accuracy** may stay poor without fine-tuning. Plan for human review on those books.
-- **Hallucination with LLM or VLM OCR:** limit edits by comparing against the OCR output, and always show a diff in review.
-- **Kindle RTL support** varies. Treat Kindle as best effort, and point users to EPUB readers with good RTL support.
-- **Privacy and copyright:** books may be copyrighted or private. Local-first by default. Cloud and LLM use must be explicit.
-- **Performance:** CPU Tesseract at 300 DPI takes roughly a few seconds per page. A 400-page book is minutes to tens of minutes. Handle this with per-page parallelism, caching, and optional GPU engines. Measure it in Phase 0.
+- **Licenses:** no AGPL dependencies (PyMuPDF and `ebooklib` avoided). Kraken's OpenITI models are CC0.
+- **Privacy and copyright:** books may be copyrighted or private. Everything runs locally; the container only sees
+  the repository folder. Outside services (AI vision) only ever opt-in. Book text is never committed, except
+  public-domain test pages.
+- **OCR on unusual fonts:** decorative fonts defeat Tesseract. Detect it (confidence) and say so.
+- **AI vision** can produce fluent but wrong text. Use it with an independent engine and review disagreements.
+- **Kindle:** KFX needs Kindle Previewer, which only runs on macOS/Windows.
 
-### Open questions
-1. Which languages come first? Persian only, or Arabic, Urdu, and Hebrew from the start?
-2. Which e-readers must work? This decides whether Kindle output is a real requirement.
-3. Is this a personal/local tool or a public multi-user service? Affects auth, licensing, and hosting.
-4. Is sending pages to cloud OCR or an LLM ever acceptable, or must everything stay offline?
-5. Is a GPU available for the heavier engines?
-6. How many typewriter books are there, and from how many different typewriters? Decides whether fine-tuning is worth it.
+### Answered since v0.2
+1. Languages: **Persian first.**
+2. E-readers: **EPUB readers and Kindle (KFX).**
+3. **A local tool**, not a hosted service.
+4. Cloud OCR / AI: **opt-in only**; not used yet.
+5. GPU: **none** (Apple Silicon CPU). Tesseract and Kraken both run on CPU.
+6. Typewriter books: **none found yet.**
 
 ---
 
 ## 10. Key tools and references
-- OCR: Tesseract 5 + `tessdata_best`, OCRmyPDF, Kraken / eScriptorium, Surya, PaddleOCR
-- PDF: pypdfium2, PyMuPDF, pdfplumber
-- Images: OpenCV, scikit-image, unpaper
-- Text: Python `unicodedata`, `regex` (Unicode script properties), hazm/parsivar (Persian), `python-bidi` (debugging only)
-- E-book: EPUB 3.3 spec (W3C), epubcheck, Calibre `ebook-convert`, kepubify, Pandoc, epub.js / Readium for preview
-- Fonts: Vazirmatn, Noto Naskh Arabic, Noto Nastaliq Urdu, Noto Serif/Sans Hebrew (all OFL)
-- Standards: hOCR, ALTO XML, PAGE XML (OCR interchange), EPUB Accessibility 1.1
+- OCR: Tesseract 5 + `tessdata_best`; Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
+- PDF and images: pypdfium2, Pillow
+- E-book: EPUB 3.3 (W3C), epubcheck, Kindle Previewer 4, calibre + KFX Output plugin, kepubify (planned)
+- Font: Vazirmatn (OFL)
 
 ---
 
@@ -358,12 +287,41 @@ rtlbook/
 **Next steps**
 1. ✅ Kindle tested on the device: KFX is good (AZW3 too slow). Still to test: Apple Books, Kobo/KOReader.
 2. ✅ Running header/footer removal and OCR-tolerant chapter headings.
-3. Hand-correct 3–5 pages as ground truth, and add a `bench` command that measures CER (§4.5).
-4. Get a real **scanned** book and a **typewriter** book to exercise preprocessing (§4.3). Everything so far was born-digital.
+3. ✅ Ground truth and accuracy measurement: `rtlbook eval` and `tests/data/` (§12).
+4. Scanned books: collected and measured in experiments (§12); supported in a later phase. Typewriter: none found yet.
 5. Fix the bold-font `!` → `ا` merges using corpus word statistics.
 6. Extract **title and author** from the title page. Drop junk front-matter pages (low confidence, catalogue records).
-7. Try **repairing broken text layers** (§4.1): reverse visual word order, or learn the glyph→letter substitution by aligning with OCR. That could skip OCR for some books.
+7. ✗ Repairing broken text layers: tried, and dropped in favour of OCR for every page (§12).
 8. Optional ZWNJ normalization (`می گویم` → `می‌گویم`). Author display order on Kindle (OPF `file-as`).
 9. Repo hygiene: a license, and CI that builds the image and runs the tests.
 
 Practical lessons and troubleshooting: [docs/LESSONS.md](docs/LESSONS.md).
+
+---
+
+## 12. Decisions and results (2026-10-01 – 10-02)
+
+**Measuring accuracy.** `rtlbook eval` compares OCR output with a correct text of the same pages: character and
+word error rates (Persian spelling conventions such as ي/ی, digits, half-spaces and vowel marks count as equal),
+plus line-based scores that separate misread letters from reading-order problems. `tests/data/` holds two
+hand-checked, public-domain pages (Hedayat, *Three Drops of Blood*, 1932) and a test that fails if accuracy drops.
+
+**OCR every page; no text-layer route.** Three more exported PDFs were tested. Their stored text had the right
+letters but words in visual (reversed) order and missing spaces, scrambled differently by each PDF tool.
+Rebuilding the text from character positions worked for some tools but needed rules per tool. OCR scored
+**0.8% of letters wrong** on an exported story (measured against its own rebuilt text; ~0.5% real misreads,
+the rest spacing) in 5.5 s, so the text-layer route (`classify.py`, `--force-ocr`) was removed. One exception
+remains open: a decorative font OCRs badly (confidence ~55%) although its stored letters are right.
+
+**OCR settings.** Tesseract `--psm 4` (one column of lines of any size) instead of `--psm 3`: the automatic layout
+dropped lines in larger type. In that mode two-column verse comes back as one line, so lines are split where
+wide word gaps line up across the page, and side-by-side lines are read row by row, right to left. A `»` with
+no open `«` in its paragraph is read as a Persian comma.
+
+**Support grows by document type.** Phase 1 is exported PDFs (prose). Scans come later. Experiments on scans,
+for later phases: on 1932 letterpress, Kraken with OpenITI's Persian model misread 1.9% of letters against
+6–8% for Tesseract, but did worse on 1960s type; an AI vision model read a hard two-column verse page best
+and also handled its layout. Notes: `output/poc/26`–`31` (git-ignored).
+
+**Removed:** AZW3 output (KFX replaced it), the Ganjoor download command (only needed for verse, later).
+
