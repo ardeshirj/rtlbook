@@ -97,7 +97,7 @@ def convert(
     lang: Annotated[str, typer.Option(help="Tesseract language(s), e.g. fas or fas+ara")] = "fas",
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20")] = None,
     dpi: Annotated[int, typer.Option(help="Render resolution for OCR (PDFs; page images keep their own)")] = 300,
-    psm: Annotated[int, typer.Option(help="Tesseract page segmentation mode")] = 3,
+    psm: Annotated[int, typer.Option(help="Tesseract page segmentation mode (4: one column of lines of any size; column gaps are split afterwards)")] = 4,
     binarize: Annotated[bool, typer.Option(help="Otsu-binarize pages before OCR")] = True,
     crop: Annotated[float, typer.Option(help="Fraction to cut off each page edge (e.g. 0.075 for framed pages)")] = 0.0,
     jobs: Annotated[int, typer.Option("-j", "--jobs", help="Parallel pages")] = os.cpu_count() or 4,

@@ -21,7 +21,7 @@ _DOC = None  # PDF or image folder, opened once per worker process
 class OcrSettings:
     dpi: int = 300
     lang: str = "fas"
-    psm: int = 3
+    psm: int = 4
     binarize: bool = True
     crop: float = 0.0
 

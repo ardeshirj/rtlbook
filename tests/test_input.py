@@ -47,3 +47,16 @@ def test_empty_folder_is_an_error(tmp_path):
         assert "No page images" in str(e)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_column_gaps_split_only_where_they_line_up():
+    from rtlbook.ocr import Word, split_columns
+
+    def line(y, *spans):  # spans right to left (reading order): (x0, x1)
+        return [Word(f"w{k}", x0, x1, y, y + 40, 90.0) for k, (x0, x1) in enumerate(spans)]
+
+    verse = [line(100 * n, (900, 1000), (780, 880), (300, 400), (180, 280)) for n in range(4)]
+    assert [len(part) for part in split_columns(verse)] == [2] * 8  # each couplet -> two half-lines
+    prose = [line(100 * n, (900, 1000), (780, 880), (660, 760), (540, 640)) for n in range(4)]
+    prose[1] = line(100, (900, 1000), (650, 880), (300, 620), (180, 280))  # one loose line
+    assert [len(part) for part in split_columns(prose)] == [4] * 4
