@@ -117,6 +117,24 @@ Typical real-world run (site credits on the title pages, extra front pages):
 `output/<name>.rtlbook/` keeps `pages/*.json` (per-page OCR with boxes and confidence),
 `pages.txt`, `paragraphs.txt`, `report.json` and `epubcheck.txt` for review.
 
+## Measuring OCR accuracy
+
+`eval` compares OCR output with a correct text of the same pages: hand-corrected, or for poetry,
+downloaded from [Ganjoor](https://ganjoor.net) with `ganjoor`. Spelling conventions that differ between
+an old printing and a modern transcription (Arabic `ي`/`ك`, digits, half-spaces, vowel marks) count as
+equal.
+
+```bash
+./rtlbook ganjoor hafez/ghazal/sh16 -o output/ref.txt                 # reference text, one half-line per line
+./rtlbook eval output/book.rtlbook output/ref.txt --pages 24 --diff output/diff.txt
+```
+
+It reports the character error rate (CER, spaces ignored), the word error rate (WER), how many reference
+words appear anywhere in the OCR text, and a CER that matches each reference line to its closest OCR line.
+When the last two are much better than the first, the words were read correctly but in the wrong order,
+which is a layout problem (e.g. two-column verse) rather than misread letters. A reference longer than
+the pages (a whole poem for a page that shows only its end) is trimmed to the part the OCR covers.
+
 ## Reading the output
 
 - **EPUB:** opens directly in Apple Books, Kobo, PocketBook, Boox, KOReader, and others. Copy it over USB (or with OpenMTP for Boox), or open it on the device.

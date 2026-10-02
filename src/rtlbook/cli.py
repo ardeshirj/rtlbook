@@ -224,6 +224,80 @@ def convert(
         raise typer.Exit(1)
 
 
+@app.command("eval")
+def eval_cmd(
+    ocr: Annotated[Path, typer.Argument(exists=True, help="OCR text: a convert work folder (<name>.rtlbook), its pages.txt/paragraphs.txt, or any text file")],
+    reference: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Correct text of the same pages (hand-corrected, or from `rtlbook ganjoor`)")],
+    pages: Annotated[Optional[str], typer.Option(help="Only these pages of pages.txt, e.g. 76-77")] = None,
+    raw: Annotated[bool, typer.Option(help="For a work folder: use raw OCR (pages.txt) instead of the cleaned-up paragraphs.txt")] = False,
+    keep_marks: Annotated[bool, typer.Option(help="Count vowel marks (harakat) as characters")] = False,
+    trim: Annotated[Optional[bool], typer.Option("--trim/--no-trim", help="Cut the reference to the part the OCR text covers (default: when much of it lies outside)")] = None,
+    json_out: Annotated[Optional[Path], typer.Option("--json", help="Write the results as JSON")] = None,
+    diff: Annotated[Optional[Path], typer.Option(help="Write every mismatch (reference → OCR) to this file")] = None,
+) -> None:
+    """Measure OCR accuracy against a correct text: character and word error rates."""
+    from rtlbook import evaluate
+
+    if ocr.is_dir():
+        ocr = ocr / ("pages.txt" if raw or pages else "paragraphs.txt")
+    wanted = set(parse_pages(pages, 100_000)) if pages else None
+    if wanted and not ocr.read_text(encoding="utf-8").lstrip().startswith("====="):
+        console.print("[red]--pages needs rtlbook's pages.txt (it has page markers)[/]")
+        raise typer.Exit(2)
+    res = evaluate.compare(
+        reference.read_text(encoding="utf-8"),
+        evaluate.read_text(ocr.read_text(encoding="utf-8"), wanted),
+        keep_marks, trim,
+    )
+    t = Table(title=f"OCR accuracy: {ocr.name} vs {reference.name}")
+    t.add_column("metric")
+    t.add_column("value", justify="right")
+    t.add_column("meaning")
+    t.add_row("CER", f"{res.cer:.1%}", f"{res.char_errors:,} of {res.ref_chars:,} letters wrong (spaces ignored)")
+    t.add_row("WER", f"{res.wer:.1%}", f"{res.word_errors:,} of {res.ref_words:,} words wrong")
+    t.add_row("word recall", f"{res.word_recall_unordered:.1%}", "reference words found anywhere, ignoring order")
+    if res.line_cer is not None:
+        t.add_row("CER by line", f"{res.line_cer:.1%}",
+                  f"each reference line vs its closest OCR line, ignoring order ({res.extra_ocr_lines} extra OCR lines not counted)")
+    console.print(t)
+    if res.trimmed:
+        console.print(f"[dim]Reference trimmed to words {res.trimmed[0]}–{res.trimmed[1]} (the part the OCR covers)[/]")
+    if res.word_recall_unordered - (1 - res.wer) > 0.2 or (res.line_cer is not None and res.cer - res.line_cer > 0.2):
+        console.print("[yellow]Many words are right but out of order: likely a reading-order/layout problem "
+                      "(e.g. two-column verse)[/]")
+    if res.confusions:
+        c = Table(title="Most common character errors")
+        for col in ("reference", "OCR", "count"):
+            c.add_column(col)
+        for (r, h), n in res.confusions.most_common(12):
+            c.add_row(r or "∅ (extra)", h or "∅ (missing)", str(n))
+        console.print(c)
+    if json_out:
+        json_out.write_text(json.dumps(res.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8")
+    if diff:
+        diff.write_text("".join(f"{r or '∅'}\n  → {h or '∅'}\n\n" for r, h in res.mismatches), encoding="utf-8")
+
+
+@app.command()
+def ganjoor(
+    poems: Annotated[list[str], typer.Argument(help="Poem pages, e.g. hafez/ghazal/sh16 or https://ganjoor.net/hafez/ghazal/sh16")],
+    output: Annotated[Path, typer.Option("-o", "--output", help="Text file to write (one half-line per line)")],
+) -> None:
+    """Download poems from Ganjoor as a reference text for `rtlbook eval`."""
+    from rtlbook.ganjoor import fetch_poem
+
+    parts, sources = [], set()
+    for spec in poems:
+        poem = fetch_poem(spec)
+        parts.append("\n".join(poem["verses"]))
+        sources.update(poem["sources"])
+        console.print(f"{poem['title']}: {len(poem['verses'])} half-lines [dim]{poem['url']}[/]")
+    output.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
+    console.print(f"[green]Written:[/] {output}")
+    for src in sorted(sources):
+        console.print(f"[dim]Ganjoor checked this text against: {src}[/]")
+
+
 @app.command()
 def kfx(
     kpf: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="KPF from Kindle Previewer (or run ./rtlbook kfx book.epub on the Mac)")],
