@@ -48,6 +48,18 @@ class DocType:
                 f"supported yet: OCR works, but expect more errors, especially in older print.{low}")
 
 
+LOW_CONF = 70  # exported PDFs OCR at 80-87; decorative fonts and old print fall well below
+
+
+def confidence_message(mean_conf: float | None) -> str | None:
+    """A warning when a book's OCR confidence is low: usually an unusual (decorative or
+    handwriting-style) font, or old print. The text will have many misread letters."""
+    if mean_conf is None or mean_conf >= LOW_CONF:
+        return None
+    return (f"Low OCR confidence ({mean_conf:.0f}, usually 80-87): expect many misread letters. Often a "
+            "decorative or handwriting-style font, or old print. Check a few pages before using the book.")
+
+
 def document_type(kinds: list[PageKind]) -> DocType:
     scans = [k for k in kinds if k.kind == "scan"]
     dpis = [k.dpi for k in scans if k.dpi]

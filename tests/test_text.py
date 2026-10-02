@@ -127,3 +127,40 @@ def test_unopened_closing_guillemet_is_a_comma():
     assert fixed("«سلام» گفت و رفت» بعد برگشت") == "«سلام» گفت و رفت، بعد برگشت"
     # a quotation that opens on one line and closes on the next stays a quotation
     assert fixed("گفت: «فردا", " ", 12, "می آیم» و رفت") == "گفت: «فردا می آیم» و رفت"
+
+
+def _page_of(n, texts, *, conf=90.0, top=200, extra=()):
+    from rtlbook.model import Line, Page
+
+    lines = [Line(t, (100, top + 60 * i, 900, top + 60 * i + 40), conf) for i, t in enumerate(texts)]
+    return Page(n, "ocr", width=1000, height=1400, lines=lines + list(extra))
+
+
+def test_title_page_lines_stand_alone_and_dont_join_the_next_page():
+    from rtlbook.text import sparse_pages
+
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    title = _page_of(1, ["نام کتاب", "نام نویسنده", "تهیه شده برای نشر در وبگاه"])
+    pages = [title] + [_page_of(n, [body] * 12) for n in (2, 3, 4)]
+    assert sparse_pages(pages) == {1}
+    texts = [p.text for p in build_paragraphs(pages)]
+    assert texts[:3] == ["نام کتاب", "نام نویسنده", "تهیه شده برای نشر در وبگاه"]
+    assert texts[3].startswith(body)  # the credits line didn't swallow the first paragraph
+
+
+def test_low_confidence_junk_in_the_margin_is_dropped():
+    from rtlbook.model import Line
+
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    footer = Line("ط0ع .102 معط ناه جیوه", (300, 1330, 700, 1360), 29.0)  # a Latin footer read as Persian
+    low_body = Line("سطر کم‌رنگ وسط صفحه", (100, 700, 900, 740), 35.0)  # mid-page: kept
+    pages = [_page_of(n, [body] * 10, extra=(footer, low_body)) for n in (1, 2, 3)]
+    text = " ".join(p.text for p in build_paragraphs(pages))
+    assert "جیوه" not in text and "کم‌رنگ" in text
+
+
+def test_low_confidence_warning():
+    from rtlbook.doctype import confidence_message
+
+    assert confidence_message(84.4) is None and confidence_message(None) is None
+    assert "Low OCR confidence (55" in confidence_message(54.6)

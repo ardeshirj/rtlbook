@@ -15,7 +15,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from rtlbook import __version__, pdf
-from rtlbook.doctype import PageKind, document_type, page_kind
+from rtlbook.doctype import PageKind, confidence_message, document_type, page_kind
 
 DEFAULT_OUTPUT_DIR = Path("output")  # relative to the directory ./rtlbook is run from
 INPUT_HELP = "Input PDF, or a folder of page images (PNG, JPEG, TIFF, JP2), one per page"
@@ -184,6 +184,7 @@ def convert(
         ),
         "mean_confidence": round(sum(confs) / len(confs), 1) if confs else None,
         "low_confidence_pages": low,
+        "warning": confidence_message(round(sum(confs) / len(confs), 1) if confs else None),
         "paragraphs": len(paras),
         "headings": sum(p.heading for p in paras),
         "sections": len(sections),
@@ -195,6 +196,8 @@ def convert(
     (work / "report.json").write_text(json.dumps(stats, ensure_ascii=False, indent=1), encoding="utf-8")
 
     console.print_json(data=stats)
+    if warning := confidence_message(stats["mean_confidence"]):
+        console.print(f"[yellow]{warning}[/]")
     console.print(("[green]epubcheck: valid[/]" if ok else "[red]epubcheck: FAILED[/]") + f" (see {work / 'epubcheck.txt'})")
     if not ok:
         raise typer.Exit(1)

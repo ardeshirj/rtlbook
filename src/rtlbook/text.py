@@ -151,6 +151,8 @@ def _margins(pages: list[Page]) -> tuple[float, float] | None:
 
 
 MARGIN_ZONE = 0.15  # top/bottom fraction of the page where running headers/footers live
+MARGIN_MIN_CONF = 50  # margin lines OCR'd below this are page furniture read as junk (e.g. a footer in Latin)
+SPARSE_PAGE = 0.25  # a page with less than this share of the book's typical word count: title, credits, contents
 
 
 def _margin_key(text: str) -> str:
@@ -176,6 +178,17 @@ def running_headers(pages: list[Page], min_share: float = 0.2) -> set[str]:
     return {k for k, nums in seen.items() if len(nums) >= need}
 
 
+def sparse_pages(pages: list[Page]) -> set[int]:
+    """Pages with far fewer words than the book's typical page: title, credits, contents, chapter
+    title pages. Their lines aren't joined into paragraphs, nor into the next page's text."""
+    counts = {p.number: sum(len(ln.text.split()) for ln in p.lines) for p in pages}
+    full = sorted(c for c in counts.values() if c)
+    if len(full) < 3:
+        return set()
+    typical = full[len(full) // 2]
+    return {n for n, c in counts.items() if c < SPARSE_PAGE * typical}
+
+
 def _line_pitch(pages: list[Page]) -> float | None:
     """Median distance between tops of consecutive OCR lines on a page."""
     gaps = [
@@ -194,9 +207,12 @@ def build_paragraphs(
 
     A line continues the previous one unless it starts a dialogue turn or a heading, or the
     previous line ended a sentence without running to the left margin (RTL line end), or
-    there is an unusually large vertical gap (blank line) before it.
+    there is an unusually large vertical gap (blank line) before it. Lines on sparse pages
+    (title, credits, contents) stand alone.
     """
     margins = _margins(pages)
+    sparse = sparse_pages(pages)
+    prev_sparse = False
     comma_fix = detect_comma_misreads(pages)
     pitch = _line_pitch(pages)
     headers = running_headers(pages)
@@ -209,11 +225,15 @@ def build_paragraphs(
     for page in pages:
         pending_pages.append(page.number)
         prev_top = None
+        page_sparse = page.number in sparse
+        first_on_page = True
         for ln in page.lines:
             text = fix_misread_commas(normalize_text(ln.text), comma_fix)
             if is_debris(ln, text) or (drop and drop.search(text)) or (ln.conf is not None and ln.conf < min_conf):
                 continue
-            if headers and _in_margin(ln, page) and _margin_key(ln.text) in headers:
+            if _in_margin(ln, page) and (
+                (headers and _margin_key(ln.text) in headers) or (ln.conf is not None and ln.conf < MARGIN_MIN_CONF)
+            ):
                 continue
             heading = match_heading(text)
             is_heading = heading is not None
@@ -221,6 +241,8 @@ def build_paragraphs(
                 text = heading
             starts_new = (
                 cur is None
+                or page_sparse
+                or (first_on_page and prev_sparse)
                 or cur.heading
                 or is_heading
                 or DIALOGUE.match(text)
@@ -237,11 +259,14 @@ def build_paragraphs(
             cur.segments.append(text)
 
             prev_text = text
+            first_on_page = False
             prev_top = ln.bbox[1]
             prev_full = False
             if margins and page.width:
                 left, width = margins
                 prev_full = (ln.bbox[0] / page.width - left) < 0.06 * width
+        if not first_on_page:  # the page had text
+            prev_sparse = page_sparse
     if pending_pages and paras:
         paras[-1].segments.extend(pending_pages)
     for p in paras:
