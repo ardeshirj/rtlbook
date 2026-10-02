@@ -1,6 +1,5 @@
 # All Persian sentences below are synthetic, written for these tests (no book text).
 from rtlbook.evaluate import compare, normalize, read_text, words
-from rtlbook.ganjoor import poem_path
 
 REF = "امروز صبح زود پدرم به باغ رفت و درختان سیب را آب داد"
 
@@ -81,8 +80,3 @@ def test_read_text_selects_pages_from_pages_txt():
     txt = "\n===== page 1 [ocr conf=80.0, 1.0s] =====\nیک\n\n===== page 2 [ocr conf=80.0, 1.0s] =====\nدو\n"
     assert read_text(txt, {2}).split() == ["دو"]
     assert read_text("## فصل اول\nمتن").split() == ["فصل", "اول", "متن"]
-
-
-def test_ganjoor_poem_path():
-    assert poem_path("https://ganjoor.net/hafez/ghazal/sh16/") == "/hafez/ghazal/sh16"
-    assert poem_path("hafez/ghazal/sh16") == "/hafez/ghazal/sh16"

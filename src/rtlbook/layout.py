@@ -24,9 +24,8 @@ def _side_by_side(a: Line, b: Line) -> bool:
 
 
 def rows(lines: list[Line]) -> list[list[Line]]:
-    """Lines grouped into rows, top to bottom; each row right to left. Lines without boxes keep
-    their original order (text-layer pages)."""
-    if len(lines) < 2 or any(ln.bbox is None for ln in lines):
+    """Lines grouped into rows, top to bottom; each row right to left."""
+    if len(lines) < 2:
         return [[ln] for ln in lines]
     out: list[list[Line]] = []
     for ln in sorted(lines, key=lambda l: (l.bbox[1], -l.bbox[2])):

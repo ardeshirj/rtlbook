@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from rtlbook.text import normalize_letters, persian_digits
 
 MARKS = re.compile("[ً-ٰٟ]")  # harakat, tanwin, shadda, sukun, hamza above/below, superscript alef
-_HAMZA_SEATS = str.maketrans({"أ": "ا", "إ": "ا", "ؤ": "و"})
+_HAMZA_SEATS = str.maketrans({"أ": "ا", "إ": "ا", "ؤ": "و", "ة": "ه"})  # ة: some PDFs encode ۀ (هٔ) as ة
 _INVISIBLE = re.compile("[‌‍‎‏‪-‮⁦-⁩﻿]")
 WORD = re.compile(r"[^\W_]+(?:[ً-ٰٟ]+[^\W_]*)*")
 PAGE_MARKER = re.compile(r"^===== page (\d+)\b.*=====$")

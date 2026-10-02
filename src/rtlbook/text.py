@@ -62,25 +62,22 @@ def normalize_text(s: str) -> str:
 
 @dataclass(frozen=True)
 class CommaFix:
-    guillemets: bool = False  # "»" -> "،"
-    hamza: bool = False  # word-final "ء" -> "،"
+    hamza: bool = False  # word-final "ء" -> "،" ("»" is handled per paragraph: fix_unopened_guillemets)
 
 
 def detect_comma_misreads(pages: list[Page]) -> CommaFix:
     """Tesseract (fas) reads the Arabic comma in some fonts (e.g. Arial) as "»" or "ء". Only
     correct when the book has almost no real "،", so correctly OCR'd books are untouched."""
     text = normalize_letters("\n".join(ln.text for p in pages for ln in p.lines))
-    closing, opening = text.count("»"), text.count("«")
+    closing = text.count("»")
     hamzas = sum(1 for m in FINAL_HAMZA.finditer(text) if m.group(1) + "ء" not in HAMZA_WORDS)
     suspects = closing + hamzas
     if suspects < 5 or text.count("،") >= 0.1 * suspects:
         return CommaFix()
-    return CommaFix(guillemets=closing >= 5 and opening < 0.2 * closing, hamza=hamzas >= 3)
+    return CommaFix(hamza=hamzas >= 3)
 
 
 def fix_misread_commas(s: str, fix: CommaFix) -> str:
-    if fix.guillemets:
-        s = re.sub(r"\s*»\s*", "، ", s)
     if fix.hamza:
         s = FINAL_HAMZA.sub(lambda m: m.group(0) if m.group(1) + "ء" in HAMZA_WORDS else m.group(1) + "، ", s)
     s = re.sub(r"\s*،[\s\u200c]*", "، ", s)  # no space before a comma, one after
@@ -91,8 +88,7 @@ def fix_misread_commas(s: str, fix: CommaFix) -> str:
 def fix_unopened_guillemets(p: Paragraph) -> None:
     """Tesseract often reads the Persian comma "،" as "»". A "»" with no open "«" before it in the
     paragraph can't be a closing quotation mark, so it's a comma. Works per paragraph, because a
-    quotation can open on one line and close on the next; catches the books where some commas were
-    read correctly (detect_comma_misreads then leaves the book alone)."""
+    quotation can open on one line and close on the next."""
     open_ = 0
     for i, seg in enumerate(p.segments):
         if not isinstance(seg, str) or not ("»" in seg or "«" in seg):
@@ -144,7 +140,7 @@ def _margins(pages: list[Page]) -> tuple[float, float] | None:
     x0s, x1s = [], []
     for p in pages:
         for ln in p.lines:
-            if ln.bbox and p.width:
+            if p.width:
                 x0s.append(ln.bbox[0] / p.width)
                 x1s.append(ln.bbox[2] / p.width)
     if len(x0s) < 20:
@@ -163,7 +159,7 @@ def _margin_key(text: str) -> str:
 
 
 def _in_margin(ln: Line, page: Page) -> bool:
-    if not (ln.bbox and page.height):
+    if not page.height:
         return False
     y = (ln.bbox[1] + ln.bbox[3]) / 2 / page.height
     return y < MARGIN_ZONE or y > 1 - MARGIN_ZONE
@@ -229,7 +225,7 @@ def build_paragraphs(
                 or is_heading
                 or DIALOGUE.match(text)
                 or (not prev_full and prev_text.endswith(TERMINAL))
-                or (pitch and ln.bbox and prev_top is not None and ln.bbox[1] - prev_top > 2.2 * pitch)
+                or (pitch and prev_top is not None and ln.bbox[1] - prev_top > 2.2 * pitch)
             )
             if starts_new:
                 cur = Paragraph(heading=is_heading)
@@ -241,9 +237,9 @@ def build_paragraphs(
             cur.segments.append(text)
 
             prev_text = text
-            prev_top = ln.bbox[1] if ln.bbox else None
+            prev_top = ln.bbox[1]
             prev_full = False
-            if margins and ln.bbox and page.width:
+            if margins and page.width:
                 left, width = margins
                 prev_full = (ln.bbox[0] / page.width - left) < 0.06 * width
     if pending_pages and paras:

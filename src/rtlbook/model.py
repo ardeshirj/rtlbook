@@ -1,4 +1,4 @@
-"""Unified document model shared by every extraction route (text layer or OCR)."""
+"""Document model: OCR'd pages, their lines, and the paragraphs and sections built from them."""
 
 from __future__ import annotations
 
@@ -8,15 +8,14 @@ from dataclasses import asdict, dataclass, field
 @dataclass
 class Line:
     text: str
-    # (x0, y0, x1, y1) in pixels of the rendered page, origin top-left; None for text-layer lines
-    bbox: tuple[int, int, int, int] | None = None
+    bbox: tuple[int, int, int, int]  # (x0, y0, x1, y1) in pixels of the rendered page, origin top-left
     conf: float | None = None
 
 
 @dataclass
 class Page:
     number: int  # 1-based physical page number in the PDF
-    route: str  # "ocr" | "text" | "empty"
+    route: str  # always "ocr" (kept in cached pages)
     width: int = 0
     height: int = 0
     lines: list[Line] = field(default_factory=list)
@@ -33,7 +32,7 @@ class Page:
 
     @classmethod
     def from_dict(cls, d: dict) -> Page:
-        lines = [Line(ln["text"], tuple(ln["bbox"]) if ln["bbox"] else None, ln["conf"]) for ln in d["lines"]]
+        lines = [Line(ln["text"], tuple(ln["bbox"]), ln["conf"]) for ln in d["lines"]]
         return cls(**{**d, "lines": lines})
 
 

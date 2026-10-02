@@ -12,15 +12,16 @@ from pathlib import Path
 import pypdfium2 as pdfium
 from PIL import Image, ImageOps
 
+ARABIC_SCRIPT = re.compile("[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]")
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".tif", ".tiff", ".jp2"})
 
 
 @dataclass
 class PageInfo:
     number: int
-    chars: int
-    text: str
     image_area: float  # fraction of the page covered by embedded images (upper bound)
+    image_dpi: int | None = None  # resolution of the largest image, e.g. a scanned page
+    script_chars: int = 0  # Arabic-script letters in the text layer (Persian text drawn by the PDF)
 
 
 class ImageFolder:
@@ -62,16 +63,20 @@ def digest(path: Path) -> str:
 
 def page_info(doc: Book, index: int) -> PageInfo:
     if isinstance(doc, ImageFolder):
-        return PageInfo(index + 1, 0, "", 1.0)
+        return PageInfo(index + 1, 1.0)
     page = doc[index]
     w, h = page.get_size()
-    tp = page.get_textpage()
-    area = 0.0
+    area, dpi, largest = 0.0, None, 0.0
     for obj in page.get_objects():
         if obj.type == pdfium.raw.FPDF_PAGEOBJ_IMAGE:
             left, bottom, right, top = obj.get_bounds()
-            area += max(0.0, right - left) * max(0.0, top - bottom)
-    return PageInfo(index + 1, tp.count_chars(), tp.get_text_range(), min(1.0, area / (w * h)))
+            a = max(0.0, right - left) * max(0.0, top - bottom)
+            area += a
+            if a > largest and right > left:
+                largest, dpi = a, round(obj.get_px_size()[0] / ((right - left) / 72))
+    tp = page.get_textpage()
+    script = len(ARABIC_SCRIPT.findall(tp.get_text_range()))
+    return PageInfo(index + 1, min(1.0, area / (w * h)), dpi, script)
 
 
 def render(doc: Book, index: int, dpi: int) -> Image.Image:

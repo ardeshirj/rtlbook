@@ -10,9 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 from rtlbook import ocr, pdf, preprocess
-from rtlbook.classify import PageClass
-from rtlbook.model import Line, Page, Paragraph, Section
-from rtlbook.text import normalize_text
+from rtlbook.model import Page, Paragraph, Section
 
 _DOC = None  # PDF or image folder, opened once per worker process
 
@@ -31,51 +29,45 @@ def _init_worker(pdf_path: str) -> None:
     _DOC = pdf.open_book(Path(pdf_path))
 
 
-def _process_page(number: int, route: str, settings: dict) -> dict:
+def _process_page(number: int, settings: dict) -> dict:
     start = time.perf_counter()
-    page = Page(number, route, settings=settings)
-    if route == "ocr":
-        img = pdf.render(_DOC, number - 1, settings["dpi"])
-        img = preprocess.prepare(img, binarize_=settings["binarize"], crop=settings["crop"])
-        page.width, page.height = img.size
-        page.lines = ocr.ocr_lines(img, settings["lang"], settings["psm"])
-    elif route == "text":
-        info = pdf.page_info(_DOC, number - 1)
-        page.lines = [Line(normalize_text(t)) for t in info.text.splitlines() if t.strip()]
+    page = Page(number, "ocr", settings=settings)
+    img = pdf.render(_DOC, number - 1, settings["dpi"])
+    img = preprocess.prepare(img, binarize_=settings["binarize"], crop=settings["crop"])
+    page.width, page.height = img.size
+    page.lines = ocr.ocr_lines(img, settings["lang"], settings["psm"])
     page.seconds = round(time.perf_counter() - start, 2)
     return page.to_dict()
 
 
 def extract_pages(
     pdf_path: Path,
-    classes: list[PageClass],
+    numbers: list[int],
     cache_dir: Path,
     settings: OcrSettings,
     jobs: int,
     on_done: Callable[[Page, bool], None] | None = None,
 ) -> list[Page]:
-    """Extract every page, reusing cached results produced with identical settings."""
+    """OCR every page, reusing cached results produced with identical settings."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     results: dict[int, Page] = {}
-    todo: list[tuple[int, str, dict]] = []
+    todo: list[int] = []
+    s = {"route": "ocr", "dpi": settings.dpi, "lang": settings.lang, "psm": settings.psm,
+         "binarize": settings.binarize, "crop": settings.crop}
 
-    for c in classes:
-        s = {"route": c.route}
-        if c.route == "ocr":
-            s |= {"dpi": settings.dpi, "lang": settings.lang, "psm": settings.psm,
-                  "binarize": settings.binarize, "crop": settings.crop}
-        f = cache_dir / f"{c.number:04d}.json"
+    for number in numbers:
+        f = cache_dir / f"{number:04d}.json"
         if f.exists():
             cached = Page.from_dict(json.loads(f.read_text(encoding="utf-8")))
             if cached.settings == s:
-                results[c.number] = cached
+                results[number] = cached
                 if on_done:
                     on_done(cached, True)
                 continue
-        todo.append((c.number, c.route, s))
+        todo.append(number)
 
     with ProcessPoolExecutor(max_workers=jobs, initializer=_init_worker, initargs=(str(pdf_path),)) as ex:
-        futures = [ex.submit(_process_page, n, r, s) for n, r, s in todo]
+        futures = [ex.submit(_process_page, n, s) for n in todo]
         for fut in futures:
             page = Page.from_dict(fut.result())
             (cache_dir / f"{page.number:04d}.json").write_text(
@@ -85,7 +77,7 @@ def extract_pages(
             if on_done:
                 on_done(page, False)
 
-    return [results[c.number] for c in classes]
+    return [results[n] for n in numbers]
 
 
 def split_sections(paras: list[Paragraph], chunk_pages: int = 20) -> list[Section]:
