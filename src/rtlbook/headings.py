@@ -1,4 +1,5 @@
-"""Chapter heading detection that tolerates OCR errors.
+"""Chapter heading detection that tolerates OCR errors. (Headings set in large type are found by
+their size, in text.build_paragraphs.)
 
 Persian novels mark chapters as "فصل <ordinal>" (or بخش/قسمت). OCR mangles these in predictable
 ways: a lost dot turns فصل into نصل/قصل, "اول" becomes "اآول", "یازدهم" becomes "بازدهم", and
@@ -69,3 +70,26 @@ def match_heading(text: str) -> str | None:
     if best and best_d <= (1 if len(rest) <= 5 else 2):
         return f"{keyword} {best}"
     return None
+
+
+NUMBERED = re.compile(r"^\s*(?:([۰-۹0-9]{1,2})\s*[-–—ـ:.)]?|ا\s*[-–—ـ:.)])\s*")
+_TO_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def numbered_title(text: str) -> str | None:
+    """A numbered title such as "۲ـ غلام" or "۳: طرح یک بیماری", as "۲- غلام". OCR often reads a
+    lone ۱ as the letter ا ("ا-مهدی"). Only the text is checked here: the caller also requires a
+    short line with space above it, so numbered list items inside paragraphs don't qualify."""
+    m = NUMBERED.match(text)
+    if not m:
+        return None
+    rest = text[m.end():].strip()
+    letters = re.findall(r"[\u0621-\u064A\u067E-\u06D3]", rest)
+    if (not rest or not re.match(r"[\u0600-\u06FF]", rest) or len(rest.split()) > 6 or len(letters) < 3
+            or re.search(r"[0-9۰-۹٠-٩]", rest) or re.search(r"[.!،,:؛]$", rest)):
+        return None
+    if m.group(1) and int(m.group(1)) == 0:  # chapters never start at zero: OCR junk
+        return None
+    number = (m.group(1) or "1").translate(_TO_FA)
+    return f"{number}- {rest}"
+

@@ -164,3 +164,41 @@ def test_low_confidence_warning():
 
     assert confidence_message(84.4) is None and confidence_message(None) is None
     assert "Low OCR confidence (55" in confidence_message(54.6)
+
+
+def test_numbered_titles():
+    from rtlbook.headings import numbered_title
+
+    assert numbered_title("۲ـ غلام") == "۲- غلام"
+    assert numbered_title("۲غلام") == "۲- غلام"
+    assert numbered_title("ا-مهدی زاغی") == "۱- مهدی زاغی"  # a lone ۱ read as ا
+    assert numbered_title("3: طرح یک بیماری") == "۳- طرح یک بیماری"
+    assert numbered_title("۲. سپس به خانه رفتیم.") is None  # a list item: a sentence
+    assert numbered_title("اسب سفید") is None  # ا without a separator is a letter
+    assert numbered_title("۲- ها") is None and numbered_title("۴- ۰ مر ۴ ۰") is None  # OCR junk
+    assert numbered_title("۱۲ سال بعد از آن روز که با هم به سفر رفتیم و برگشتیم") is None  # too long
+
+
+def test_headings_from_layout():
+    from rtlbook.model import Line, Page
+
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+
+    def page(n, lines):
+        return Page(n, "ocr", width=1000, height=1400, lines=lines)
+
+    def row(text, y, *, x0=100, h=40):
+        return Line(text, (x0, y, 900, y + h), 90.0)
+
+    pages = [
+        page(1, [row("ا-مهدی زاغی", 200, x0=700)] + [row(body, 300 + 60 * i) for i in range(12)]),
+        page(2, [row(body, 200 + 60 * i) for i in range(5)]
+             + [row("۲ـ غلام", 620, x0=800)]  # space above, short, numbered
+             + [row(body, 720 + 60 * i) for i in range(6)]),
+        page(3, [row("طرح یک", 200, h=100), row("بیماری", 310, h=100)]  # large type, wrapped
+             + [row(body, 450 + 60 * i) for i in range(10)]
+             + [row("۲ سال بعد از آن روز همه چیز تغییر کرده بود و ما هم دیگر آن آدم‌ها نبودیم", 1060)]
+             + [row("دو سطر متن که در یک کادر بلند خوانده شده‌اند و پر از حرف هستند", 1120, h=100)]),
+    ]
+    heads = [p.text for p in build_paragraphs(pages) if p.heading]
+    assert heads == ["۱- مهدی زاغی", "۲- غلام", "طرح یک بیماری"]

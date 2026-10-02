@@ -146,10 +146,14 @@ Correct low-confidence lines with a vision model, compared back to the OCR outpu
 accepted. Off by default.
 
 ### 4.9 Structure
-- **Built:** chapter headings, tolerant of OCR errors (edit distance on `فصل` + ordinals); books without chapters
-  are split into ~20-page sections; cover from the first page image; EPUB page list from the PDF pages.
-- **Planned:** title/author from the title page; front matter (credits, catalogue pages) kept out of the first
-  paragraph; the book's own table of contents; footnotes (`noteref` → `footnote`); couplets laid out as verse.
+- **Built:** chapter headings of three kinds: `فصل` + ordinal, tolerant of OCR errors (edit distance); a short
+  line in **large type** (≥ 1.6× the book's line height, with big letters rather than two merged lines, and OCR
+  confidence ≥ 60); a short **numbered title** with space above it (`۲ـ غلام`; a lone `۱` misread as `ا` is
+  fixed). A wrapped large-type title stays one heading. Books without headings are split into ~20-page sections; cover from the first page image; EPUB page list from the PDF pages.
+- **Built:** title, credits and contents pages (far fewer words than a typical page) keep each line separate
+  and don't run into the text.
+- **Planned:** title/author from the title page; matching the book's own table of contents against the text
+  (finds chapters whose headings aren't set apart); footnotes (`noteref` → `footnote`); couplets laid out as verse.
 
 ### 4.10 EPUB 3 builder — built
 Written directly (a ZIP of XHTML, CSS and an OPF manifest), keeping full control of RTL details and avoiding

@@ -6,7 +6,7 @@ import re
 import statistics
 from dataclasses import dataclass
 
-from rtlbook.headings import match_heading
+from rtlbook.headings import match_heading, numbered_title
 from rtlbook.model import Line, Page, Paragraph
 
 _LETTER_MAP = str.maketrans({
@@ -153,6 +153,11 @@ def _margins(pages: list[Page]) -> tuple[float, float] | None:
 MARGIN_ZONE = 0.15  # top/bottom fraction of the page where running headers/footers live
 MARGIN_MIN_CONF = 50  # margin lines OCR'd below this are page furniture read as junk (e.g. a footer in Latin)
 SPARSE_PAGE = 0.25  # a page with less than this share of the book's typical word count: title, credits, contents
+BIG_TYPE = 1.6  # a short line this many times the book's usual line height is a heading...
+BIG_TYPE_DENSITY = 1.6  # ...if its letters are big too: few letters per line-height of width (body text ~2.5;
+                        # two body lines merged into one tall box keep the body density)
+HEADING_MIN_CONF = 60  # large-type headings read below this are usually OCR of an illustration
+NUMBERED_MIN_CONF = 40
 
 
 def _margin_key(text: str) -> str:
@@ -176,6 +181,22 @@ def running_headers(pages: list[Page], min_share: float = 0.2) -> set[str]:
                 seen.setdefault(k, set()).add(p.number)
     need = max(3, min_share * len(pages))
     return {k for k, nums in seen.items() if len(nums) >= need}
+
+
+def _layout_heading(ln: Line, text: str, gap: float | None, line_h: float, page: Page,
+                    margins: tuple[float, float] | None) -> str | None:
+    """A heading recognised by layout: large type, or a short numbered title with space above it."""
+    if not line_h:
+        return None
+    width = max(1, ln.bbox[2] - ln.bbox[0])
+    conf = ln.conf if ln.conf is not None else 100
+    if (ln.bbox[3] - ln.bbox[1] >= BIG_TYPE * line_h and len(text.split()) <= 12
+            and len(text) * line_h / width < BIG_TYPE_DENSITY and conf >= HEADING_MIN_CONF):
+        return text
+    short = margins is None or not page.width or width / page.width < 0.6 * margins[1]
+    if short and (gap is None or gap >= 2 * line_h) and conf >= NUMBERED_MIN_CONF:
+        return numbered_title(text)
+    return None
 
 
 def sparse_pages(pages: list[Page]) -> set[int]:
@@ -209,6 +230,9 @@ def build_paragraphs(
     previous line ended a sentence without running to the left margin (RTL line end), or
     there is an unusually large vertical gap (blank line) before it. Lines on sparse pages
     (title, credits, contents) stand alone.
+
+    Headings: "فصل" + ordinal, a short line in large type, or a short numbered title ("۲ـ غلام")
+    with space above it. A large-type title that wraps stays one heading.
     """
     margins = _margins(pages)
     sparse = sparse_pages(pages)
@@ -216,6 +240,8 @@ def build_paragraphs(
     comma_fix = detect_comma_misreads(pages)
     pitch = _line_pitch(pages)
     headers = running_headers(pages)
+    heights = [ln.bbox[3] - ln.bbox[1] for p in pages for ln in p.lines]
+    line_h = statistics.median(heights) if heights else 0
     paras: list[Paragraph] = []
     cur: Paragraph | None = None
     prev_full = False
@@ -224,7 +250,7 @@ def build_paragraphs(
 
     for page in pages:
         pending_pages.append(page.number)
-        prev_top = None
+        prev_top = prev_bottom = None
         page_sparse = page.number in sparse
         first_on_page = True
         for ln in page.lines:
@@ -235,11 +261,15 @@ def build_paragraphs(
                 (headers and _margin_key(ln.text) in headers) or (ln.conf is not None and ln.conf < MARGIN_MIN_CONF)
             ):
                 continue
-            heading = match_heading(text)
+            gap = ln.bbox[1] - prev_bottom if prev_bottom is not None else None
+            heading = match_heading(text) or (None if page_sparse else _layout_heading(ln, text, gap, line_h, page, margins))
             is_heading = heading is not None
             if heading:
                 text = heading
-            starts_new = (
+            continues_heading = (
+                is_heading and cur is not None and cur.heading and gap is not None and gap < 1.5 * line_h
+            )
+            starts_new = not continues_heading and (
                 cur is None
                 or page_sparse
                 or (first_on_page and prev_sparse)
@@ -260,7 +290,7 @@ def build_paragraphs(
 
             prev_text = text
             first_on_page = False
-            prev_top = ln.bbox[1]
+            prev_top, prev_bottom = ln.bbox[1], ln.bbox[3]
             prev_full = False
             if margins and page.width:
                 left, width = margins
