@@ -112,7 +112,7 @@ def convert(
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
 ) -> None:
     """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
-    from rtlbook import epub, kindle, ocr, text
+    from rtlbook import epub, kindle, layout, ocr, text
     from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
     from rtlbook.validate import epubcheck
 
@@ -140,6 +140,8 @@ def convert(
             pdf_path, classes, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop), max(1, jobs), done
         )
     timings["extract"] = time.perf_counter() - t0
+    for p in page_results:  # side-by-side lines (two-column verse) read row by row, right to left
+        p.lines = layout.reading_order(p.lines)
 
     # Raw per-page text, handy for reviewing OCR output
     with open(work / "pages.txt", "w", encoding="utf-8") as f:
@@ -231,7 +233,7 @@ def eval_cmd(
     pages: Annotated[Optional[str], typer.Option(help="Only these pages of pages.txt, e.g. 76-77")] = None,
     raw: Annotated[bool, typer.Option(help="For a work folder: use raw OCR (pages.txt) instead of the cleaned-up paragraphs.txt")] = False,
     keep_marks: Annotated[bool, typer.Option(help="Count vowel marks (harakat) as characters")] = False,
-    trim: Annotated[Optional[bool], typer.Option("--trim/--no-trim", help="Cut the reference to the part the OCR text covers (default: when much of it lies outside)")] = None,
+    trim: Annotated[Optional[bool], typer.Option("--trim/--no-trim", help="Cut the reference to the part the OCR text covers (default: when the reference is clearly longer)")] = None,
     json_out: Annotated[Optional[Path], typer.Option("--json", help="Write the results as JSON")] = None,
     diff: Annotated[Optional[Path], typer.Option(help="Write every mismatch (reference → OCR) to this file")] = None,
 ) -> None:
@@ -259,6 +261,9 @@ def eval_cmd(
     if res.line_cer is not None:
         t.add_row("CER by line", f"{res.line_cer:.1%}",
                   f"each reference line vs its closest OCR line, ignoring order ({res.extra_ocr_lines} extra OCR lines not counted)")
+    if res.line_order is not None:
+        t.add_row("line order", f"{res.line_order:.1%}",
+                  f"{res.line_pairs_in_order} of {res.line_pairs} consecutive reference lines also consecutive in the OCR text")
     console.print(t)
     if res.trimmed:
         console.print(f"[dim]Reference trimmed to words {res.trimmed[0]}–{res.trimmed[1]} (the part the OCR covers)[/]")

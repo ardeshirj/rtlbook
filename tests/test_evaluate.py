@@ -41,6 +41,20 @@ def test_line_scores_ignore_line_order_and_extra_lines():
     ocr = "نه ده یازده\nپنج شش هفت هشت\nیادداشت پایین صفحه\nیک دو سه چهار"
     r = compare(ref, ocr)
     assert r.cer > 0.3 and r.line_cer == 0 and r.extra_ocr_lines == 1
+    assert r.line_pairs == 2 and r.line_order == 0  # reversed: no pair in order
+
+
+def test_line_order_ignores_extra_lines_between():
+    ref = "یک دو سه چهار\nپنج شش هفت هشت\nنه ده یازده"
+    r = compare(ref, "یک دو سه چهار\nیادداشت\nپنج شش هفت هشت\nنه ده یازده")
+    assert r.line_order == 1
+
+
+def test_misread_words_at_the_page_start_stay_in_the_trimmed_reference():
+    before = "این جمله فقط در متن مرجع آمده است و در صفحه نیست " * 5
+    garbled_start = "ابن حمله اول صفحه " + REF  # four misread words, then a clean match
+    r = compare(before + "این جمله اول صفحه " + REF, garbled_start)
+    assert r.trimmed is not None and r.word_errors <= 3 + 5  # misreads + slack, not the page start
 
 
 def test_long_reference_is_trimmed_to_the_ocr_part():
@@ -55,6 +69,12 @@ def test_long_reference_is_trimmed_to_the_ocr_part():
 def test_a_few_missed_words_are_errors_not_trimmed():
     r = compare(REF, " ".join(REF.split()[3:]))
     assert r.trimmed is None and r.word_errors == 3
+
+
+def test_badly_misread_first_line_of_a_short_page_is_not_trimmed():
+    ref = "در غروب سرد پاییز\n" + REF
+    r = compare(ref, "دد غرودبی آایدک سرف\n" + REF)
+    assert r.trimmed is None and r.ref_words == len(words(ref))
 
 
 def test_read_text_selects_pages_from_pages_txt():
