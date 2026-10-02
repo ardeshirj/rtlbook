@@ -1,7 +1,10 @@
 # All Persian sentences below are synthetic, written for these tests (no book text).
 from rtlbook.classify import function_word_score
 from rtlbook.model import Line, Page
-from rtlbook.text import CommaFix, build_paragraphs, detect_comma_misreads, fix_misread_commas, normalize_text
+from rtlbook.model import Paragraph
+from rtlbook.text import (
+    CommaFix, build_paragraphs, detect_comma_misreads, fix_misread_commas, fix_unopened_guillemets, normalize_text,
+)
 
 W = 1000  # page width for synthetic OCR lines
 
@@ -140,3 +143,16 @@ def test_screenplay_dialogue_splits():
                   *[line(f"سطر پر شماره {i} ادامه دارد", 100) for i in range(20)])]
     texts = [p.text for p in build_paragraphs(pages)]
     assert texts[0].startswith("سارا :") and texts[1].startswith("علی :")
+
+
+def test_unopened_closing_guillemet_is_a_comma():
+    def fixed(*segments):
+        p = Paragraph(list(segments))
+        fix_unopened_guillemets(p)
+        return p.text
+
+    assert fixed("نه» ای دوست» امروز آمد") == "نه، ای دوست، امروز آمد"
+    assert fixed("گفت: «نه، تو پیری» و رفت") == "گفت: «نه، تو پیری» و رفت"
+    assert fixed("«سلام» گفت و رفت» بعد برگشت") == "«سلام» گفت و رفت، بعد برگشت"
+    # a quotation that opens on one line and closes on the next stays a quotation
+    assert fixed("گفت: «فردا", " ", 12, "می آیم» و رفت") == "گفت: «فردا می آیم» و رفت"

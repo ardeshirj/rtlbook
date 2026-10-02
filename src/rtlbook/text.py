@@ -88,6 +88,29 @@ def fix_misread_commas(s: str, fix: CommaFix) -> str:
     return re.sub(r" {2,}", " ", s).strip()
 
 
+def fix_unopened_guillemets(p: Paragraph) -> None:
+    """Tesseract often reads the Persian comma "،" as "»". A "»" with no open "«" before it in the
+    paragraph can't be a closing quotation mark, so it's a comma. Works per paragraph, because a
+    quotation can open on one line and close on the next; catches the books where some commas were
+    read correctly (detect_comma_misreads then leaves the book alone)."""
+    open_ = 0
+    for i, seg in enumerate(p.segments):
+        if not isinstance(seg, str) or not ("»" in seg or "«" in seg):
+            continue
+        out = []
+        for ch in seg:
+            if ch == "«":
+                open_ += 1
+            elif ch == "»":
+                if open_:
+                    open_ -= 1
+                else:
+                    ch = "،"
+            out.append(ch)
+        seg = re.sub(r"[ \t]+،", "،", "".join(out))  # no space before a comma...
+        p.segments[i] = re.sub(r"،[ \t\u200c]*(?=\S)", "، ", seg)  # ...one after
+
+
 def fix_mirrored_parens(p: Paragraph) -> None:
     """RTL OCR often emits the closing parenthesis as "(" (its visual shape), and
     parentheticals often span lines: "(با صدای آهسته(" -> "(با صدای آهسته)".
@@ -227,4 +250,5 @@ def build_paragraphs(
         paras[-1].segments.extend(pending_pages)
     for p in paras:
         fix_mirrored_parens(p)
+        fix_unopened_guillemets(p)
     return paras
