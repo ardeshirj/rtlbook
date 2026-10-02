@@ -1,4 +1,4 @@
-# Real, public-domain book text: see tests/data/three-drops/README.md. Fails if accuracy gets worse.
+# Real, public-domain book text: see tests/data/*/README.md. Fails if accuracy gets worse.
 import json
 import shutil
 from pathlib import Path
@@ -40,3 +40,20 @@ def test_fresh_ocr_meets_baseline(number):
     page = Page(number, "ocr", *img.size, lines=ocr.ocr_lines(img, s["lang"], s["psm"]))
     r = compare((DATA / f"p{number}.txt").read_text(encoding="utf-8"), ocr_text(page))
     assert r.cer <= MAX_CER[number], f"CER {r.cer:.1%} > {MAX_CER[number]:.0%}"
+
+
+TOMORROW = Path(__file__).parent / "data" / "tomorrow"
+TOMORROW_MAX_CER = 0.007  # baseline 0.5% (2026-10-02)
+
+
+def test_exported_pdf_full_pipeline_meets_baseline():
+    from rtlbook.text import build_paragraphs
+
+    pages = [Page.from_dict(d) for d in json.loads((TOMORROW / "pages.ocr.json").read_text(encoding="utf-8"))]
+    for page in pages:
+        page.lines = reading_order(page.lines)
+    text = "\n".join(p.text for p in build_paragraphs(pages))
+    r = compare((TOMORROW / "reference.txt").read_text(encoding="utf-8"), text)
+    assert r.trimmed is None
+    assert r.cer <= TOMORROW_MAX_CER, f"CER {r.cer:.2%} > {TOMORROW_MAX_CER:.1%}"
+    assert "mihanblog" not in text and "جیوه" not in text  # the site footer, read as junk, is gone
