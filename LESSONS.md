@@ -1,7 +1,7 @@
 # Lessons learned (POC, 2026-09-24)
 
 Practical findings from building and testing the proof of concept on 8 Persian novels (3,231 pages)
-and a real Kindle. This complements [DESIGN.md §11](../DESIGN.md#11-decisions-and-poc-results-2026-09-24),
+and a real Kindle. This complements [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24),
 which records the decisions and results. Book text is deliberately not quoted here.
 
 ## PDFs and text layers

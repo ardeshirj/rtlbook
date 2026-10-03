@@ -192,8 +192,8 @@ def test_headings_from_layout():
 
     pages = [
         page(1, [row("ا-مهدی زاغی", 200, x0=700)] + [row(body, 300 + 60 * i) for i in range(12)]),
-        page(2, [row(body, 200 + 60 * i) for i in range(5)]
-             + [row("۲ـ غلام", 620, x0=800)]  # space above, short, numbered
+        page(2, [row(body, 200 + 60 * i) for i in range(4)] + [row("و تمام شد.", 440, x0=650)]
+             + [row("۲ـ غلام", 620, x0=800)]  # space above, short, numbered, after a finished sentence
              + [row(body, 720 + 60 * i) for i in range(6)]),
         page(3, [row("طرح یک", 200, h=100), row("بیماری", 310, h=100)]  # large type, wrapped
              + [row(body, 450 + 60 * i) for i in range(10)]
@@ -247,3 +247,37 @@ def test_contents_page_fixes_garbled_headings_and_finds_plain_ones():
     })
     heads = [p.text for p in build_paragraphs(pages) if p.heading]
     assert heads == ["راه شکستن طلسم", "پیش در آمد"]
+
+
+def test_numbered_line_inside_a_sentence_is_not_a_heading():
+    from rtlbook.model import Line, Page
+
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    lines = [Line(body, (100, 200 + 60 * i, 900, 240 + 60 * i), 90.0) for i in range(10)]
+    lines += [Line("صبح‌ها ساعت حدود", (600, 820, 900, 860), 90.0),  # sentence goes on...
+              Line("۲ هم به خونه برمی‌گشتم", (650, 1000, 900, 1040), 90.0)]  # ...after a gap: not a title
+    pages = [Page(n, "ocr", width=1000, height=1400, lines=list(lines)) for n in (1, 2, 3)]
+    assert not any(p.heading for p in build_paragraphs(pages))
+
+
+def test_running_header_variants_are_removed():
+    from rtlbook.model import Line, Page
+
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    variants = ["تک سایت رکسانا- کتابخانه مجازی تک سایت"] * 6 + ["رکسانا- کتابخانه مجازی تک سایت", "تک سایت رکسائنا- کتابخانه مجازی تک سایت"]
+    pages = [Page(n, "ocr", width=1000, height=1400,
+                  lines=[Line(v, (300, 40, 700, 80), 80.0)] + [Line(body, (100, 200 + 60 * i, 900, 240 + 60 * i), 90.0) for i in range(10)])
+             for n, v in enumerate(variants, start=1)]
+    assert "کتابخانه" not in " ".join(p.text for p in build_paragraphs(pages))
+
+
+def test_title_page_labels_and_pen_names():
+    from rtlbook.frontmatter import guess_title_author
+
+    labelled = _book([_row("نام کتاب : عنوان داستان", 300), _row("نویسنده : م. نام‌خانوادگی", 360),
+                      _row("کتابخانه مجازی یک سایت", 450)])
+    assert guess_title_author(labelled) == ("عنوان داستان", "م. نام‌خانوادگی")
+    above_author = _book([_row("دریا", 200), _row("نویسنده: نام نویسنده", 300), _row("تایپ : یک نفر", 400, h=90)])
+    assert guess_title_author(above_author) == ("دریا", "نام نویسنده")
+    pen_name_only = _book([_row("م . نام‌خانوادگی", 1200, h=90)])
+    assert guess_title_author(pen_name_only) == (None, "م . نام‌خانوادگی")

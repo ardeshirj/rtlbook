@@ -103,7 +103,8 @@ usable as is; rebuilding it needed rules per PDF tool, while OCR misread about 0
   the page** (wide spaces in prose fall at random places, so prose is left alone).
 - Lines that sit **side by side are read as one row**, rows top to bottom, each row right to left, so a couplet's
   two half-lines stay together.
-- **Running headers, footers and watermarks** repeated in the top/bottom 15% of many pages are removed.
+- **Running headers, footers and watermarks** repeated in the top/bottom 15% of many pages are removed, including
+  OCR variants of them (a misread letter, or only part of the header).
 - *Planned:* footnotes, page furniture in Latin script, multi-column prose.
 
 ### 4.5 OCR engines and accuracy
@@ -152,8 +153,9 @@ accepted. Off by default.
   fixed). A wrapped large-type title stays one heading. Books without headings are split into ~20-page sections; cover from the first page image; EPUB page list from the PDF pages.
 - **Built:** title, credits and contents pages (far fewer words than a typical page) keep each line separate
   and don't run into the text.
-- **Built:** title and author from the title page: the topmost large-type line, and a `نوشته:`/`اثر` line or
-  the next large or short line; credit lines are skipped and PDF metadata is ignored (usually wrong). `convert`
+- **Built:** title and author from the title page: a `نام کتاب :` / `نویسنده :` label, else the line right above
+  the author line, else the topmost large-type line (a pen name such as `م. مودب‌پور` is the author, not the title);
+  credit lines (typist, converter, website, publisher) are skipped and PDF metadata is ignored (usually wrong). `convert`
   reports what it found and where from.
 - **Built:** the book's contents page (a sparse page with 4+ numbered lines) corrects chapter headings OCR'd
   worse than their entry, and turns a short standalone line matching an entry into a heading.
@@ -222,7 +224,7 @@ rtlbook/
 │  ├─ evaluate.py            # accuracy against a checked text
 │  └─ validate.py            # epubcheck
 ├─ tests/                    # unit tests; tests/data/ = public-domain ground truth
-├─ docs/LESSONS.md           # practical lessons and troubleshooting
+├─ LESSONS.md           # practical lessons and troubleshooting
 ├─ input/                    # PDFs to convert (git-ignored)
 └─ output/                   # EPUB/KFX, per-book OCR caches, experiment notes (git-ignored)
 ```
@@ -309,7 +311,7 @@ rtlbook/
 8. Optional ZWNJ normalization (`می گویم` → `می‌گویم`). Author display order on Kindle (OPF `file-as`).
 9. Repo hygiene: a license, and CI that builds the image and runs the tests.
 
-Practical lessons and troubleshooting: [docs/LESSONS.md](docs/LESSONS.md).
+Practical lessons and troubleshooting: [LESSONS.md](LESSONS.md).
 
 ---
 

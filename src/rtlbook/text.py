@@ -173,6 +173,18 @@ def _in_margin(ln: Line, page: Page) -> bool:
     return y < MARGIN_ZONE or y > 1 - MARGIN_ZONE
 
 
+def _is_running_header(key: str, headers: set[str]) -> bool:
+    """A margin line that is a running header, allowing for OCR variants: the same text read slightly
+    differently ("رکسائنا"), or only part of it ("رکسانا- کتابخانه مجازی" of "تک سایت رکسانا- …")."""
+    if not headers or len(key) < 3:
+        return False
+    if key in headers:
+        return True
+    return len(key) >= 6 and any(
+        key in h or h in key or difflib.SequenceMatcher(None, key, h, autojunk=False).ratio() >= 0.8 for h in headers
+    )
+
+
 def running_headers(pages: list[Page], min_share: float = 0.2) -> set[str]:
     """Keys of lines repeated in the top/bottom zone of many pages (site banners, book titles)."""
     seen: dict[str, set[int]] = {}
@@ -185,8 +197,9 @@ def running_headers(pages: list[Page], min_share: float = 0.2) -> set[str]:
 
 
 def _layout_heading(ln: Line, text: str, gap: float | None, line_h: float, page: Page,
-                    margins: tuple[float, float] | None) -> str | None:
-    """A heading recognised by layout: large type, or a short numbered title with space above it."""
+                    margins: tuple[float, float] | None, after_break: bool = True) -> str | None:
+    """A heading recognised by layout: large type, or a short numbered title with space above it that
+    follows a finished sentence (a title never interrupts one)."""
     if not line_h:
         return None
     width = max(1, ln.bbox[2] - ln.bbox[0])
@@ -195,7 +208,7 @@ def _layout_heading(ln: Line, text: str, gap: float | None, line_h: float, page:
             and len(text) * line_h / width < BIG_TYPE_DENSITY and conf >= HEADING_MIN_CONF):
         return text
     short = margins is None or not page.width or width / page.width < 0.6 * margins[1]
-    if short and (gap is None or gap >= 2 * line_h) and conf >= NUMBERED_MIN_CONF:
+    if short and after_break and (gap is None or gap >= 2 * line_h) and conf >= NUMBERED_MIN_CONF:
         return numbered_title(text)
     return None
 
@@ -259,11 +272,13 @@ def build_paragraphs(
             if is_debris(ln, text) or (drop and drop.search(text)) or (ln.conf is not None and ln.conf < min_conf):
                 continue
             if _in_margin(ln, page) and (
-                (headers and _margin_key(ln.text) in headers) or (ln.conf is not None and ln.conf < MARGIN_MIN_CONF)
+                _is_running_header(_margin_key(ln.text), headers) or (ln.conf is not None and ln.conf < MARGIN_MIN_CONF)
             ):
                 continue
             gap = ln.bbox[1] - prev_bottom if prev_bottom is not None else None
-            heading = match_heading(text) or (None if page_sparse else _layout_heading(ln, text, gap, line_h, page, margins))
+            after_break = cur is None or cur.heading or prev_sparse and first_on_page or prev_text.endswith(TERMINAL)
+            heading = match_heading(text) or (
+                None if page_sparse else _layout_heading(ln, text, gap, line_h, page, margins, after_break))
             is_heading = heading is not None
             if heading:
                 text = heading
