@@ -93,6 +93,7 @@ Useful `convert` options:
 | `--digits keep` | Keep digits as printed (default `auto`: Persian ۰–۹ for `fas`) |
 | `--pages 1-120` | Convert part of a book |
 | `-j 8` | Pages OCR'd in parallel (default: all CPUs) |
+| `--progress json` | Progress as JSON lines on stderr (`start`, one `page` per page, `done`), for other programs |
 | `--crop 0.075` | Cut page frames/borders before OCR |
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |

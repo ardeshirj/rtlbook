@@ -4,6 +4,7 @@ import collections
 import json
 import os
 import re
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -101,6 +102,7 @@ def convert(
     embed_font: Annotated[bool, typer.Option(help="Embed the Vazirmatn font (off: use the reader's own font)")] = True,
     min_line_conf: Annotated[float, typer.Option(help="Drop OCR lines below this confidence (0 keeps all)")] = 0.0,
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
+    progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
 ) -> None:
     """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
     from rtlbook import epub, frontmatter, layout, ocr, text
@@ -112,18 +114,28 @@ def convert(
     work = work or output.with_name(output.stem + ".rtlbook")
     work.mkdir(parents=True, exist_ok=True)
 
+    def emit(**event) -> None:
+        if progress == "json":
+            print(json.dumps(event, ensure_ascii=False), file=sys.stderr, flush=True)
+
     numbers = parse_pages(pages, len(pdf.open_book(pdf_path)))
-    print_doctype(page_kinds(pdf_path, numbers))
+    kinds = page_kinds(pdf_path, numbers)
+    print_doctype(kinds)
+    emit(event="start", pages=len(numbers), document=document_type(kinds).kind)
 
     t0 = time.perf_counter()
     cached = 0
-    with Progress(TextColumn("OCR"), BarColumn(), MofNCompleteColumn(), TimeElapsedColumn(), console=console) as prog:
+    finished = 0
+    with Progress(TextColumn("OCR"), BarColumn(), MofNCompleteColumn(), TimeElapsedColumn(), console=console,
+                  disable=progress == "json") as prog:
         task = prog.add_task("pages", total=len(numbers))
 
-        def done(_page, from_cache: bool) -> None:
-            nonlocal cached
+        def done(page, from_cache: bool) -> None:
+            nonlocal cached, finished
             cached += from_cache
+            finished += 1
             prog.advance(task)
+            emit(event="page", page=page.number, done=finished, total=len(numbers), cached=from_cache)
 
         page_results = extract_pages(
             pdf_path, numbers, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop), max(1, jobs), done
@@ -207,6 +219,8 @@ def convert(
     }
     (work / "report.json").write_text(json.dumps(stats, ensure_ascii=False, indent=1), encoding="utf-8")
 
+    emit(event="done", ok=ok, epub=str(output), report=str(work / "report.json"), title=title, author=author,
+         warning=stats["warning"])
     console.print_json(data=stats)
     if warning := confidence_message(stats["mean_confidence"]):
         console.print(f"[yellow]{warning}[/]")
