@@ -48,7 +48,8 @@ Not yet done or known to be weak:
 - **Persian only:** Arabic, Urdu and Hebrew profiles from [DESIGN.md](DESIGN.md) aren't built.
 - **Known OCR quirks:** in some bold fonts, `!` without a following space is read as `ا`, which merges
   words. Front pages (catalogue records, site banners) can come out as junk text.
-- **Titles and authors** must be passed by hand (`--title`, `--author`).
+- **Titles and authors** are read from the title page when it has them in text; check what `convert`
+  reports and pass `--title`/`--author` when it's wrong or missing.
 - **No web app yet.** The CLI is the only interface.
 
 See [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and next steps.

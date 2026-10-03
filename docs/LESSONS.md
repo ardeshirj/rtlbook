@@ -27,7 +27,8 @@ which records the decisions and results. Book text is deliberately not quoted he
 - **Use `--psm 4`, not the automatic layout (`--psm 3`).** The automatic layout silently dropped lines set in
   larger type. `--psm 4` merges two-column verse into one line, which rtlbook splits again at aligned gaps.
 - **Decorative fonts defeat Tesseract** (confidence ~55%, dots dropped). Check the mean confidence in
-  `report.json`: 80–87 is normal for exported PDFs.
+  `report.json`: 80–87 is normal for exported PDFs. No Tesseract setting fixed it, but the PDF's stored text
+  had every letter right (scrambled order, spacing glitches): a possible fallback, not built yet.
 - **Measure, don't eyeball.** Misread Persian words often look like real words: a first hand-correction pass
   of OCR text missed about half the errors. Compare against a checked reference with `rtlbook eval`.
 - **One thread per page, several pages in parallel** (`OMP_THREAD_LIMIT=1`). About 2 s per page on one M2 core,

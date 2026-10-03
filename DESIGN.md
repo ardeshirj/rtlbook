@@ -152,8 +152,12 @@ accepted. Off by default.
   fixed). A wrapped large-type title stays one heading. Books without headings are split into ~20-page sections; cover from the first page image; EPUB page list from the PDF pages.
 - **Built:** title, credits and contents pages (far fewer words than a typical page) keep each line separate
   and don't run into the text.
-- **Planned:** title/author from the title page; matching the book's own table of contents against the text
-  (finds chapters whose headings aren't set apart); footnotes (`noteref` → `footnote`); couplets laid out as verse.
+- **Built:** title and author from the title page: the topmost large-type line, and a `نوشته:`/`اثر` line or
+  the next large or short line; credit lines are skipped and PDF metadata is ignored (usually wrong). `convert`
+  reports what it found and where from.
+- **Built:** the book's contents page (a sparse page with 4+ numbered lines) corrects chapter headings OCR'd
+  worse than their entry, and turns a short standalone line matching an entry into a heading.
+- **Planned:** footnotes (`noteref` → `footnote`); couplets laid out as verse.
 
 ### 4.10 EPUB 3 builder — built
 Written directly (a ZIP of XHTML, CSS and an OPF manifest), keeping full control of RTL details and avoiding
@@ -243,7 +247,13 @@ rtlbook/
 - **Privacy and copyright:** books may be copyrighted or private. Everything runs locally; the container only sees
   the repository folder. Outside services (AI vision) only ever opt-in. Book text is never committed, except
   public-domain test pages.
-- **OCR on unusual fonts:** decorative fonts defeat Tesseract. Detect it (confidence) and say so.
+- **OCR on unusual fonts (open, to investigate):** decorative fonts defeat Tesseract. `convert` warns (mean
+  confidence below 70) but has no fallback. Findings on one book (a handwriting-style font, confidence 55):
+  no Tesseract setting helped (resolution, binarization, `ara`/`fas+ara`, `--psm 6`: word recall 37–45%); the
+  PDF's own stored text, rebuilt from character positions, had **every letter right** but stray spaces inside
+  about 1 word in 5. Options: an opt-in text-layer fallback (perfect letters, spacing glitches, brings back
+  per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple; prototype in
+  `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-decorative/` (git-ignored).
 - **AI vision** can produce fluent but wrong text. Use it with an independent engine and review disagreements.
 - **Kindle:** KFX needs Kindle Previewer, which only runs on macOS/Windows.
 
