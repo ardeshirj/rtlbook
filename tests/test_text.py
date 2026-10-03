@@ -202,3 +202,48 @@ def test_headings_from_layout():
     ]
     heads = [p.text for p in build_paragraphs(pages) if p.heading]
     assert heads == ["۱- مهدی زاغی", "۲- غلام", "طرح یک بیماری"]
+
+
+def _row(text, y, *, x0=100, h=40, conf=90.0):
+    from rtlbook.model import Line
+
+    return Line(text, (x0, y, 900, y + h), conf)
+
+
+BODY = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+
+
+def _book(first_page_lines, body_pages=3, extra=None):
+    from rtlbook.model import Page
+
+    pages = [Page(1, "ocr", width=1000, height=1400, lines=first_page_lines)]
+    for n in range(2, 2 + body_pages):
+        lines = [_row(BODY, 200 + 60 * i) for i in range(12)]
+        if extra and n in extra:
+            lines = extra[n] + [_row(BODY, 400 + 60 * i) for i in range(12)]
+        lines.append(_row("و تمام شد.", lines[-1].bbox[3] + 20, x0=650))  # a chapter-like ending
+        pages.append(Page(n, "ocr", width=1000, height=1400, lines=lines))
+    return pages
+
+
+def test_title_and_author_from_the_title_page():
+    from rtlbook.frontmatter import guess_title_author
+
+    plain = _book([_row("نام کتاب", 300, h=160), _row("نام نویسنده", 520),
+                   _row("تهیه برای نشر الکترونیک توسط یک نفر", 700)])
+    assert guess_title_author(plain) == ("نام کتاب", "نام نویسنده")
+    marked = _book([_row("«نام کتاب»", 300, h=120), _row("نوشته: نام نویسنده ۱۳۴۷", 900)])
+    assert guess_title_author(marked) == ("نام کتاب", "نام نویسنده")
+    credits_only = _book([_row("الکترونیک: وب لاگ یک سایت", 600, h=120)])
+    assert guess_title_author(credits_only) == (None, None)
+
+
+def test_contents_page_fixes_garbled_headings_and_finds_plain_ones():
+    contents = [_row(f"{n}: {t}", 200 + 70 * i, conf=90.0) for i, (n, t) in
+                enumerate([("۱", "شانزده تن"), ("۲", "پیش در آمد"), ("۳", "طرح یک بیماری"), ("۴", "راه شکستن طلسم")])]
+    pages = _book(contents, body_pages=3, extra={
+        2: [_row("راه شکست. ما", 200, h=120, conf=60.0)],  # large type, garbled
+        3: [_row("پیش در آمد", 200, x0=700)],  # not set apart: a plain short line
+    })
+    heads = [p.text for p in build_paragraphs(pages) if p.heading]
+    assert heads == ["راه شکستن طلسم", "پیش در آمد"]

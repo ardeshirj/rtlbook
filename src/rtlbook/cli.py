@@ -85,8 +85,8 @@ def inspect(
 def convert(
     pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
     output: Annotated[Optional[Path], typer.Option("-o", "--output", help="Output .epub (default: output/<pdf name>.epub)")] = None,
-    title: Annotated[Optional[str], typer.Option(help="Book title (default: file name)")] = None,
-    author: Annotated[str, typer.Option(help="Author")] = "",
+    title: Annotated[Optional[str], typer.Option(help="Book title (default: from the title page, else the file name)")] = None,
+    author: Annotated[Optional[str], typer.Option(help="Author (default: from the title page)")] = None,
     lang: Annotated[str, typer.Option(help="Tesseract language(s), e.g. fas or fas+ara")] = "fas",
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20")] = None,
     dpi: Annotated[int, typer.Option(help="Render resolution for OCR (PDFs; page images keep their own)")] = 300,
@@ -103,7 +103,7 @@ def convert(
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
 ) -> None:
     """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
-    from rtlbook import epub, layout, ocr, text
+    from rtlbook import epub, frontmatter, layout, ocr, text
     from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
     from rtlbook.validate import epubcheck
 
@@ -139,6 +139,14 @@ def convert(
             f.write(f"\n===== page {p.number} [{p.route}{conf}, {p.seconds}s] =====\n")
             f.write("\n".join(ln.text for ln in p.lines) + "\n")
 
+    found_title, found_author = frontmatter.guess_title_author(page_results)
+    title_from = "--title" if title else "title page" if found_title else "file name"
+    author_from = "--author" if author else "title page" if found_author else "none"
+    title = title or found_title or pdf_path.stem
+    author = author or found_author or ""
+    console.print(f"Title: [bold]{title}[/] [dim]({title_from})[/] · Author: [bold]{author or '-'}[/] [dim]({author_from})[/]"
+                  + ("" if title_from == "--title" and author_from == "--author" else " [dim]Use --title/--author to change.[/]"))
+
     t0 = time.perf_counter()
     paras = text.build_paragraphs(page_results, re.compile(drop_lines) if drop_lines else None, min_line_conf)
     text.apply_digits(paras, ("fa" if lang.startswith("fas") else "keep") if digits == "auto" else digits)
@@ -156,7 +164,7 @@ def convert(
     digest = pdf.digest(pdf_path)
     fonts_dir = Path(os.environ.get("RTLBOOK_FONTS", "/opt/fonts"))
     meta = epub.BookMeta(
-        title=title or pdf_path.stem,
+        title=title,
         author=author,
         lang="fa" if lang.startswith("fas") else lang[:2],
         identifier=f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, 'rtlbook:' + digest)}",
@@ -175,6 +183,10 @@ def convert(
     low = [p.number for p in page_results if p.mean_conf is not None and p.mean_conf < 80]
     stats = {
         "pdf": str(pdf_path),
+        "title": title,
+        "title_from": title_from,
+        "author": author,
+        "author_from": author_from,
         "pages": len(page_results),
         "pages_from_cache": cached,
         "ocr_engine": ocr.tesseract_version(),

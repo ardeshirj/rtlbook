@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import re
 import statistics
 from dataclasses import dataclass
@@ -280,13 +281,15 @@ def build_paragraphs(
                 or (pitch and prev_top is not None and ln.bbox[1] - prev_top > 2.2 * pitch)
             )
             if starts_new:
-                cur = Paragraph(heading=is_heading)
+                cur = Paragraph(heading=is_heading, sparse=page_sparse)
                 paras.append(cur)
             elif cur.segments:
                 cur.segments.append(" ")
             cur.segments.extend(pending_pages)
             pending_pages = []
             cur.segments.append(text)
+            if ln.conf is not None:
+                cur.confs.append(ln.conf)
 
             prev_text = text
             first_on_page = False
@@ -302,4 +305,52 @@ def build_paragraphs(
     for p in paras:
         fix_mirrored_parens(p)
         fix_unopened_guillemets(p)
+    apply_contents(paras)
     return paras
+
+
+CONTENTS_ENTRY = re.compile(r"^\s*(?:[۰-۹0-9]{1,3}|ا)?\s*[-–—ـ:.)]?\s*(.*?)[\s.…_ـ]*[۰-۹0-9]*\s*$")
+
+
+def _letters(text: str) -> str:
+    return "".join(re.findall(r"[\u0621-\u064A\u067E-\u06D3]", normalize_letters(text)))
+
+
+def contents_entries(paras: list[Paragraph]) -> list[tuple[str, float]]:
+    """(entry, confidence) from the book's contents page: a sparse page (title, credits, contents) with
+    at least 4 numbered lines. Numbers and page numbers are stripped."""
+    entries = []
+    for p in paras:
+        if not p.sparse or p.heading:
+            continue
+        numbered = bool(re.match(r"^\s*(?:[۰-۹0-9]{1,3}|ا)\s*[-–—ـ:.)]?\s*\S", p.text)) or bool(re.search(r"[۰-۹0-9]+\s*$", p.text))
+        m = CONTENTS_ENTRY.match(p.text)
+        entry = m.group(1).strip(" :.") if m else ""
+        if numbered and len(_letters(entry)) >= 3 and len(entry.split()) <= 10:
+            entries.append((entry, p.conf or 0.0))
+    return entries if len(entries) >= 4 else []
+
+
+def apply_contents(paras: list[Paragraph], fix_ratio: float = 0.6, promote_ratio: float = 0.85) -> None:
+    """Use the book's contents page: a chapter heading OCR'd worse than its contents entry takes the entry's
+    text ("راه شکست. ما" -> "راه شکستن طلسم"), and a short standalone line in the text that matches an
+    entry becomes a heading (titles that aren't set apart by size or numbering)."""
+    entries = contents_entries(paras)
+    if not entries:
+        return
+    keyed = [(e, c, _letters(e)) for e, c in entries]
+
+    def best(text: str) -> tuple[float, str, float]:
+        k = _letters(text)
+        return max(((difflib.SequenceMatcher(None, k, ek, autojunk=False).ratio(), e, c) for e, c, ek in keyed),
+                   default=(0.0, "", 0.0))
+
+    for p in paras:
+        if p.sparse:
+            continue
+        if p.heading:
+            ratio, entry, conf = best(p.text)
+            if ratio >= fix_ratio and conf > (p.conf or 0):
+                p.segments = [s for s in p.segments if isinstance(s, int)] + [entry]
+        elif len(p.text.split()) <= 10 and best(p.text)[0] >= promote_ratio:
+            p.heading = True

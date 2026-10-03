@@ -41,6 +41,12 @@ class Paragraph:
     # Inline segments: text strings, and ints marking where a physical page starts
     segments: list[str | int] = field(default_factory=list)
     heading: bool = False
+    confs: list[float] = field(default_factory=list)  # OCR confidence of its lines
+    sparse: bool = False  # from a title/credits/contents page
+
+    @property
+    def conf(self) -> float | None:
+        return sum(self.confs) / len(self.confs) if self.confs else None
 
     @property
     def text(self) -> str:
