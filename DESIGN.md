@@ -31,7 +31,6 @@ differently. rtlbook therefore OCRs every page (§4.1, §12).
 - Keeping the exact visual layout (that's what the PDF is for). The output is reflowable text.
 - Handwriting recognition.
 - Complex tables, math, and multi-column magazine layouts.
-- A hosted, multi-user web service (§6).
 
 ---
 
@@ -192,13 +191,13 @@ needed while each book is one `convert` with a page cache).
 
 ---
 
-## 6. Web app — deferred
+## 6. Review page — prototype
 
-A hosted upload-and-convert service is not planned for now: it needs servers to run OCR, the Kindle step needs
-macOS or Windows, and it would handle other people's files. If it comes back, it stays a thin shell over the same
-engine (upload → job queue → worker → download). A **local review page** is the part worth building: a scan crop
-next to the text, with choices for the person to make, saving the decisions as a file. A prototype already proved
-useful for checking OCR against scans.
+A local page for a person to settle what the engine can't: for each uncertain spot, a crop of the scan line, the
+candidate readings as buttons, and a box to type the right text. A "save" button writes the decisions to a JSON
+file, which a script applies to the text. A prototype was used to check OCR ground truth against scans
+(`output/poc/27-eval/`, git-ignored): far quicker and more reliable than correcting OCR text by eye. Planned uses:
+reviewing disagreements between two OCR engines (§4.5) and proofreading a whole book.
 
 ---
 
@@ -262,7 +261,7 @@ rtlbook/
 ### Answered since v0.2
 1. Languages: **Persian first.**
 2. E-readers: **EPUB readers and Kindle (KFX).**
-3. **A local tool**, not a hosted service.
+3. **A local tool.**
 4. Cloud OCR / AI: **opt-in only**; not used yet.
 5. GPU: **none** (Apple Silicon CPU). Tesseract and Kraken both run on CPU.
 6. Typewriter books: **none found yet.**
