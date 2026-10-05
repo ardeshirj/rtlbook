@@ -16,7 +16,7 @@ are planned: they convert, but with more errors. `inspect` tells you which kind 
 ```bash
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
-./rtlbook version                              # first run creates input/ and output/
+./rtlbook init                                 # creates input/ and output/
 # put your PDF in input/, e.g. input/book.pdf
 ./rtlbook inspect input/book.pdf               # exported PDF or scan?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
@@ -63,7 +63,7 @@ Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [LES
 | `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
 | `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
 
-`./rtlbook` creates both folders on every run, so they always exist while you use it. Books can be
+`./rtlbook init` creates both folders (`convert` also creates `output/` if it's missing). Books can be
 copyrighted or private, so the folders and everything in them are git-ignored and never committed.
 `convert` writes to `output/<pdf name>.epub` unless you pass `-o`. It reuses the OCR cache in
 `output/<name>.rtlbook/`, so re-running with different text or EPUB options takes seconds.

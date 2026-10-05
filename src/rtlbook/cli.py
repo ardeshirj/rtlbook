@@ -62,6 +62,17 @@ def print_doctype(kinds: list[PageKind]) -> None:
 
 
 @app.command()
+def init() -> None:
+    """Create the input/ and output/ folders here, and say what to do next."""
+    for name in ("input", DEFAULT_OUTPUT_DIR.name):
+        folder = Path(name)
+        state = "exists" if folder.is_dir() else "created"
+        folder.mkdir(exist_ok=True)
+        console.print(f"{name}/ {state}")
+    console.print("Next: put a PDF in input/, then: [bold]rtlbook convert input/book.pdf[/]")
+
+
+@app.command()
 def version() -> None:
     """Print the version."""
     print(__version__)

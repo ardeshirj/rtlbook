@@ -21,3 +21,12 @@ def test_convert_reports_progress_as_json_lines(tmp_path):
     assert all(e["total"] == 2 for e in pages)
     assert events[-1]["event"] == "done" and events[-1]["ok"] is True
     assert Path(events[-1]["epub"]).exists()
+
+
+def test_init_creates_input_and_output(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+    result = CliRunner().invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert (tmp_path / "input").is_dir() and (tmp_path / "output").is_dir()
+    assert "input/ created" in result.stdout and "output/ exists" in result.stdout
