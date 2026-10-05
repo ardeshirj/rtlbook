@@ -14,13 +14,20 @@ are planned: they convert, but with more errors. `inspect` tells you which kind 
 ## Quick start (Docker)
 
 ```bash
+# Build the Docker image
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
-./rtlbook init                                 # creates input/ and output/
-# put your PDF in input/, e.g. input/book.pdf
-./rtlbook inspect input/book.pdf               # exported PDF or scan?
-./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
-./rtlbook kfx output/book.epub                 # → output/book.kfx (macOS + Kindle Previewer 4)
+# Create input/ and output/, then put your PDF in input/
+./rtlbook init
+
+# Exported PDF or scan?
+./rtlbook inspect input/book.pdf
+
+# Convert to EPUB → output/book.epub
+./rtlbook convert input/book.pdf --title "…" --author "…"
+
+# Make a Kindle file → output/book.kfx (macOS + Kindle Previewer 4)
+./rtlbook kfx output/book.epub
 ```
 
 `./rtlbook` runs the CLI in Docker. **Only this repository folder is shared with the container**,
