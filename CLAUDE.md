@@ -4,7 +4,8 @@ rtlbook converts PDF books in right-to-left languages (Persian first) into EPUB 
 for usage, `DESIGN.md` for the engine's design and dated decisions, and `LESSONS.md` for troubleshooting.
 
 ## Running things
-- Everything runs in Docker: build with `docker build -f docker/Dockerfile -t rtlbook:dev .`; use the `./rtlbook`
+- Everything runs in Docker: build with `make build` (`docker build -f docker/Dockerfile -t rtlbook:dev .`; `make`
+  lists the rest: `core`, `core-amd64`, `test`); use the `./rtlbook`
   wrapper (it only shares this repository folder with the container, so inputs go in `input/`).
 - Tests: `docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests`
   (with the whole repo mounted, tests that need PDFs in `input/` also run; otherwise they're skipped).

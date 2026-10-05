@@ -1,6 +1,6 @@
 # rtlbook: Tesseract + epubcheck + Python (OCR → EPUB), plus calibre for Kindle KFX packaging.
 #   docker build -f docker/Dockerfile -t rtlbook:dev .                  # everything (default)
-#   docker build -f docker/Dockerfile --target core -t rtlbook:dev .    # no Kindle output: ~680 MB smaller
+#   docker build -f docker/Dockerfile --target core -t rtlbook:core .   # no Kindle output: ~680 MB smaller (make core)
 # Build-only tools (curl, unzip, uv) stay in the build stages and don't reach the final image.
 
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm

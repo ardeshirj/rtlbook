@@ -14,7 +14,7 @@ are planned: they convert, but with more errors. `inspect` tells you which kind 
 ## Quick start (Docker)
 
 ```bash
-# Build the Docker image
+# Build the Docker image (make build; `make` lists the other commands)
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
 # Create input/ and output/, then put your PDF in input/
@@ -153,10 +153,13 @@ the pages (a whole chapter for a page that shows only its end) is trimmed to the
   3. Copy `book.kfx` into the Kindle's `documents/` folder over USB. Newer USB-C Kindles on macOS need
      [OpenMTP](https://openmtp.ganeshrvel.com/). On macOS, run `dot_clean -m /Volumes/Kindle/documents`
      to remove `._*` files, then eject. Nothing is uploaded to Amazon.
-  - Build with `--target core` (`docker build -f docker/Dockerfile --target core -t rtlbook:dev .`) to leave
-    calibre out, which makes the image about 680 MB smaller. This removes KFX support.
+  - Build with `--target core` (`make core`, image `rtlbook:core`) to leave calibre out, which makes the image
+    about 680 MB smaller. This removes KFX support. `make core-amd64` builds it for linux/amd64 hosts, e.g. from an
+    Apple Silicon Mac (emulated, so slower).
 
 ## Tests
+
+`make test`, or:
 
 ```bash
 docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app \
