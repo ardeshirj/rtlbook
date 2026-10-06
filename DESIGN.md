@@ -53,7 +53,7 @@ Solid boxes are built; dashed ones are planned.
 
 ```mermaid
 flowchart TD
-    A[PDF, or a folder of page images] --> B[Inspect<br/>exported PDF or scan · script check]
+    A[PDF] --> B[Inspect<br/>exported PDF or scan · script check]
     B --> P
     subgraph P [Each page, in parallel, cached]
         C[Render<br/>300 DPI, grayscale] --> D[Preprocess<br/>binarize · optional crop]
@@ -101,8 +101,9 @@ usable as is; rebuilding it needed rules per PDF tool, while OCR misread about 0
 
 ### 4.2 Rendering — built
 - Pages render at **300 DPI** with `pypdfium2` (permissive license). 400 DPI was slower with no gain (§11).
-- A **folder of page images** (PNG, JPEG, TIFF, JP2; e.g. an unpacked Internet Archive JP2 ZIP) is read in natural
-  file-name order at the images' own resolution.
+- *Dropped (2026-10-06), to keep the input simple:* a folder of page images instead of a PDF (PNG, JPEG, TIFF,
+  JP2, e.g. an unpacked Internet Archive JP2 ZIP). Scans still convert when they come as a PDF. Worth bringing back
+  for the scans phase (§8): old books are often only available as page images.
 
 ### 4.3 Image preprocessing
 - **Built:** grayscale and **Otsu binarization** (essential for tinted page backgrounds), optional edge crop for framed pages.
@@ -226,7 +227,7 @@ rtlbook/
 │  ├─ cli.py                 # Typer commands: inspect, convert, kfx, eval
 │  ├─ doctype.py             # exported PDF or scan
 │  ├─ script.py              # script check: Tesseract OSD on a few random pages
-│  ├─ pdf.py                 # PDFs and image folders: rendering, page info, cover image
+│  ├─ pdf.py                 # PDFs: rendering, page info, cover image
 │  ├─ preprocess.py          # binarize, crop
 │  ├─ ocr.py                 # Tesseract, line boxes, column-gap splitting
 │  ├─ pipeline.py            # parallel OCR with a per-page cache; sections

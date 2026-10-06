@@ -19,7 +19,7 @@ from rtlbook import __version__, pdf, script
 from rtlbook.doctype import PageKind, confidence_message, document_type, page_kind
 
 DEFAULT_OUTPUT_DIR = Path("output")  # relative to the directory ./rtlbook is run from
-INPUT_HELP = "Input PDF, or a folder of page images (PNG, JPEG, TIFF, JP2), one per page"
+INPUT_HELP = "Input PDF"
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Convert RTL-language PDF books to EPUB.")
 console = Console()
@@ -89,7 +89,7 @@ def version() -> None:
 
 @app.command()
 def inspect(
-    pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
+    pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help=INPUT_HELP)],
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20,35")] = None,
     json_out: Annotated[Optional[Path], typer.Option("--json", help="Write per-page results as JSON")] = None,
     lang: Annotated[str, typer.Option(help="OCR language(s) the book should be in; its script is checked on a few pages")] = "fas",
@@ -107,13 +107,13 @@ def inspect(
 
 @app.command()
 def convert(
-    pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
+    pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help=INPUT_HELP)],
     output: Annotated[Optional[Path], typer.Option("-o", "--output", help="Output .epub (default: output/<pdf name>.epub)")] = None,
     title: Annotated[Optional[str], typer.Option(help="Book title (default: from the title page, else the file name)")] = None,
     author: Annotated[Optional[str], typer.Option(help="Author (default: from the title page)")] = None,
     lang: Annotated[str, typer.Option(help="Tesseract language(s), e.g. fas or fas+ara")] = "fas",
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20")] = None,
-    dpi: Annotated[int, typer.Option(help="Render resolution for OCR (PDFs; page images keep their own)")] = 300,
+    dpi: Annotated[int, typer.Option(help="Render resolution for OCR")] = 300,
     psm: Annotated[int, typer.Option(help="Tesseract page segmentation mode (4: one column of lines of any size; column gaps are split afterwards)")] = 4,
     binarize: Annotated[bool, typer.Option(help="Otsu-binarize pages before OCR")] = True,
     crop: Annotated[float, typer.Option(help="Fraction to cut off each page edge (e.g. 0.075 for framed pages)")] = 0.0,
@@ -128,7 +128,7 @@ def convert(
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
     check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
 ) -> None:
-    """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
+    """Convert a PDF into an RTL EPUB 3."""
     from rtlbook import epub, frontmatter, layout, ocr, text
     from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
     from rtlbook.validate import epubcheck

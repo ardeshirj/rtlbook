@@ -12,7 +12,7 @@ from typing import Callable
 from rtlbook import ocr, pdf, preprocess
 from rtlbook.model import Page, Paragraph, Section
 
-_DOC = None  # PDF or image folder, opened once per worker process
+_DOC = None  # the PDF, opened once per worker process
 
 
 @dataclass(frozen=True)
