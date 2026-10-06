@@ -1,7 +1,7 @@
 # RTL PDF → E-book Converter: Design
 
 **Status:** proof of concept. Exported Persian PDFs convert end to end to EPUB 3 and Kindle KFX; scans convert
-with more errors and aren't supported yet. · **Version:** v0.3 · **Date:** 2026-10-02
+with more errors and aren't supported yet. · **Version:** v0.3 · **Date:** 2026-10-06
 
 > Each section says what is **built**, what is **planned**, and what was **dropped**. The dated decisions and
 > measurements behind it are in §11 (POC, 2026-09-24) and §12 (2026-10-01 – 10-02).
@@ -142,13 +142,14 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
 *Planned:* block types (footnote, verse, table), printed page labels.
 
 ### 4.7 Text clean-up
+- **Built:** a warning when a book's mean OCR confidence is below 70 (exported PDFs score 80–87; a decorative
+  font scored ~55), in `report.json` and the `done` event.
 - **Built:** Arabic `ي`/`ك` → Persian `ی`/`ک`; tatweel removed; Persian digits by default (`--digits`); the Persian
   comma misread as `»` (a `»` with no open `«` in its paragraph) or as a word-final `ء`; mirrored parentheses;
   OCR debris lines; dropping lines by regex (`--drop-lines`) or below a confidence (`--min-line-conf`).
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
   dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
-- **Planned:** half-space (ZWNJ) normalization (`می گویم` → `می‌گویم`), a warning when a book's OCR confidence is
-  low (a decorative font scored ~55% against the usual 80–87%).
+- **Planned:** half-space (ZWNJ) normalization (`می گویم` → `می‌گویم`).
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.
 
 ### 4.8 AI correction — planned, opt-in
@@ -280,7 +281,7 @@ rtlbook/
 ---
 
 ## 10. Key tools and references
-- OCR: Tesseract 5 + `tessdata_best`; Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
+- OCR: Tesseract 5 + `tessdata_best` (`fas`, `ara`; `osd` for the script check); Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
 - PDF and images: pypdfium2, Pillow
 - E-book: EPUB 3.3 (W3C), epubcheck, Kindle Previewer 4, calibre + KFX Output plugin, kepubify (planned)
 - Font: Parastoo (OFL); Vazirmatn until 2026-10-05
@@ -297,7 +298,7 @@ rtlbook/
 - **PDF library: pypdfium2.** **EPUB writer: our own** (§4.10). No AGPL dependencies.
 
 **POC book:** *Parichehr* (پریچهر), 472 pages, exported from Word 2007.
-- The text layer is **completely garbled** (a broken glyph→Unicode map). `inspect` detects this on every page (function-word score 0.009) and sends the pages to OCR. This confirmed §4.1: a born-digital PDF can't be trusted as-is.
+- The text layer is **completely garbled** (a broken glyph→Unicode map). `inspect` detected this on every page (function-word score 0.009) and sent the pages to OCR. This confirmed §4.1: a born-digital PDF can't be trusted as-is. (That text-layer check was later removed: every page is OCR'd, §12.)
 - **OCR:** Tesseract `fas` at 300 DPI, **binarized first**, which was essential because the tinted page background broke some lines. The full book took **~2 minutes** on an M2 (8 workers), with 86.8% mean confidence. 400 DPI didn't help.
 - **Font-specific OCR quirks:** the Persian comma is read as `»`/`ء`, and closing parentheses come out mirrored. Both are fixed in post-processing, gated on book-level detection so books that OCR correctly aren't changed.
 - **Paragraph rebuilding:** uses dialogue markers (`Name- …`), sentence-final punctuation, full-width lines (the RTL line end reaches the left margin), and large vertical gaps. Paragraphs join across page breaks.
@@ -305,7 +306,7 @@ rtlbook/
 - Detailed log and all intermediate outputs: `output/poc/NOTES.md` (git-ignored because it contains book text).
 
 **Batch of 8 novels (3,231 pages).** All 8 converted to valid EPUB and KFX, about 13 minutes of OCR in total.
-- **Not one had a usable text layer.** 3 had garbled glyph mappings. 5 stored words in **reversed (visual) order**: sentence punctuation started 28–52% of lines and ended ≤4%. One also split words at glyph boundaries. The per-page function-word score misses reversed order, so the checks now also run at the **book level** (punctuation position, share of one-letter words).
+- **Not one had a usable text layer.** 3 had garbled glyph mappings. 5 stored words in **reversed (visual) order**: sentence punctuation started 28–52% of lines and ended ≤4%. One also split words at glyph boundaries. The per-page function-word score missed reversed order, so the checks were extended to the **book level** (punctuation position, share of one-letter words), before the text-layer route was dropped altogether (§12).
 - Mean OCR confidence was 81.6–86.8 per book. The output passes the order checks (≤0.4% of paragraphs start with sentence punctuation).
 - Added **fuzzy chapter headings** (edit distance on `فصل` + ordinals), and **running header/watermark removal** (lines repeated in the top/bottom 15% of ≥20% of pages, removed from 484–558 pages in 3 books).
 - Remaining quirk: a bold font where `!` without a following space OCRs as `ا` (Shirin). Fixable with corpus word statistics.
@@ -316,7 +317,7 @@ rtlbook/
 3. ✅ Ground truth and accuracy measurement: `rtlbook eval` and `tests/data/` (§12).
 4. Scanned books: collected and measured in experiments (§12); supported in a later phase. Typewriter: none found yet.
 5. Fix the bold-font `!` → `ا` merges using corpus word statistics.
-6. Extract **title and author** from the title page. Drop junk front-matter pages (low confidence, catalogue records).
+6. ✅ **Title and author** from the title page; title, credits and contents pages kept out of the text (§4.9).
 7. ✗ Repairing broken text layers: tried, and dropped in favour of OCR for every page (§12).
 8. Optional ZWNJ normalization (`می گویم` → `می‌گویم`). Author display order on Kindle (OPF `file-as`).
 9. Repo hygiene: a license, and CI that builds the image and runs the tests.
