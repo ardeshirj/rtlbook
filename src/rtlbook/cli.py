@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
-from rtlbook import __version__, pdf
+from rtlbook import __version__, pdf, script
 from rtlbook.doctype import PageKind, confidence_message, document_type, page_kind
 
 DEFAULT_OUTPUT_DIR = Path("output")  # relative to the directory ./rtlbook is run from
@@ -61,6 +61,15 @@ def print_doctype(kinds: list[PageKind]) -> None:
     console.print(f"[green]{dt.message()}[/]" if dt.supported else f"[yellow]{dt.message()}[/]")
 
 
+def check_script_of(pdf_path: Path, numbers: list[int], lang: str) -> script.ScriptCheck:
+    doc = pdf.open_book(pdf_path)
+    return script.check(lambda n: pdf.render(doc, n - 1, 300), numbers, lang, pdf.digest(pdf_path))
+
+
+def print_script(check: script.ScriptCheck) -> None:
+    console.print(f"[yellow]{check.message()}[/]" if check.mismatch else check.message())
+
+
 @app.command()
 def init() -> None:
     """Create the input/ and output/ folders here, and say what to do next."""
@@ -83,11 +92,14 @@ def inspect(
     pdf_path: Annotated[Path, typer.Argument(exists=True, help=INPUT_HELP)],
     pages: Annotated[Optional[str], typer.Option(help="Page selection, e.g. 1-20,35")] = None,
     json_out: Annotated[Optional[Path], typer.Option("--json", help="Write per-page results as JSON")] = None,
+    lang: Annotated[str, typer.Option(help="OCR language(s) the book should be in; its script is checked on a few pages")] = "fas",
 ) -> None:
-    """Say what kind of document this is (exported PDF or scan) and whether it's supported yet."""
+    """Say what kind of document this is (exported PDF or scan), whether it's supported yet, and its script."""
     start = time.perf_counter()
-    kinds = page_kinds(pdf_path, parse_pages(pages, len(pdf.open_book(pdf_path))))
+    numbers = parse_pages(pages, len(pdf.open_book(pdf_path)))
+    kinds = page_kinds(pdf_path, numbers)
     print_doctype(kinds)
+    print_script(check_script_of(pdf_path, numbers, lang))
     console.print(f"[dim]{len(kinds)} pages inspected in {time.perf_counter() - start:.1f}s[/]")
     if json_out:
         json_out.write_text(json.dumps([k.__dict__ for k in kinds], indent=1), encoding="utf-8")
@@ -114,6 +126,7 @@ def convert(
     min_line_conf: Annotated[float, typer.Option(help="Drop OCR lines below this confidence (0 keeps all)")] = 0.0,
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
+    check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
 ) -> None:
     """Convert a PDF (or a folder of page images) into an RTL EPUB 3."""
     from rtlbook import epub, frontmatter, layout, ocr, text
@@ -132,7 +145,13 @@ def convert(
     numbers = parse_pages(pages, len(pdf.open_book(pdf_path)))
     kinds = page_kinds(pdf_path, numbers)
     print_doctype(kinds)
-    emit(event="start", pages=len(numbers), document=document_type(kinds).kind)
+    t0 = time.perf_counter()
+    scripts = check_script_of(pdf_path, numbers, lang) if check_script else script.ScriptCheck(None)
+    timings["script"] = time.perf_counter() - t0
+    if check_script:
+        print_script(scripts)
+    emit(event="start", pages=len(numbers), document=document_type(kinds).kind,
+         script=scripts.found, script_expected=scripts.expected)
 
     t0 = time.perf_counter()
     cached = 0
@@ -219,6 +238,7 @@ def convert(
         ),
         "mean_confidence": round(sum(confs) / len(confs), 1) if confs else None,
         "low_confidence_pages": low,
+        "script": {"expected": scripts.expected, "found": scripts.found, "pages": scripts.seen} if check_script else None,
         "warning": confidence_message(round(sum(confs) / len(confs), 1) if confs else None),
         "paragraphs": len(paras),
         "headings": sum(p.heading for p in paras),

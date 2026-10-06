@@ -5,7 +5,8 @@
 
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 and Kindle KFX.
 So far it supports PDFs exported from a word processor (born-digital). Scanned and typewritten books
-are planned: they convert, but with more errors. `inspect` tells you which kind you have. See
+are planned: they convert, but with more errors. `inspect` tells you which kind you have, and checks the book
+is in the right script (not English, say). See
 [DESIGN.md](DESIGN.md) for the full plan.
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
@@ -20,7 +21,7 @@ docker build -f docker/Dockerfile -t rtlbook:dev .
 # Create input/ and output/, then put your PDF in input/
 ./rtlbook init
 
-# Exported PDF or scan?
+# Exported PDF or scan? Right script?
 ./rtlbook inspect input/book.pdf
 
 # Convert to EPUB → output/book.epub

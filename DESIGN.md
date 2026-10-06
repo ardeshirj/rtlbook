@@ -53,7 +53,7 @@ Solid boxes are built; dashed ones are planned.
 
 ```mermaid
 flowchart TD
-    A[PDF, or a folder of page images] --> B[Inspect<br/>exported PDF or scan]
+    A[PDF, or a folder of page images] --> B[Inspect<br/>exported PDF or scan · script check]
     B --> C[Render each page<br/>300 DPI, grayscale]
     C --> D[Preprocess<br/>binarize · optional crop]
     D --> E[OCR: Tesseract fas<br/>single-column mode]
@@ -80,6 +80,16 @@ settings. Re-running with other text or EPUB options takes seconds. Pages are OC
 supported yet), with the scan resolution. A page counts as a scan if images cover most of it, or a good part of it
 while the text layer holds almost no Persian letters (scanned strips pasted into Word, or a scan with an English
 header). `convert` prints the same verdict and warns on scans. Correct on all 10 test PDFs.
+
+**Script check — built.** Before OCR, Tesseract's orientation and script detection (OSD, `--psm 0`, the `osd`
+model) looks at up to six pages picked at random from the body of the book (not the first or last tenth; the same
+book always gets the same pages) until three answer, and takes the majority (`script.py`). If the book is in another
+script than the OCR language's (Latin for `fas`), `convert` says so, in the `start` event too (`script`,
+`script_expected`), and goes on; a program running it can stop it there. OSD reads the page images, so it works on
+scans and garbled text layers alike, in about 0.5 s a page. It names scripts, not languages: Persian, Arabic and
+Urdu are all Arabic. Its confidence number varies too much to use (2 to 260 on clean pages), so only the names
+count. Correct on all 18 Persian test PDFs (7 of them scans) and on test pages in 11 scripts (Latin, Cyrillic,
+Arabic in three styles including Nastaliq, Hebrew, Han, Devanagari, Thai; sideways and upside-down pages too).
 
 *Dropped:* a text-layer route that read the PDF's own text when quality checks passed (presentation forms,
 visual-order detection, garbage ratio, common-word score). None of 11 exported Persian PDFs had a text layer
@@ -177,7 +187,7 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
 Runs in Docker through the `./rtlbook` wrapper, which only shares the repository folder with the container.
 
 ```bash
-./rtlbook inspect input/book.pdf                       # exported PDF or scan?
+./rtlbook inspect input/book.pdf                       # exported PDF or scan? right script?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
 ./rtlbook kfx output/book.epub                         # → output/book.kfx (macOS + Kindle Previewer)
 ./rtlbook eval output/book.rtlbook ref.txt --pages 24  # accuracy against a checked text
@@ -210,6 +220,7 @@ rtlbook/
 ├─ src/rtlbook/
 │  ├─ cli.py                 # Typer commands: inspect, convert, kfx, eval
 │  ├─ doctype.py             # exported PDF or scan
+│  ├─ script.py              # script check: Tesseract OSD on a few random pages
 │  ├─ pdf.py                 # PDFs and image folders: rendering, page info, cover image
 │  ├─ preprocess.py          # binarize, crop
 │  ├─ ocr.py                 # Tesseract, line boxes, column-gap splitting
@@ -279,7 +290,7 @@ rtlbook/
 ## 11. Decisions and POC results (2026-09-24)
 
 **Decisions**
-- **Runtime: Docker.** One image (`docker/Dockerfile`) with Tesseract 5 and `tessdata_best` (fas, ara), epubcheck 5.1, Java, the Parastoo font, and Python deps via uv. The `./rtlbook` wrapper runs the CLI with the current directory mounted.
+- **Runtime: Docker.** One image (`docker/Dockerfile`) with Tesseract 5 and `tessdata_best` (fas, ara, and osd for the script check), epubcheck 5.1, Java, the Parastoo font, and Python deps via uv. The `./rtlbook` wrapper runs the CLI with the current directory mounted.
 - **First language: Persian.**
 - **Kindle output: KFX, built locally.** Tested on the device: AZW3 (Calibre) renders Persian with heavy lag and multiple refreshes. KFX is much faster and has Persian reflow and real page numbers. The pipeline: EPUB (container) → **Kindle Previewer 4 on the Mac** (EPUB→KPF, macOS/Windows only) → calibre **KFX Output** plugin in the container (KPF→KFX). Run it with `./rtlbook kfx book.epub`. Nothing is uploaded to Amazon.
 - **Digits:** Persian ۰–۹ by default for Persian books (`--digits`).

@@ -8,7 +8,7 @@ ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 # ---- Downloads: OCR models, epubcheck, font ----
 FROM debian:bookworm-slim AS downloads
 ARG EPUBCHECK_VERSION=5.1.0
-ARG TESSDATA_LANGS="fas ara"
+ARG TESSDATA_LANGS="fas ara osd"  # osd: orientation and script detection (the script check)
 ARG PARASTOO_VERSION=2.0.1
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
