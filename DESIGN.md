@@ -54,18 +54,22 @@ Solid boxes are built; dashed ones are planned.
 ```mermaid
 flowchart TD
     A[PDF, or a folder of page images] --> B[Inspect<br/>exported PDF or scan · script check]
-    B --> C[Render each page<br/>300 DPI, grayscale]
-    C --> D[Preprocess<br/>binarize · optional crop]
-    D --> E[OCR: Tesseract fas<br/>single-column mode]
-    E --> F[Layout<br/>split lines at column gaps · read rows right to left]
-    F --> G[Text clean-up<br/>letters · digits · commas · parentheses · headers/footers]
-    G --> H[Structure<br/>paragraphs · dialogue · chapter headings · page markers]
-    H --> I[EPUB 3 builder]
-    I --> J[epubcheck]
-    I --> K[KFX via Kindle Previewer]
+    B --> P
+    subgraph P [Each page, in parallel, cached]
+        C[Render<br/>300 DPI, grayscale] --> D[Preprocess<br/>binarize · optional crop]
+        D --> E[OCR: Tesseract fas<br/>single-column mode · split lines at column gaps]
+    end
+    P --> F[Reading order<br/>side-by-side lines as rows, right to left]
+    F --> G[Title and author<br/>from the title page]
+    G --> H[Text clean-up<br/>letters · digits · commas · parentheses · running headers · debris]
+    H --> I[Structure<br/>paragraphs · dialogue · title and contents pages kept apart ·<br/>chapter headings, checked against the contents page · sections · page markers]
+    I --> J[EPUB 3 builder<br/>cover · Parastoo · TOC · page list]
+    J --> K[epubcheck]
+    K --> R[report.json<br/>confidence warning · title and author found]
+    J -->|rtlbook kfx| L[KFX via Kindle Previewer<br/>on the Mac]
     D -.-> D2[Deskew · split spreads · denoise]
     E -.-> E2[Other engines for scans:<br/>Kraken · AI vision]
-    H -.-> H2[Front matter · TOC · footnotes · couplets in the EPUB]
+    I -.-> I2[Footnotes · couplets laid out as verse]
 ```
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
