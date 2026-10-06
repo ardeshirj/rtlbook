@@ -9,7 +9,7 @@ ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 FROM debian:bookworm-slim AS downloads
 ARG EPUBCHECK_VERSION=5.1.0
 ARG TESSDATA_LANGS="fas ara"
-ARG VAZIRMATN_VERSION=33.003
+ARG PARASTOO_VERSION=2.0.1
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
 # Tesseract "best" (float) models, more accurate than distro packages
@@ -22,11 +22,12 @@ RUN curl -fsSL -o /tmp/epubcheck.zip \
         https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip \
     && unzip -q /tmp/epubcheck.zip -d /opt \
     && mv /opt/epubcheck-${EPUBCHECK_VERSION} /opt/epubcheck
-# Vazirmatn (OFL) embedded into Persian EPUBs
-RUN curl -fsSL -o /tmp/vz.zip \
-        https://github.com/rastikerdar/vazirmatn/releases/download/v${VAZIRMATN_VERSION}/vazirmatn-v${VAZIRMATN_VERSION}.zip \
+# Parastoo (OFL), a book typeface by Saber Rastikerdar, embedded into Persian EPUBs (the "web" cut, with Latin)
+RUN curl -fsSL -o /tmp/parastoo.zip \
+        https://github.com/rastikerdar/parastoo-font/releases/download/v${PARASTOO_VERSION}/parastoo-font-v${PARASTOO_VERSION}.zip \
     && mkdir -p /opt/fonts \
-    && unzip -q -j /tmp/vz.zip fonts/ttf/Vazirmatn-Regular.ttf fonts/ttf/Vazirmatn-Bold.ttf OFL.txt -d /opt/fonts
+    && unzip -q -j /tmp/parastoo.zip web/Parastoo.ttf web/Parastoo-Bold.ttf LICENSE -d /opt/fonts \
+    && mv /opt/fonts/LICENSE /opt/fonts/OFL.txt
 
 # ---- Python environment, built with uv ----
 FROM ${PYTHON_IMAGE} AS venv

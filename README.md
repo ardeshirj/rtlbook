@@ -112,7 +112,7 @@ What `convert` does automatically:
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
-- **Builds a valid EPUB 3** (epubcheck) with RTL page direction, the Vazirmatn font, cover, and print page list.
+- **Builds a valid EPUB 3** (epubcheck) with RTL page direction, the Parastoo font, cover, and print page list.
 
 Typical real-world run (site credits on the title pages, extra front pages):
 
@@ -174,7 +174,7 @@ docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app 
 - **Built on:** [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and its
   `tessdata_best` models (Apache-2.0) · [PDFium](https://pdfium.googlesource.com/pdfium/) via
   [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) · [W3C EPUBCheck](https://github.com/w3c/epubcheck)
-  · [Vazirmatn](https://github.com/rastikerdar/vazirmatn) font by Saber Rastikerdar (SIL OFL 1.1),
+  · [Parastoo](https://github.com/rastikerdar/parastoo-font) font by Saber Rastikerdar (SIL OFL 1.1),
   embedded in the EPUBs · [calibre](https://calibre-ebook.com/) and the
   [KFX Output plugin](https://www.mobileread.com/forums/showthread.php?t=272407) by jhowell ·
   Amazon's Kindle Previewer (installed separately; not bundled).

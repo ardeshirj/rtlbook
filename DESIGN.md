@@ -38,7 +38,7 @@ differently. rtlbook therefore OCRs every page (§4.1, §12).
 
 | Format | Status | Notes |
 |---|---|---|
-| **EPUB 3** | **Built** | `page-progression-direction="rtl"`, `dir`/`lang` on every document, embedded Vazirmatn font, cover, chapter TOC and print page list. Opens in Apple Books, Kobo, KOReader, PocketBook, Boox. |
+| **EPUB 3** | **Built** | `page-progression-direction="rtl"`, `dir`/`lang` on every document, embedded Parastoo font, cover, chapter TOC and print page list. Opens in Apple Books, Kobo, KOReader, PocketBook, Boox. |
 | **KFX (Kindle)** | **Built** | Kindle Previewer (on the Mac) makes a KPF, calibre's KFX Output plugin (in the container) packages it. All local; nothing is uploaded to Amazon. Fast, with Persian reflow and real page numbers. |
 | AZW3 | Dropped | Tested on a Kindle: renders Persian with heavy lag (§11). |
 | KEPUB | Planned | Kobo's EPUB variant via `kepubify`. |
@@ -163,7 +163,7 @@ accepted. Off by default.
 ### 4.10 EPUB 3 builder — built
 Written directly (a ZIP of XHTML, CSS and an OPF manifest), keeping full control of RTL details and avoiding
 AGPL dependencies. One XHTML file per section, `nav.xhtml` with TOC and page list plus `toc.ncx`, the
-Vazirmatn font (OFL) embedded by default (`--no-embed-font` to leave it to the reader).
+Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to leave it to the reader).
 
 ### 4.11 Validation — built
 - **epubcheck** on every build; any error fails `convert`.
@@ -272,14 +272,14 @@ rtlbook/
 - OCR: Tesseract 5 + `tessdata_best`; Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
 - PDF and images: pypdfium2, Pillow
 - E-book: EPUB 3.3 (W3C), epubcheck, Kindle Previewer 4, calibre + KFX Output plugin, kepubify (planned)
-- Font: Vazirmatn (OFL)
+- Font: Parastoo (OFL); Vazirmatn until 2026-10-05
 
 ---
 
 ## 11. Decisions and POC results (2026-09-24)
 
 **Decisions**
-- **Runtime: Docker.** One image (`docker/Dockerfile`) with Tesseract 5 and `tessdata_best` (fas, ara), epubcheck 5.1, Java, the Vazirmatn font, and Python deps via uv. The `./rtlbook` wrapper runs the CLI with the current directory mounted.
+- **Runtime: Docker.** One image (`docker/Dockerfile`) with Tesseract 5 and `tessdata_best` (fas, ara), epubcheck 5.1, Java, the Parastoo font, and Python deps via uv. The `./rtlbook` wrapper runs the CLI with the current directory mounted.
 - **First language: Persian.**
 - **Kindle output: KFX, built locally.** Tested on the device: AZW3 (Calibre) renders Persian with heavy lag and multiple refreshes. KFX is much faster and has Persian reflow and real page numbers. The pipeline: EPUB (container) → **Kindle Previewer 4 on the Mac** (EPUB→KPF, macOS/Windows only) → calibre **KFX Output** plugin in the container (KPF→KFX). Run it with `./rtlbook kfx book.epub`. Nothing is uploaded to Amazon.
 - **Digits:** Persian ۰–۹ by default for Persian books (`--digits`).

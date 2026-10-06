@@ -110,7 +110,7 @@ def convert(
     work: Annotated[Optional[Path], typer.Option(help="Work/cache dir (default: <output>.rtlbook)")] = None,
     drop_lines: Annotated[Optional[str], typer.Option(help="Regex: drop matching lines (watermarks, site banners)")] = None,
     digits: Annotated[str, typer.Option(help="Digits in the text: auto (Persian ۰-۹ for fas), fa, or keep")] = "auto",
-    embed_font: Annotated[bool, typer.Option(help="Embed the Vazirmatn font (off: use the reader's own font)")] = True,
+    embed_font: Annotated[bool, typer.Option(help="Embed the Parastoo font (off: use the reader's own font)")] = True,
     min_line_conf: Annotated[float, typer.Option(help="Drop OCR lines below this confidence (0 keeps all)")] = 0.0,
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
