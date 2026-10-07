@@ -57,8 +57,11 @@ the next.
   2. *Mark damaged words:* a word with very low confidence inside an otherwise good line becomes a marker in the
      EPUB (for example `[ناخوانا]`, "illegible"), styled so readers see something is missing. The threshold is
      measured on checked pages so real words aren't replaced.
-  3. *Report the pages:* list pages that look marked up in `report.json`, so a person can check them, and later
-     fill in the missing words on the review page.
+  3. *Report the pages:* list pages that look marked up in `report.json`, so a person can check them.
+  4. *Recover from the print, never from the handwriting:* a note is a reader's gloss or "correction", not the
+     printed text. A lost word is filled in only from another source of the same text: a clean scan of another
+     copy of the same printing (which rtlbook could OCR and use for just the damaged spots), or else a later
+     edition, recorded as such. Until then the gap marker stays.
 - **Measure:** on checked pages from both books, nonsense words that reach the text and real words wrongly
   dropped or marked.
 
