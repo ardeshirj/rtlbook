@@ -7,7 +7,7 @@ Convert PDF books in right-to-left languages (Persian first) into reflowable EPU
 So far it supports PDFs exported from a word processor (born-digital). Scanned and typewritten books
 are planned: they convert, but with more errors. `inspect` tells you which kind you have, and checks the book
 is in the right script (not English, say). See
-[DESIGN.md](DESIGN.md) for the full plan.
+[DESIGN.md](DESIGN.md) for how it works and [ROADMAP.md](ROADMAP.md) for what's next.
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
 > [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
@@ -60,7 +60,8 @@ Not yet done or known to be weak:
   reports and pass `--title`/`--author` when it's wrong or missing.
 - **No web app yet.** The CLI is the only interface.
 
-See [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and next steps.
+See [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and
+[ROADMAP.md](ROADMAP.md) for what's next.
 Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [LESSONS.md](LESSONS.md).
 
 ## Folders

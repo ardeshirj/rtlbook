@@ -1,7 +1,8 @@
 # rtlbook — notes for AI assistants and contributors
 
 rtlbook converts PDF books in right-to-left languages (Persian first) into EPUB 3 and Kindle KFX. See `README.md`
-for usage, `DESIGN.md` for the engine's design and dated decisions, and `LESSONS.md` for troubleshooting.
+for usage, `DESIGN.md` for the engine's design and dated decisions, `ROADMAP.md` for phases and planned work,
+and `LESSONS.md` for troubleshooting.
 
 ## Running things
 - Everything runs in Docker: build with `make build` (`docker build -f docker/Dockerfile -t rtlbook:dev .`; `make`
@@ -18,6 +19,7 @@ for usage, `DESIGN.md` for the engine's design and dated decisions, and `LESSONS
   (`tests/test_ground_truth.py`); keep or improve the baselines noted in `tests/data/*/README.md`.
 - Experiments and their notes go in `output/poc/<NN>-<name>/` (git-ignored); record outcomes worth keeping in
   `DESIGN.md` (engine decisions) or `LESSONS.md` (practical lessons).
-- `DESIGN.md` is about the engine only.
+- `DESIGN.md` is about the engine only, and only what is built (or dropped). Plans go in `ROADMAP.md`; when an item
+  ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no service or library plans.
 - Prefer simple, general rules over per-PDF special cases; every page is OCR'd (the PDF's own text layer isn't used).
 - Small commits with a clear message explaining why.
