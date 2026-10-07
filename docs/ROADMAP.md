@@ -70,7 +70,7 @@ prototype in `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-
 - **Review page:** reviewing disagreements between two OCR engines; proofreading a whole book.
 - **Outputs:** KEPUB (Kobo's EPUB variant, via `kepubify`); author display order on Kindle (OPF `file-as`).
 - **Readers:** test on Apple Books and Kobo/KOReader (Kindle is tested).
-- **Repository:** a license, and CI that builds the image and runs the tests.
+- **Repository:** CI that builds the image and runs the tests.
 
 ## 3. Later
 - Typewritten books (none found yet).

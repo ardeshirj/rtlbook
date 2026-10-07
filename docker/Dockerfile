@@ -37,7 +37,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --no-install-project
 COPY src ./src
-COPY README.md* ./
+COPY README.md* LICENSE NOTICE ./
 RUN uv sync
 
 # ---- core: OCR and EPUB, no Kindle output ----

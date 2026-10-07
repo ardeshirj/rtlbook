@@ -171,3 +171,10 @@ docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app 
   embedded in the EPUBs · [calibre](https://calibre-ebook.com/) and the
   [KFX Output plugin](https://www.mobileread.com/forums/showthread.php?t=272407) by jhowell ·
   Amazon's Kindle Previewer (installed separately; not bundled).
+
+## License
+
+[Apache-2.0](LICENSE). The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
+license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck, calibre, the
+KFX Output plugin, Kindle Previewer) and the Parastoo font keep their own licenses; none of them is stored in this
+repository.
