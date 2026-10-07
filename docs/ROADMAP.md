@@ -44,6 +44,24 @@ the next.
   two-column verse.
 - Couplets laid out as verse in the EPUB.
 
+### Readers' marks in scans (open)
+- **Problem:** scans of library copies carry earlier readers' handwriting: notes in the margins and between
+  lines, underlining, arrows. OCR reads it as Persian-looking nonsense words inside the lines of text, and a note
+  written over printed words damages them too. Seen on a 1963 poetry printing (a page of glosses) and in a 1925
+  Masnavi scan (pencil notes). Nothing in the pipeline catches it today.
+- **Goal:** no handwriting reaches the book as text. Where printed words are lost under it, the book shows a
+  visible gap marker instead of a guess or nonsense, the way printed editions mark an unreadable word.
+- **Approach (to investigate):**
+  1. *Drop margin notes:* printed lines share column edges across the book; words beyond those edges with low
+     confidence are notes, not text.
+  2. *Mark damaged words:* a word with very low confidence inside an otherwise good line becomes a marker in the
+     EPUB (for example `[ناخوانا]`, "illegible"), styled so readers see something is missing. The threshold is
+     measured on checked pages so real words aren't replaced.
+  3. *Report the pages:* list pages that look marked up in `report.json`, so a person can check them, and later
+     fill in the missing words on the review page.
+- **Measure:** on checked pages from both books, nonsense words that reach the text and real words wrongly
+  dropped or marked.
+
 ### Unusual fonts (open)
 Decorative fonts defeat Tesseract. `convert` warns (mean confidence below 70) but has no fallback. Findings on one
 book (a handwriting-style font, confidence 55): no Tesseract setting helped (resolution, binarization,
