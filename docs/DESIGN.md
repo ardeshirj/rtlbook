@@ -221,8 +221,7 @@ rtlbook/
 │  ├─ evaluate.py            # accuracy against a checked text
 │  └─ validate.py            # epubcheck
 ├─ tests/                    # unit tests; tests/data/ = public-domain ground truth
-├─ ROADMAP.md                # phases and planned work
-├─ LESSONS.md                # practical lessons and troubleshooting
+├─ docs/                     # DESIGN.md (this file), ROADMAP.md (phases, planned work), LESSONS.md (troubleshooting)
 ├─ input/                    # PDFs to convert (git-ignored)
 └─ output/                   # EPUB/KFX, per-book OCR caches, experiment notes (git-ignored)
 ```
