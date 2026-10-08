@@ -19,6 +19,17 @@ def tesseract_version() -> str:
 
 
 def ocr_lines(image: Image.Image, lang: str, psm: int = 3) -> list[Line]:
+    lines = []
+    for part in split_columns(ocr_words(image, lang, psm)):
+        text = " ".join(wd.text for wd in part)
+        conf = sum(wd.conf for wd in part) / len(part)
+        box = (min(wd.x0 for wd in part), min(wd.y0 for wd in part), max(wd.x1 for wd in part), max(wd.y1 for wd in part))
+        lines.append(Line(text, box, round(conf, 1)))
+    return lines
+
+
+def ocr_words(image: Image.Image, lang: str, psm: int = 3) -> list[list[Word]]:
+    """Tesseract's text lines, top to bottom, each a list of words in reading order with boxes and confidences."""
     buf = io.BytesIO()
     image.save(buf, "PNG")
     # TSV via -c variables: the "tsv" config file is not found when TESSDATA_PREFIX points at
@@ -30,25 +41,16 @@ def ocr_lines(image: Image.Image, lang: str, psm: int = 3) -> list[Line]:
     )
     rows = csv.DictReader(io.StringIO(proc.stdout.decode("utf-8")), delimiter="\t", quoting=csv.QUOTE_NONE)
 
-    boxes: dict[tuple, tuple[int, int, int, int]] = {}
     words: dict[tuple, list[Word]] = defaultdict(list)
     order: list[tuple] = []
     for r in rows:
         key = (r["block_num"], r["par_num"], r["line_num"])
         left, top, w, h = (int(r[k]) for k in ("left", "top", "width", "height"))
         if r["level"] == "4":
-            boxes[key] = (left, top, left + w, top + h)
             order.append(key)
         elif r["level"] == "5" and (t := (r["text"] or "").strip()):
             words[key].append(Word(t, left, left + w, top, top + h, float(r["conf"])))
-
-    lines = []
-    for part in split_columns([words[k] for k in order if words.get(k)]):
-        text = " ".join(wd.text for wd in part)
-        conf = sum(wd.conf for wd in part) / len(part)
-        box = (min(wd.x0 for wd in part), min(wd.y0 for wd in part), max(wd.x1 for wd in part), max(wd.y1 for wd in part))
-        lines.append(Line(text, box, round(conf, 1)))
-    return lines
+    return [words[k] for k in order if words.get(k)]
 
 
 @dataclass(frozen=True)
