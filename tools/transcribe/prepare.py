@@ -7,7 +7,8 @@ docs/TRAINING-DATA.md. Re-running for a page replaces its OCR and crops; checked
 
 Run in the container from the repo root, e.g.:
   python tools/transcribe/prepare.py input/book.pdf --pages 40,86-87 --split test \\
-      --out output/poc/35-period-type/lines --common dict/common.txt --more dict/more.txt
+      --out output/poc/35-period-type/lines --common dict/common.txt --more dict/more.txt \\
+      --source "first printing, 1963" --public-domain no
 """
 
 from __future__ import annotations
@@ -128,6 +129,9 @@ def main() -> None:
     ap.add_argument("--dpi", type=int, default=300)
     ap.add_argument("--lang", default="fas")
     ap.add_argument("--psm", type=int, default=4)
+    ap.add_argument("--source", help="the edition, e.g. 'first printing, Tehran 1932' (kept once set)")
+    ap.add_argument("--public-domain", choices=["yes", "no"],
+                    help="whether the source edition is public domain everywhere (kept once set)")
     args = ap.parse_args()
 
     book_words = []
@@ -140,6 +144,10 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     index_path = args.out / "lines.json"
     index = json.loads(index_path.read_text()) if index_path.exists() else {"book": args.pdf.name, "lines": []}
+    if args.source:
+        index["source"] = args.source
+    if args.public_domain:
+        index["public_domain"] = args.public_domain == "yes"
     pages = page_numbers(args.pages)
     kept = [ln for ln in index["lines"] if ln["page"] not in pages]
     doc = pdf.open_book(args.pdf)
@@ -182,6 +190,7 @@ def main() -> None:
               f"flagged words")
     carry_over(args.out, [ln for ln in index["lines"] if ln["page"] in pages], new)
     index["lines"] = sorted(kept + new, key=lambda ln: (ln["split"] != "test", ln["page"], ln["id"]))
+    index = {k: index[k] for k in ("book", "source", "public_domain") if k in index} | {"lines": index["lines"]}
     index_path.write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(index['lines'])} lines in {index_path}")
 

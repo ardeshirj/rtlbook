@@ -32,6 +32,8 @@ order. Re-preparing a page renumbers its lines; `prepare.py` carries over the de
 ```json
 {
   "book": "book.pdf",
+  "source": "first printing, Tehran 1932",
+  "public_domain": true,
   "lines": [
     {
       "id": "p028-04", "page": 28, "split": "test", "rules": 1,
@@ -48,6 +50,8 @@ order. Re-preparing a page renumbers its lines; `prepare.py` carries over the de
 | Field | Meaning |
 |---|---|
 | `book` | the source file's name |
+| `source` | optional: the edition the scan is of (printing, place, year) |
+| `public_domain` | optional: `true` when that edition is public domain everywhere, so the set's lines may be published; `false` or missing: keep the set private |
 | `id`, `page` | the line ID; the page number in the PDF, from 1 |
 | `split` | `train` or `test`. Test lines measure the OCR and must never be used for training. |
 | `rules` | the version of the transcription rules (below) the line is to be checked under |
