@@ -7,7 +7,8 @@ text a person checked against the image. It's the ground truth for measuring OCR
 rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones; it has no checking tool of
 its own. Push and pull (`tools/transcribe/bucket`; the bucket and its key in `training.env`, from
 `training.env.example`) copy a set to and from an S3 bucket, where any program can be the checking tool: it reads
-the files below and writes the decisions.
+the files below and writes the decisions. The bucket is private: it keeps sets for checking and training, public
+domain or not. Whether a set may also be published is its `public_domain` field, set before the first push.
 
 Format version 1. New fields may be added at any time, so readers must ignore fields they don't know; renaming or
 removing a field, or changing what one means, raises the version.
