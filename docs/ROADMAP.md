@@ -19,7 +19,7 @@ the next.
 
 ## 2. Work items
 
-### 1960s letterpress type — in progress (ahead of phases 3–4)
+### 1960s letterpress type — trial done; next on a public-domain book (ahead of phases 3–4)
 - **Problem:** on a 1963 poetry printing, Tesseract misreads 6–12% of letters (two hand-checked pages). Most
   errors are dots (ی→ب, ن→ت, پ→د), گ read as ک, bold poem titles garbled, and specks read as characters.
   Kraken's stock Persian model does worse on this type (20–30%).
@@ -36,6 +36,13 @@ the next.
      model chosen per book from a reviewed sample page, not a replacement for `fas`. Training lines are scans and
      never go into git; only the model might ship.
 - **Not covered here:** layout (next item).
+- **Trial (2026-10-07):** the line transcription page (`tools/transcribe/`) was tried on that printing: 349 lines,
+  324 checked (65 on held-out test pages), frozen as a private dataset version with a manifest. No model trained:
+  the book isn't public domain everywhere, so its data can't be shared. Lessons: settle the rules (with real
+  examples) before checking; a routine second look at lines that differ most from OCR (it changed 12 of 21); crops
+  must include marks at line edges; keep an append-only history of decisions.
+- **Next:** the same steps on a book in this type that is public domain everywhere, so the checked lines and the
+  model can be shared. The checking moves to a separate tool that reads the set from a bucket (push and pull, [TRAINING-DATA.md](TRAINING-DATA.md)).
 - **Notes:** `output/poc/35-period-type/` (git-ignored).
 
 ### Verse layout (phase 3)
