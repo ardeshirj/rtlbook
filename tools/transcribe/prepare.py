@@ -25,7 +25,7 @@ from rtlbook import ocr, pdf, preprocess  # noqa: E402
 from rtlbook.suggest import Lexicon, normalize  # noqa: E402
 from rtlbook.text import normalize_text, persian_digits  # noqa: E402
 
-RULES = 1  # version of the transcription rules shown on the page (index.html); stored with every line
+RULES = 1  # version of the transcription rules (docs/TRAINING-DATA.md); stored with every line
 FLAG_CONF = 60  # words OCR'd below this confidence are flagged even when they are real words
 GAP_SPLIT = 2.5  # a gap wider than this many word heights splits a line (page number and running title)
 MIN_LINE_H = 12  # px at 300 dpi: shorter "lines" are specks
@@ -112,7 +112,8 @@ def carry_over(out: Path, old: list[dict], new: list[dict]) -> None:
                 ln["start"], ln["prefilled"] = saved["text"], False
             changed += 1
     lost = len(saved_old) - kept - changed
-    review_path.write_text(json.dumps(review, ensure_ascii=False, indent=1), encoding="utf-8")
+    if review or review_path.exists():  # no empty file in a new folder: push would take it for local checking
+        review_path.write_text(json.dumps(review, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"checked lines: {kept} kept, {changed} to check again (new crop), {lost} with no matching line")
 
 
