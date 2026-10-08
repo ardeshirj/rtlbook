@@ -13,6 +13,8 @@ output/
 *.kpf.log.csv
 *.kfx.log
 .kpf-*/
+# The training bucket's key (training.env.example).
+training.env
 # Local working plan, kept out of git on purpose.
 /PLAN.md
 .DS_Store

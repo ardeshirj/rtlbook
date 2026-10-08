@@ -5,7 +5,8 @@ text a person checked against the image. It's the ground truth for measuring OCR
 (the [tesstrain](https://github.com/tesseract-ocr/tesstrain) layout: `<id>.png` next to `<id>.gt.txt`).
 
 rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones; it has no checking tool of
-its own. Push and pull copy a set to and from an S3 bucket, where any program can be the checking tool: it reads
+its own. Push and pull (`tools/transcribe/bucket`; the bucket and its key in `training.env`, from
+`training.env.example`) copy a set to and from an S3 bucket, where any program can be the checking tool: it reads
 the files below and writes the decisions.
 
 Format version 1. New fields may be added at any time, so readers must ignore fields they don't know; renaming or
@@ -82,7 +83,7 @@ wrong way to type it. The names used by rule version 1: `joined-prefix`, `joined
 
 ## Decisions
 
-A decision is `{"status", "text", "saved"}`:
+A decision is `{"status", "text", "saved"}`, and optionally `"by"`:
 
 | `status` | Meaning | `<id>.gt.txt` |
 |---|---|---|
@@ -91,17 +92,22 @@ A decision is `{"status", "text", "saved"}`:
 | `skip` | the image can't be used (not one line of printed text) | removed |
 
 `text` has single spaces between words (half-spaces, U+200C, are kept as typed); `saved` is the time of the save
-(ISO 8601). Only `done` lines go into training or testing.
+(ISO 8601: UTC ending in `Z`, or local time in sets checked before this format); `by` names who checked the line,
+for a tool used by several people. Only `done` lines go into training or testing. Leave `by` out of a set that is
+published.
 
-They're stored differently in a folder and in a bucket, since a bucket can't append to a file:
+| File | What it is |
+|---|---|
+| `review.json` | the latest decision per line: `{"<id>": decision}` |
+| `saves.jsonl` (folder) or `saves/<time>-<id>.json` (bucket) | every save, `{"id", …decision}`, never changed: the history. A bucket can't add to a file, so there each save is a file of its own; `<time>` is `saved` as `20261008T093000.000Z`, so the names sort in order. |
 
-| | In a folder | In a bucket |
-|---|---|---|
-| latest per line | `review.json`: `{"<id>": decision}` | `review/<id>.json`: the decision |
-| every save | `saves.jsonl`: one `{"id", …decision}` per line, appended, never rewritten | `saves/<saved, UTC>-<id>.json`: one per save, never rewritten |
+`review.json` can always be rebuilt from the history (the last save of each line). A checking tool writes one save
+at a time, so `review.json` is never written by two at once.
 
-`saved` is UTC, ending in `Z`. Pull turns the bucket form into the folder form; push never sends decisions (except
-the first push of a set checked before it had a bucket), so whatever was checked in the bucket stays as it is.
+Push never sends decisions, so whatever was checked in the bucket stays as it is; the exception is the first push of
+a set checked before it had a bucket (no `review.json` there yet), which sends its `review.json` and turns
+`saves.jsonl` into `saves/`. Pull brings back `review.json` and the `.gt.txt` files (and removes those of lines no
+longer `done`), and writes `saves.jsonl` from `saves/`.
 
 ## Transcription rules, version 1
 
