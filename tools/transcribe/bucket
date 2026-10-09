@@ -6,8 +6,9 @@
 # Push sends the lines (lines.json, the images, examples.json), never decisions, except on a set's first push when
 # the folder has some (they move to the bucket). Pull replaces the folder's decisions with the bucket's: once a set
 # is pushed, check it there, not in the folder. Re-preparing pages: pull, prepare.py, then push.
-# The bucket and its key are in training.env (git-ignored; copy training.env.example). Runs the AWS command-line tool
-# in Docker, and Python in rtlbook:dev.
+# The bucket and its key are in training.env (git-ignored; copy training.env.example); another file, such as one for
+# a local S3 server, with TRAINING_ENV=training.local.env. Runs the AWS command-line tool in Docker, and Python in
+# rtlbook:dev.
 set -e
 cd "$(dirname "$0")/../.."
 usage() { echo "usage: tools/transcribe/bucket push|pull FOLDER SET" >&2; exit 2; }
@@ -15,8 +16,9 @@ usage() { echo "usage: tools/transcribe/bucket push|pull FOLDER SET" >&2; exit 2
 cmd=$1 dir=$2 set=$3
 case "$cmd" in push|pull) ;; *) usage ;; esac
 case "$set" in ""|-*|*[!a-z0-9-]*) echo "SET: lowercase letters, digits and -" >&2; exit 2 ;; esac
-[ -f training.env ] || { echo "No training.env: copy training.env.example and fill it in." >&2; exit 1; }
-. ./training.env
+env=${TRAINING_ENV:-training.env}
+[ -f "$env" ] || { echo "No $env: copy training.env.example and fill it in." >&2; exit 1; }
+. "./$env"
 mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 remote="s3://$S3_BUCKET/$set/"
