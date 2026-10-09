@@ -1,10 +1,10 @@
 # RTL PDF → E-book Converter: Design
 
-**Status:** proof of concept. Exported Persian PDFs convert end to end to EPUB 3; scans convert with more errors
-and aren't supported yet. · **Version:** v0.5 · **Date:** 2026-10-08
+**Status:** early (rtlbook 0.5). Exported Persian PDFs convert end to end to EPUB 3; scans convert with more
+errors and aren't supported yet. · **Updated:** 2026-10-08
 
 > Each section says what is **built** and what was **dropped**; what's planned is in [ROADMAP.md](ROADMAP.md).
-> The dated decisions and measurements behind it are in §11 (POC, 2026-09-24), §12 (2026-10-01 – 10-02) and §13
+> The dated decisions and measurements behind it are in §11 (first prototype, 2026-09-24), §12 (2026-10-01 – 10-02) and §13
 > (2026-10-08).
 
 ## 1. Goal
@@ -241,7 +241,7 @@ Moved to [ROADMAP.md](ROADMAP.md).
   public-domain test pages.
 - **AI vision** can produce fluent but wrong text. Use it with an independent engine and review disagreements.
 
-### Answered since v0.2
+### Questions answered
 1. Languages: **Persian first.**
 2. E-readers: **EPUB 3 for Readium-based reading systems (Thorium)**; device formats out of scope (§13; KFX
    for Kindle until 2026-10-08).

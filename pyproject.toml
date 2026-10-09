@@ -1,6 +1,6 @@
 [project]
 name = "rtlbook"
-version = "0.1.0"
+version = "0.5.0"
 description = "Convert RTL-language PDF books (typed, scanned, typewriter) into EPUB"
 requires-python = ">=3.12"
 license = "Apache-2.0"

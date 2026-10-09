@@ -1,7 +1,7 @@
 # rtlbook
 
-> ⚠️ **Status: proof of concept.** This works end to end, but it has only been tested on a small set of
-> Persian novels on one Mac. Expect rough edges and breaking changes. See [Status](#status).
+> **Status: early (0.5).** Exported Persian PDFs convert end to end to EPUB; scanned books aren't supported
+> yet. Expect breaking changes between versions. See [Status](#status).
 
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. EPUB is the only output,
 made for reading apps built on [Readium](https://readium.org/), such as
@@ -39,7 +39,8 @@ code changes apply without a rebuild.
 
 ## Status
 
-This is a **proof of concept (v0.1)**, not a finished tool.
+rtlbook is **early (version 0.5)**: it does one kind of book well and is being extended one document type at a
+time (see the [roadmap](docs/ROADMAP.md)). `rtlbook version` prints the version.
 
 What has been verified:
 - 8 Persian novels (3,231 pages, born-digital PDFs from Word, pdfFactory, iText and others) converted to
@@ -58,7 +59,7 @@ Not yet done or known to be weak:
   reports and pass `--title`/`--author` when it's wrong or missing.
 - **No web app yet.** The CLI is the only interface.
 
-See [DESIGN.md §11](docs/DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and
+See [DESIGN.md](docs/DESIGN.md) §11–13 for the dated decisions and measurements, and
 [ROADMAP.md](docs/ROADMAP.md) for what's next.
 Practical lessons and troubleshooting (OCR, EPUB, Docker on macOS) are in [LESSONS.md](docs/LESSONS.md).
 

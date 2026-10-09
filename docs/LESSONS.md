@@ -1,6 +1,7 @@
-# Lessons learned (POC, 2026-09-24)
+# Lessons learned
 
-Practical findings from building and testing the proof of concept on 8 Persian novels (3,231 pages).
+Practical findings from building and testing rtlbook, starting with the first prototype on 8 Persian novels
+(3,231 pages, 2026-09-24).
 This complements [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24),
 which records the decisions and results. Book text is deliberately not quoted here.
 
