@@ -11,11 +11,11 @@ the next.
 
 | Phase | Scope | Done when |
 |---|---|---|
-| **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB/KFX you'd read without noticing errors, with measured accuracy on sample pages |
-| **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization, KEPUB; tested on Kindle, KOReader, Apple Books and an Android reader | One complete book you'd happily recommend |
+| **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB you'd read without noticing errors, with measured accuracy on sample pages |
+| **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization; checked in Thorium Reader (Readium) | One complete book you'd happily recommend |
 | **3: Scans of modern print, then verse** | Deskew, spreads, low-resolution warnings; couplets laid out as verse in the EPUB | Measured accuracy on scanned pages; verse reads correctly |
 | **4: Old letterpress** | Second engine (Kraken and/or opt-in AI vision), engine choice per book, a review step for disagreements | A 1930s book converts with errors only a review can catch |
-| Later | Typewriter, other languages, searchable PDF / Markdown outputs | — |
+| Later | Typewriter, other languages | — |
 
 ## 2. Work items
 
@@ -96,8 +96,8 @@ prototype in `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-
   large edits are flagged, not accepted. Off by default.
 - **Structure:** footnotes (`noteref` → `footnote`); couplets laid out as verse.
 - **Review page:** reviewing disagreements between two OCR engines; proofreading a whole book.
-- **Outputs:** KEPUB (Kobo's EPUB variant, via `kepubify`); author display order on Kindle (OPF `file-as`).
-- **Readers:** test on Apple Books and Kobo/KOReader (Kindle is tested).
+- **Readers:** check the EPUBs in Thorium Reader (Readium) and fix what renders wrong there: page direction, the
+  embedded font, the page list, the TOC.
 - **Repository:** CI that builds the image and runs the tests.
 
 ## 3. Later

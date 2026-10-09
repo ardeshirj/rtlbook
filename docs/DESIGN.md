@@ -1,15 +1,16 @@
 # RTL PDF → E-book Converter: Design
 
-**Status:** proof of concept. Exported Persian PDFs convert end to end to EPUB 3 and Kindle KFX; scans convert
-with more errors and aren't supported yet. · **Version:** v0.4 · **Date:** 2026-10-07
+**Status:** proof of concept. Exported Persian PDFs convert end to end to EPUB 3; scans convert with more errors
+and aren't supported yet. · **Version:** v0.5 · **Date:** 2026-10-08
 
 > Each section says what is **built** and what was **dropped**; what's planned is in [ROADMAP.md](ROADMAP.md).
-> The dated decisions and measurements behind it are in §11 (POC, 2026-09-24) and §12 (2026-10-01 – 10-02).
+> The dated decisions and measurements behind it are in §11 (POC, 2026-09-24), §12 (2026-10-01 – 10-02) and §13
+> (2026-10-08).
 
 ## 1. Goal
 
-Take a PDF of a book written in a right-to-left (RTL) language and produce a clean, reflowable e-book that reads
-correctly on common e-readers. Persian first; Arabic, Urdu and Hebrew later, as configuration where possible.
+Take a PDF of a book written in a right-to-left (RTL) language and produce a clean, reflowable EPUB 3 that reads
+correctly in reading systems built on Readium, such as Thorium Reader. Persian first; Arabic, Urdu and Hebrew later, as configuration where possible.
 
 Support grows **one document type at a time**. Each type is finished, with measured accuracy, before the next:
 
@@ -33,6 +34,7 @@ differently. rtlbook therefore OCRs every page (§4.1, §12).
 - Keeping the exact visual layout (that's what the PDF is for). The output is reflowable text.
 - Handwriting recognition.
 - Complex tables, math, and multi-column magazine layouts.
+- Formats other than EPUB, and converting the EPUB for a device (Kindle, Kobo): other tools do that (§13).
 
 ---
 
@@ -40,8 +42,8 @@ differently. rtlbook therefore OCRs every page (§4.1, §12).
 
 | Format | Status | Notes |
 |---|---|---|
-| **EPUB 3** | **Built** | `page-progression-direction="rtl"`, `dir`/`lang` on every document, embedded Parastoo font, cover, chapter TOC and print page list. Opens in Apple Books, Kobo, KOReader, PocketBook, Boox. |
-| **KFX (Kindle)** | **Built** | Kindle Previewer (on the Mac) makes a KPF, calibre's KFX Output plugin (in the container) packages it. All local; nothing is uploaded to Amazon. Fast, with Persian reflow and real page numbers. |
+| **EPUB 3** | **Built** | `page-progression-direction="rtl"`, `dir`/`lang` on every document, embedded Parastoo font, cover, chapter TOC and print page list. Made for Readium-based reading systems (Thorium). The only output. |
+| KFX (Kindle) | Dropped | Built 2026-09-24 – 10-08 (Kindle Previewer + calibre's KFX Output plugin); device formats are out of scope (§13). |
 | AZW3 | Dropped | Tested on a Kindle: renders Persian with heavy lag (§11). |
 
 ---
@@ -63,7 +65,6 @@ flowchart TD
     I --> J[EPUB 3 builder<br/>cover · Parastoo · TOC · page list]
     J --> K[epubcheck]
     K --> R[report.json<br/>confidence warning · title and author found]
-    J -->|rtlbook kfx| L[KFX via Kindle Previewer<br/>on the Mac]
 ```
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
@@ -177,7 +178,6 @@ Runs in Docker through the `./rtlbook` wrapper, which only shares the repository
 ```bash
 ./rtlbook inspect input/book.pdf                       # exported PDF or scan? right script?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
-./rtlbook kfx output/book.epub                         # → output/book.kfx (macOS + Kindle Previewer)
 ./rtlbook eval output/book.rtlbook ref.txt --pages 24  # accuracy against a checked text
 ```
 
@@ -202,10 +202,10 @@ file, which a script applies to the text. A prototype was used to check OCR grou
 
 ```
 rtlbook/
-├─ rtlbook                   # wrapper: runs the CLI in Docker; `kfx` runs Kindle Previewer on the host
-├─ docker/Dockerfile         # Tesseract, epubcheck, calibre + KFX Output plugin, fonts, Python deps
+├─ rtlbook                   # wrapper: runs the CLI in Docker
+├─ docker/Dockerfile         # Tesseract, epubcheck, fonts, Python deps
 ├─ src/rtlbook/
-│  ├─ cli.py                 # Typer commands: inspect, convert, kfx, eval
+│  ├─ cli.py                 # Typer commands: init, inspect, convert, eval
 │  ├─ doctype.py             # exported PDF or scan
 │  ├─ script.py              # script check: Tesseract OSD on a few random pages
 │  ├─ pdf.py                 # PDFs: rendering, page info, cover image
@@ -217,13 +217,12 @@ rtlbook/
 │  ├─ headings.py            # chapter headings
 │  ├─ model.py               # Page, Line, Paragraph, Section
 │  ├─ epub.py                # EPUB 3 writer
-│  ├─ kindle.py              # KPF → KFX
 │  ├─ evaluate.py            # accuracy against a checked text
 │  └─ validate.py            # epubcheck
 ├─ tests/                    # unit tests; tests/data/ = public-domain ground truth
 ├─ docs/                     # DESIGN.md (this file), ROADMAP.md (phases, planned work), LESSONS.md (troubleshooting)
 ├─ input/                    # PDFs to convert (git-ignored)
-└─ output/                   # EPUB/KFX, per-book OCR caches, experiment notes (git-ignored)
+└─ output/                   # EPUBs, per-book OCR caches, experiment notes (git-ignored)
 ```
 
 ---
@@ -241,11 +240,11 @@ Moved to [ROADMAP.md](ROADMAP.md).
   the repository folder. Outside services (AI vision) only ever opt-in. Book text is never committed, except
   public-domain test pages.
 - **AI vision** can produce fluent but wrong text. Use it with an independent engine and review disagreements.
-- **Kindle:** KFX needs Kindle Previewer, which only runs on macOS/Windows.
 
 ### Answered since v0.2
 1. Languages: **Persian first.**
-2. E-readers: **EPUB readers and Kindle (KFX).**
+2. E-readers: **EPUB 3 for Readium-based reading systems (Thorium)**; device formats out of scope (§13; KFX
+   for Kindle until 2026-10-08).
 3. **A local tool.**
 4. Cloud OCR / AI: **opt-in only**; not used yet.
 5. GPU: **none** (Apple Silicon CPU). Tesseract and Kraken both run on CPU.
@@ -256,7 +255,7 @@ Moved to [ROADMAP.md](ROADMAP.md).
 ## 10. Key tools and references
 - OCR: Tesseract 5 + `tessdata_best` (`fas`, `ara`; `osd` for the script check); Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
 - PDF and images: pypdfium2, Pillow
-- E-book: EPUB 3.3 (W3C), epubcheck, Kindle Previewer 4, calibre + KFX Output plugin
+- E-book: EPUB 3.3 (W3C), epubcheck; reading systems: Readium, Thorium Reader
 - Font: Parastoo (OFL); Vazirmatn until 2026-10-05
 
 ---
@@ -266,7 +265,7 @@ Moved to [ROADMAP.md](ROADMAP.md).
 **Decisions**
 - **Runtime: Docker.** One image (`docker/Dockerfile`) with Tesseract 5 and `tessdata_best` (fas, ara, and osd for the script check), epubcheck 5.1, Java, the Parastoo font, and Python deps via uv. The `./rtlbook` wrapper runs the CLI with the current directory mounted.
 - **First language: Persian.**
-- **Kindle output: KFX, built locally.** Tested on the device: AZW3 (Calibre) renders Persian with heavy lag and multiple refreshes. KFX is much faster and has Persian reflow and real page numbers. The pipeline: EPUB (container) → **Kindle Previewer 4 on the Mac** (EPUB→KPF, macOS/Windows only) → calibre **KFX Output** plugin in the container (KPF→KFX). Run it with `./rtlbook kfx book.epub`. Nothing is uploaded to Amazon.
+- **Kindle output: KFX, built locally** (dropped 2026-10-08, §13). Tested on the device: AZW3 (Calibre) renders Persian with heavy lag and multiple refreshes. KFX is much faster and has Persian reflow and real page numbers. The pipeline: EPUB (container) → **Kindle Previewer 4 on the Mac** (EPUB→KPF, macOS/Windows only) → calibre **KFX Output** plugin in the container (KPF→KFX). Run it with `./rtlbook kfx book.epub`. Nothing is uploaded to Amazon.
 - **Digits:** Persian ۰–۹ by default for Persian books (`--digits`).
 - **PDF library: pypdfium2.** **EPUB writer: our own** (§4.9). No AGPL dependencies.
 
@@ -322,3 +321,13 @@ and also handled its layout. Notes: `output/poc/26`–`31` (git-ignored).
 
 **Removed:** AZW3 output (KFX replaced it), the Ganjoor download command (only needed for verse, later).
 
+---
+
+## 13. Decisions (2026-10-08)
+
+**EPUB 3 is the only output.** rtlbook's job is a correct EPUB; the reading systems it targets are those built on
+Readium, such as Thorium Reader. Turning that EPUB into a device's own format is a separate problem with its own
+tools, and out of scope. Removed: the `kfx` command (`kindle.py`), the wrapper's Kindle Previewer step, calibre and
+the KFX Output plugin (the image is now what the `core` target was, about 680 MB smaller), and the Kindle-only
+`primary-writing-mode` hint in the OPF. KFX had been built and read on a Kindle (§11); the Kindle lessons left
+LESSONS.md and remain in git history.

@@ -1,7 +1,7 @@
 # Lessons learned (POC, 2026-09-24)
 
-Practical findings from building and testing the proof of concept on 8 Persian novels (3,231 pages)
-and a real Kindle. This complements [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24),
+Practical findings from building and testing the proof of concept on 8 Persian novels (3,231 pages).
+This complements [DESIGN.md §11](DESIGN.md#11-decisions-and-poc-results-2026-09-24),
 which records the decisions and results. Book text is deliberately not quoted here.
 
 ## PDFs and text layers
@@ -49,32 +49,8 @@ which records the decisions and results. Book text is deliberately not quoted he
 - **epubcheck forbids the CSS `direction` property.** RTL must come from `dir="rtl"` on `html`/`body`, plus
   `page-progression-direction="rtl"` on the spine.
 - **An empty `<dc:creator>` is invalid.** Omit it when there's no author.
-- Our EPUBs passed epubcheck with 0 errors and 0 warnings. Embedding Vazirmatn (OFL) makes rendering consistent
-  on readers without good Arabic-script fonts.
-
-## Kindle
-
-- **Kindles can't open EPUB.** Sideloading needs AZW3 or KFX, and conversion always happens somewhere. Send to
-  Kindle converts on Amazon's servers. Everything here converts locally.
-- **AZW3 (calibre) renders Persian with heavy lag and repeated screen refreshes** on current firmware. Smaller
-  sections and removing the embedded font didn't help. **KFX is much faster**, with Persian reflow
-  (`fa-reflow-language-1`) and real page numbers taken from the EPUB page list.
-- **KFX pipeline:**
-  - Kindle Previewer 4 (macOS/Windows only) converts EPUB to **KPF**. KPF is the KDP upload format and can't be
-    sideloaded.
-  - calibre's **KFX Output** plugin packages KPF into KFX. The plugin runs in the Linux container. Previewer does
-    not, so `./rtlbook kfx` calls Previewer on the host.
-- **Library placement:** personal documents (PDOC) appear under **Docs**, not Books. `kfx` marks files as books
-  (EBOK) by default.
-- **Page direction:** in an RTL book, "next page" is a tap on the **left** side.
-- **The Kindle's own screens** (page N of M, progress) use the device's language for digits, whatever the book
-  uses.
-- **Author order:** KFX tools store the author surname-first ("Surname, Initial").
-- **Copying from macOS to a USB-mounted Kindle** creates `._*` AppleDouble files. Some Kindles list them as
-  broken books. Remove them with `dot_clean -m /Volumes/Kindle/documents`, then eject.
-- **Mounting:** older Kindles mount as a drive in Finder. Newer USB-C models use MTP and need OpenMTP.
-- **Reading data:** each book gets a `.sdr` folder (reading position, highlights). Deleting a book file doesn't
-  delete its `.sdr`, so remove both.
+- Our EPUBs passed epubcheck with 0 errors and 0 warnings. Embedding the font (Parastoo, OFL; Vazirmatn at the
+  time) makes rendering consistent on readers without good Arabic-script fonts.
 
 ## Docker and macOS gotchas
 
@@ -84,8 +60,6 @@ which records the decisions and results. Book text is deliberately not quoted he
   directory literally named `?` in the mounted repo.
 - **`TESSDATA_PREFIX` pointing at a models-only directory** hides Tesseract's `tsv` config, and output silently
   becomes plain text. Request TSV with `-c tessedit_create_tsv=1` instead.
-- **calibre's plugin server uses a self-signed certificate** that calibre pins. Download plugins with calibre's
-  own `get_https_resource_securely`. Don't turn off TLS verification.
 - **macOS ships bash 3.2:** `"${arr[@]}"` on an empty array fails under `set -u`. Use `${arr[@]+"${arr[@]}"}`.
 - **pypdfium2 v5** renamed `PdfObject.get_pos()` to `get_bounds()`.
 
@@ -94,6 +68,6 @@ which records the decisions and results. Book text is deliberately not quoted he
 - **OCR confidence:** mean confidence, plus the share of lines below 60.
 - **Common-word rate:** readable Persian is about 0.2–0.35, and garbled text about 0.
 - **Word order:** the share of paragraphs *ending* versus *starting* with sentence punctuation.
-- **Validity:** epubcheck, and an on-device check (Kindle).
+- **Validity:** epubcheck, and reading the result on a device.
 
 These are proxies. The next step is a small hand-corrected set, to measure the actual character error rate.

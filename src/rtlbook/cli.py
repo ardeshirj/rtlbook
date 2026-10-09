@@ -315,30 +315,3 @@ def eval_cmd(
         json_out.write_text(json.dumps(res.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8")
     if diff:
         diff.write_text("".join(f"{r or '∅'}\n  → {h or '∅'}\n\n" for r, h in res.mismatches), encoding="utf-8")
-
-
-@app.command()
-def kfx(
-    kpf: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="KPF from Kindle Previewer (or run ./rtlbook kfx book.epub on the Mac)")],
-    output: Annotated[Optional[Path], typer.Option("-o", "--output", help="Output .kfx (default: next to input)")] = None,
-    book: Annotated[bool, typer.Option("--book/--doc", help="List under Books (default) or Docs on the Kindle")] = True,
-) -> None:
-    """Package a Kindle Previewer KPF as a sideloadable .kfx (Kindle's current format)."""
-    from rtlbook import kindle
-
-    if kpf.suffix.lower() != ".kpf":
-        console.print("[red]Expected a .kpf. Kindle Previewer only runs on macOS/Windows, so convert an EPUB with "
-                      "the ./rtlbook wrapper on the Mac: ./rtlbook kfx book.epub[/]")
-        raise typer.Exit(2)
-    output = output or kpf.with_suffix(".kfx")
-    t0 = time.perf_counter()
-    ok, log = kindle.kpf_to_kfx(kpf, output, book)
-    output.with_suffix(".kfx.log").write_text(log + "\n", encoding="utf-8")
-    if not ok:
-        console.print(log[-2000:])
-        console.print("[red]KFX packaging failed[/]")
-        raise typer.Exit(1)
-    console.print(f"[green]KFX written:[/] {output} ({output.stat().st_size:,} bytes, {time.perf_counter() - t0:.1f}s)")
-    for ln in log.splitlines():
-        if ln.startswith(("Features:", "Metadata:")):
-            console.print(f"[dim]{ln[:300]}[/]")

@@ -1,6 +1,6 @@
-# rtlbook: Tesseract + epubcheck + Python (OCR → EPUB), plus calibre for Kindle KFX packaging.
-#   docker build -f docker/Dockerfile -t rtlbook:dev .                  # everything (default)
-#   docker build -f docker/Dockerfile --target core -t rtlbook:core .   # no Kindle output: ~680 MB smaller (make core)
+# rtlbook: Tesseract + epubcheck + Python (OCR → EPUB).
+#   docker build -f docker/Dockerfile -t rtlbook:dev .
+# The final stage is named core, the target other projects build (--target core -t rtlbook:core; make core).
 # Build-only tools (curl, unzip, uv) stay in the build stages and don't reach the final image.
 
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm
@@ -40,7 +40,7 @@ COPY src ./src
 COPY README.md* LICENSE NOTICE ./
 RUN uv sync
 
-# ---- core: OCR and EPUB, no Kindle output ----
+# ---- core: OCR and EPUB ----
 FROM ${PYTHON_IMAGE} AS core
 ENV PYTHONUNBUFFERED=1 \
     PATH=/opt/venv/bin:$PATH \
@@ -60,16 +60,3 @@ COPY --from=venv /app /app
 WORKDIR /work
 ENTRYPOINT ["rtlbook"]
 CMD ["--help"]
-
-# ---- full (default): core + calibre and the KFX Output plugin, for `rtlbook kfx` ----
-FROM core AS full
-ENV QT_QPA_PLATFORM=offscreen DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends calibre \
-    && rm -rf /var/lib/apt/lists/*
-# KFX Output plugin (jhowell): packages Kindle Previewer's KPF into a sideloadable .kfx.
-# calibre's plugin server uses a self-signed cert that calibre pins, hence its own downloader.
-ARG KFX_OUTPUT_PLUGIN=272407
-RUN export CALIBRE_CONFIG_DIRECTORY=/opt/calibre-config \
-    && calibre-debug -c "from calibre.utils.https import get_https_resource_securely as get; open('/tmp/kfx.zip', 'wb').write(get('https://code.calibre-ebook.com/plugins/${KFX_OUTPUT_PLUGIN}.zip'))" \
-    && calibre-customize -a /tmp/kfx.zip && rm /tmp/kfx.zip \
-    && chmod -R a+rX /opt/calibre-config

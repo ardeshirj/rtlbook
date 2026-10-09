@@ -157,8 +157,6 @@ def write_epub(path: Path, meta: BookMeta, sections: list[Section]) -> None:
 
     creator = f"<dc:creator>{escape(meta.author)}</dc:creator>\n" if meta.author.strip() else ""
     cover_meta = '<meta name="cover" content="cover-image"/>' if meta.cover else ""
-    # Kindle conversion hint for RTL books (Amazon Kindle Publishing Guidelines)
-    cover_meta += '\n<meta name="primary-writing-mode" content="horizontal-rl"/>'
     files["OEBPS/content.opf"] = f"""<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="{lang}" dir="rtl">
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">

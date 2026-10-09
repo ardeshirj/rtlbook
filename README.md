@@ -3,7 +3,9 @@
 > ⚠️ **Status: proof of concept.** This works end to end, but it has only been tested on a small set of
 > Persian novels on one Mac. Expect rough edges and breaking changes. See [Status](#status).
 
-Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 and Kindle KFX.
+Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. EPUB is the only output,
+made for reading apps built on [Readium](https://readium.org/), such as
+[Thorium Reader](https://thorium.edrlab.org/). Converting to a device's own format (Kindle, Kobo) is out of scope.
 So far it supports PDFs exported from a word processor (born-digital). Scanned and typewritten books
 are planned: they convert, but with more errors. `inspect` tells you which kind you have, and checks the book
 is in the right script (not English, say). See
@@ -26,9 +28,6 @@ docker build -f docker/Dockerfile -t rtlbook:dev .
 
 # Convert to EPUB → output/book.epub
 ./rtlbook convert input/book.pdf --title "…" --author "…"
-
-# Make a Kindle file → output/book.kfx (macOS + Kindle Previewer 4)
-./rtlbook kfx output/book.epub
 ```
 
 `./rtlbook` runs the CLI in Docker. **Only this repository folder is shared with the container**,
@@ -44,9 +43,8 @@ This is a **proof of concept (v0.1)**, not a finished tool.
 
 What has been verified:
 - 8 Persian novels (3,231 pages, born-digital PDFs from Word, pdfFactory, iText and others) converted to
-  EPUB 3 that passes epubcheck, and to KFX that was read on a real Kindle (firmware 5.19).
-- Apple Silicon Mac (M2) with Docker Desktop. Kindle KFX output needs macOS, because Kindle Previewer
-  only runs on macOS/Windows.
+  EPUB 3 that passes epubcheck.
+- Apple Silicon Mac (M2) with Docker Desktop.
 
 Not yet done or known to be weak:
 - **Scanned and typewritten books** aren't supported yet. They convert, but on a 1932 letterpress scan
@@ -62,14 +60,14 @@ Not yet done or known to be weak:
 
 See [DESIGN.md §11](docs/DESIGN.md#11-decisions-and-poc-results-2026-09-24) for the POC results and
 [ROADMAP.md](docs/ROADMAP.md) for what's next.
-Practical lessons and troubleshooting (Kindle, OCR, Docker on macOS) are in [LESSONS.md](docs/LESSONS.md).
+Practical lessons and troubleshooting (OCR, EPUB, Docker on macOS) are in [LESSONS.md](docs/LESSONS.md).
 
 ## Folders
 
 | Folder | What goes there | In git? |
 |---|---|---|
 | `input/` | PDFs to convert. Copy them here, because the container can only see the repo folder | No, fully ignored |
-| `output/` | Results: `<name>.epub`, `<name>.kfx` (and `<name>.kpf` for Kindle Previewer), plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
+| `output/` | Results: `<name>.epub`, plus `<name>.rtlbook/`, the per-book work folder | No, fully ignored |
 | `output/<name>.rtlbook/` | OCR cache (`pages/*.json`), `pages.txt`, `paragraphs.txt`, `report.json`, `epubcheck.txt` | No |
 
 `./rtlbook init` creates both folders (`convert` also creates `output/` if it's missing). Books can be
@@ -81,8 +79,7 @@ Convert a whole folder:
 
 ```bash
 for pdf in input/*.pdf; do
-  name=$(basename "$pdf" .pdf)
-  ./rtlbook convert "$pdf" && ./rtlbook kfx "output/$name.epub"
+  ./rtlbook convert "$pdf"
 done
 ```
 
@@ -112,7 +109,6 @@ Typical real-world run (site credits on the title pages, extra front pages):
 ```bash
 ./rtlbook convert input/Gandom.pdf --title "گندم" --author "م. مودب‌پور" \
   --drop-lines 'کتابخانه مجازی|تهیه و تنظیم' --pages 2-557
-./rtlbook kfx output/Gandom.epub
 ```
 
 `output/<name>.rtlbook/` keeps `pages/*.json` (per-page OCR with boxes and confidence),
@@ -136,19 +132,10 @@ the pages (a whole chapter for a page that shows only its end) is trimmed to the
 
 ## Reading the output
 
-- **EPUB:** opens directly in Apple Books, Kobo, PocketBook, Boox, KOReader, and others. Copy it over USB (or with OpenMTP for Boox), or open it on the device.
-- **Kindle:** Kindles can't open EPUB. Use **KFX**, Kindle's current format, which is fast and has Persian reflow and real page numbers:
-  1. Install **Kindle Previewer 4** (free, from Amazon). It only runs on macOS/Windows, so the
-     wrapper runs it on the host. The conversion is local (~1 min).
-  2. `./rtlbook kfx book.epub` → `book.kpf` (open it in Previewer to check the layout) and
-     `book.kfx`. The container packages the KPF with calibre's KFX Output plugin. `--doc` files it
-     under Docs instead of Books.
-  3. Copy `book.kfx` into the Kindle's `documents/` folder over USB. Newer USB-C Kindles on macOS need
-     [OpenMTP](https://openmtp.ganeshrvel.com/). On macOS, run `dot_clean -m /Volumes/Kindle/documents`
-     to remove `._*` files, then eject. Nothing is uploaded to Amazon.
-  - Build with `--target core` (`make core`, image `rtlbook:core`) to leave calibre out, which makes the image
-    about 680 MB smaller. This removes KFX support. `make core-amd64` builds it for linux/amd64 hosts, e.g. from an
-    Apple Silicon Mac (emulated, so slower).
+Open the EPUB in [Thorium Reader](https://thorium.edrlab.org/) (Windows, macOS, Linux) or another app built on
+Readium: that is what rtlbook's output is made for. Other reading apps may also open it, but they
+aren't targets, and turning the EPUB into a device's own format (Kindle's KFX or AZW3, Kobo's KEPUB) is out of
+scope.
 
 ## Tests
 
@@ -162,19 +149,17 @@ docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app 
 ## Credits
 
 - **Code and design:** written by Claude Opus 5.5 (Anthropic) using Claude Code, with the project
-  maintainer supplying the test books, checking every output on real devices, and making the product
-  decisions (Docker, local-only, KFX for Kindle).
+  maintainer supplying the test books, checking the outputs, and making the product decisions (Docker,
+  local-only, EPUB only).
 - **Built on:** [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and its
   `tessdata_best` models (Apache-2.0) · [PDFium](https://pdfium.googlesource.com/pdfium/) via
   [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) · [W3C EPUBCheck](https://github.com/w3c/epubcheck)
   · [Parastoo](https://github.com/rastikerdar/parastoo-font) font by Saber Rastikerdar (SIL OFL 1.1),
-  embedded in the EPUBs · [calibre](https://calibre-ebook.com/) and the
-  [KFX Output plugin](https://www.mobileread.com/forums/showthread.php?t=272407) by jhowell ·
-  Amazon's Kindle Previewer (installed separately; not bundled).
+  embedded in the EPUBs.
 
 ## License
 
 [Apache-2.0](LICENSE). The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
-license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck, calibre, the
-KFX Output plugin, Kindle Previewer) and the Parastoo font keep their own licenses; none of them is stored in this
+license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck) and the
+Parastoo font keep their own licenses; none of them is stored in this
 repository.

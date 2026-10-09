@@ -1,8 +1,9 @@
 # rtlbook — notes for AI assistants and contributors
 
-rtlbook converts PDF books in right-to-left languages (Persian first) into EPUB 3 and Kindle KFX. See `README.md`
-for usage; in `docs/`: `DESIGN.md` for the engine's design and dated decisions, `ROADMAP.md` for phases and
-planned work, and `LESSONS.md` for troubleshooting.
+rtlbook converts PDF books in right-to-left languages (Persian first) into EPUB 3, its only output, made for
+reading systems built on Readium (such as Thorium Reader); device formats (Kindle, Kobo) are out of scope. See
+`README.md` for usage; in `docs/`: `DESIGN.md` for the engine's design and dated decisions, `ROADMAP.md` for phases
+and planned work, and `LESSONS.md` for troubleshooting.
 
 ## Running things
 - Everything runs in Docker: build with `make build` (`docker build -f docker/Dockerfile -t rtlbook:dev .`; `make`
