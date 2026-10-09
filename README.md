@@ -147,6 +147,28 @@ docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app 
   --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
 ```
 
+## Versions and releases
+
+rtlbook has one version number (`rtlbook version` prints it). Releases are git tags named `vX.Y.Z`.
+
+- **When:** a change in what rtlbook produces or how it's used (a new kind of book supported, an output change, a
+  command or option removed or renamed) gets a new middle number, e.g. 0.6.0; a fix gets a new last number, e.g.
+  0.5.1. Docs, experiments and the training tools don't change the version.
+- **Where:** the number is in three files, kept the same: `pyproject.toml` (the package version, which the tag
+  is named from), `src/rtlbook/__init__.py` (what `rtlbook version` prints) and `uv.lock` (which records the
+  project's own version next to its dependencies). `make bump` sets all three; `make tag` refuses to tag when they
+  differ.
+- **How:**
+
+  ```bash
+  make bump V=0.6.0                  # set the version in the three files
+  git commit -am "…"                 # commit the bump
+  make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
+  git push origin main v0.6.0
+  ```
+
+  `make tag` only tags a clean `main` with no tag for that version yet, and never pushes.
+
 ## Credits
 
 - **Code and design:** written by Claude Opus 5.5 (Anthropic) using Claude Code, with the project
