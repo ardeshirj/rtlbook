@@ -5,7 +5,7 @@ text a person checked against the image. It's the ground truth for measuring OCR
 (the [tesstrain](https://github.com/tesseract-ocr/tesstrain) layout: `<id>.png` next to `<id>.gt.txt`).
 
 rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones; it has no checking tool of
-its own. Push and pull (`tools/transcribe/bucket`; the bucket and its key in `training.env`, from
+its own. Push, pull and freeze (`tools/transcribe/bucket`; the bucket and its key in `training.env`, from
 `training.env.example`) copy a set to and from an S3 bucket, where any program can be the checking tool: it reads
 the files below and writes the decisions. The bucket is private: it keeps sets for checking and training, public
 domain or not. Whether a set may also be published is its `public_domain` field, set before the first push.
@@ -105,10 +105,28 @@ published.
 `review.json` can always be rebuilt from the history (the last save of each line). A checking tool writes one save
 at a time, so `review.json` is never written by two at once.
 
-Push never sends decisions, so whatever was checked in the bucket stays as it is; the exception is the first push of
-a set checked before it had a bucket (no `review.json` there yet), which sends its `review.json` and turns
-`saves.jsonl` into `saves/`. Pull brings back `review.json` and the `.gt.txt` files (and removes those of lines no
-longer `done`), and writes `saves.jsonl` from `saves/`.
+Pull brings back `review.json` and the `.gt.txt` files (and removes those of lines no longer `done`), writes
+`saves.jsonl` from `saves/`, and leaves the bucket's `review.json` fingerprint (its sha256) in the folder's `.pulled`.
+Push refuses a folder whose `.pulled` doesn't match the bucket's decisions (lines were checked since its last pull,
+or it was never pulled): nothing is sent, so nothing checked is lost. When it matches, push sends the folder's
+decisions with the lines, since they're the current ones (`prepare.py` renumbers re-cut pages and carries the checked
+text over); the history keeps the old numbers. A set's first push sends the folder's decisions too, if it has some
+(a set checked before it had a bucket), turning `saves.jsonl` into `saves/`.
+
+## Frozen versions
+
+A finished set (every line decided) is frozen: training and testing use a numbered version of it, never the working
+set, so a result can always be traced to exact data. In the bucket:
+
+| File | What it is |
+|---|---|
+| `versions/v<N>.tar.gz` | the whole set as frozen (lines, images, `.gt.txt`, decisions, history), in a folder `<set>-v<N>/`; the same files give the same bytes |
+| `versions/v<N>.manifest.json` | set, version, time, book, source, `public_domain`, rules versions, counts, and per line: `id`, `split`, `rules`, `status`, and sha256 of its image (`png`) and, when done, its text (`gt`) |
+| `frozen.json` | `{"version", "sha256" (of the archive), "frozen", "counts"}`: the set is frozen at that version |
+
+While `frozen.json` is there the set is read-only: a checking tool must refuse saves, and push refuses the set.
+Unfreezing removes `frozen.json` (the versions stay); the next freeze is `v<N+1>`. `tools/transcribe/bucket freeze`
+and `unfreeze` do both.
 
 ## Transcription rules, version 1
 

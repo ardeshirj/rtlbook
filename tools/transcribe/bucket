@@ -1,28 +1,37 @@
 #!/bin/sh
 # Copy a set of lines (made by prepare.py) to an S3 bucket, where a checking tool on another machine can work on it,
-# and bring the decisions back for training. The format, and what each direction copies: docs/TRAINING-DATA.md.
+# bring the decisions back for training, and freeze a finished set as a numbered version. The format, and what each
+# command copies: docs/TRAINING-DATA.md.
 #   tools/transcribe/bucket push output/poc/my-book/lines my-book
 #   tools/transcribe/bucket pull output/poc/my-book/lines my-book
-# Push sends the lines (lines.json, the images, examples.json), never decisions, except on a set's first push when
-# the folder has some (they move to the bucket). Pull replaces the folder's decisions with the bucket's: once a set
-# is pushed, check it there, not in the folder. Re-preparing pages: pull, prepare.py, then push.
-# The bucket and its key are in training.env (git-ignored; copy training.env.example). Runs the AWS command-line tool
-# in Docker, and Python in rtlbook:dev.
+#   tools/transcribe/bucket freeze my-book          every line decided: versions/vN in the bucket, then read-only
+#   tools/transcribe/bucket unfreeze my-book        to change it again (the next freeze is vN+1)
+# Once a set is pushed, it's checked in the bucket, not in the folder: pull before preparing pages again. Push
+# refuses a frozen set, and a folder that isn't up to date with the bucket's decisions (pull leaves their
+# fingerprint in .pulled); when it is up to date, push sends the folder's decisions too (prepare.py may have
+# renumbered lines). The bucket and its key are in training.env (git-ignored; copy training.env.example). Runs the AWS
+# command-line tool in Docker, and Python in rtlbook:dev.
 set -e
 cd "$(dirname "$0")/../.."
-usage() { echo "usage: tools/transcribe/bucket push|pull FOLDER SET" >&2; exit 2; }
-[ $# -eq 3 ] || usage
-cmd=$1 dir=$2 set=$3
-case "$cmd" in push|pull) ;; *) usage ;; esac
-case "$set" in ""|-*|*[!a-z0-9-]*) echo "SET: lowercase letters, digits and -" >&2; exit 2 ;; esac
+usage() {
+  echo "usage: tools/transcribe/bucket push|pull FOLDER SET, or freeze|unfreeze SET" >&2
+  exit 2
+}
+case "$1" in
+  push | pull) [ $# -eq 3 ] || usage; cmd=$1 dir=$2 set=$3 ;;
+  freeze | unfreeze) [ $# -eq 2 ] || usage; cmd=$1 set=$2 dir=output/.bucket-$2 ;;
+  *) usage ;;
+esac
+case "$set" in "" | -* | *[!a-z0-9-]*) echo "SET: lowercase letters, digits and -" >&2; exit 2 ;; esac
 [ -f training.env ] || { echo "No training.env: copy training.env.example and fill it in." >&2; exit 1; }
 . ./training.env
 mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 remote="s3://$S3_BUCKET/$set/"
+case "$cmd" in freeze | unfreeze) trap 'rm -rf "$dir"' EXIT ;; esac # their scratch folder goes, whatever happens
 
-aws() {
-  docker run --rm -i --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$dir":/set -w /set \
+aws() { # no -i: it would read the input meant for unfreeze's question
+  docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$dir":/set -w /set \
     -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
     -e AWS_DEFAULT_REGION="${S3_REGION:-auto}" amazon/aws-cli:2.31.8 --endpoint-url "$S3_ENDPOINT" "$@"
 }
@@ -30,13 +39,37 @@ py() {
   docker run --rm -i --user "$(id -u):$(id -g)" -v "$dir":/set -w /set --entrypoint python rtlbook:dev - "$@"
 }
 in_bucket() { aws s3 ls "$remote$1" >/dev/null 2>&1; }
+# The bucket's decisions, as a fingerprint (sha256 of its review.json); empty when it has none.
+remote_review() { if in_bucket review.json; then aws s3 cp "${remote}review.json" - | shasum -a 256 | cut -c1-64; fi; }
+frozen_version() { aws s3 cp "${remote}frozen.json" - 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p'; }
+refuse_frozen() {
+  if in_bucket frozen.json; then
+    echo "$set is frozen as $(frozen_version): read-only. To change it: tools/transcribe/bucket unfreeze $set" >&2
+    exit 1
+  fi
+}
 
-if [ "$cmd" = push ]; then
+case "$cmd" in
+push)
   [ -f "$dir/lines.json" ] || { echo "$dir has no lines.json: run prepare.py first." >&2; exit 1; }
+  refuse_frozen
+  checked=$(remote_review)
+  if [ -n "$checked" ] && [ "$checked" != "$(cat "$dir/.pulled" 2>/dev/null)" ]; then
+    echo "$set has lines checked in the bucket that this folder doesn't have (checked since its last pull, or never" >&2
+    echo "pulled). Nothing sent. Pull first (then prepare.py, if you're re-cutting pages), then push." >&2
+    exit 1
+  fi
   aws s3 sync . "$remote" --exclude '*' --include '*.png' --include examples.json --delete --only-show-errors
   aws s3 cp lines.json "$remote" --only-show-errors # last: a set shows up once its lines are there
   echo "Pushed the lines to $remote"
-  if [ -f "$dir/review.json" ] && ! in_bucket review.json; then
+  if [ -n "$checked" ]; then
+    # Up to date with the bucket, so the folder's decisions are the current ones, renumbered if prepare.py re-cut
+    # pages: they go back with the lines. The history (saves/) stays as it was.
+    aws s3 sync . "$remote" --exclude '*' --include '*.gt.txt' --delete --only-show-errors
+    aws s3 cp review.json "$remote" --only-show-errors
+    shasum -a 256 <"$dir/review.json" | cut -c1-64 >"$dir/.pulled"
+    echo "And the folder's decisions (up to date with the bucket's)."
+  elif [ -f "$dir/review.json" ]; then
     # A set checked in the folder before it was pushed: its decisions move to the bucket, the history as one file per
     # save (saves/{time}-{id}.json; the same second twice gets .001, .002).
     rm -rf "$dir/.saves"
@@ -57,12 +90,17 @@ PY
     aws s3 sync . "$remote" --exclude '*' --include '*.gt.txt' --only-show-errors
     aws s3 cp review.json "$remote" --only-show-errors
     rm -rf "$dir/.saves"
+    shasum -a 256 <"$dir/review.json" | cut -c1-64 >"$dir/.pulled"
     echo "And its decisions, checked here before: from now on check it in the bucket."
   fi
-else
-  in_bucket review.json || { echo "Nothing checked in $remote yet."; exit 0; }
+  ;;
+
+pull)
+  checked=$(remote_review)
+  [ -n "$checked" ] || { echo "Nothing checked in $remote yet."; exit 0; }
   aws s3 sync "$remote" . --exclude '*' --include '*.gt.txt' --include 'saves/*' --delete --only-show-errors
   aws s3 cp "${remote}review.json" review.json --only-show-errors
+  echo "$checked" >"$dir/.pulled"
   py <<'PY'
 import glob, json
 with open("saves.jsonl", "w", encoding="utf-8") as out:
@@ -72,4 +110,75 @@ review = json.load(open("review.json", encoding="utf-8"))
 done = sum(d["status"] == "done" for d in review.values())
 print(f"Pulled: {len(review)} lines decided, {done} done (with .gt.txt); history in saves.jsonl")
 PY
-fi
+  if in_bucket frozen.json; then echo "(Frozen as $(frozen_version): read-only.)"; fi
+  ;;
+
+freeze)
+  in_bucket lines.json || { echo "No set $set in the bucket." >&2; exit 1; }
+  refuse_frozen
+  # Everything but earlier versions, into a scratch folder (output/, git-ignored); the version is made there.
+  aws s3 sync "$remote" . --exclude 'versions/*' --delete --only-show-errors
+  last=$(aws s3 ls "${remote}versions/" 2>/dev/null | sed -n 's/.* v\([0-9]*\)\.tar\.gz$/\1/p' | sort -n | tail -1)
+  version=v$(( ${last:-0} + 1 ))
+  py "$set" "$version" <<'PY'
+import glob, gzip, hashlib, io, json, os, sys, tarfile, time
+set_name, version = sys.argv[1], sys.argv[2]
+index = json.load(open("lines.json", encoding="utf-8"))
+review = json.load(open("review.json", encoding="utf-8")) if os.path.exists("review.json") else {}
+left = [ln["id"] for ln in index["lines"] if ln["id"] not in review]
+if left:
+    sys.exit(f"Not frozen: {len(left)} of {len(index['lines'])} lines aren't decided yet (first: {', '.join(left[:5])}).")
+sha = lambda path: hashlib.sha256(open(path, "rb").read()).hexdigest()
+lines = []
+for ln in index["lines"]:
+    d = review[ln["id"]]
+    entry = {"id": ln["id"], "split": ln["split"], "rules": ln.get("rules"), "status": d["status"], "png": sha(ln["id"] + ".png")}
+    if d["status"] == "done":
+        entry["gt"] = sha(ln["id"] + ".gt.txt")
+    lines.append(entry)
+count = lambda **kw: sum(all(l.get(k) == v for k, v in kw.items()) for l in lines)
+manifest = {
+    "set": set_name, "version": version, "frozen": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "book": index.get("book"), "source": index.get("source"), "public_domain": index.get("public_domain"),
+    "rules": sorted({l["rules"] for l in lines if l["rules"] is not None}),
+    "counts": {"lines": len(lines), "done": count(status="done"), "unsure": count(status="unsure"), "skip": count(status="skip"),
+               "done_test": count(status="done", split="test"), "done_train": count(status="done", split="train")},
+    "lines": lines,
+}
+os.makedirs(".version", exist_ok=True)
+with open(f".version/{version}.manifest.json", "w", encoding="utf-8") as f:
+    json.dump(manifest, f, ensure_ascii=False, indent=1)
+# The archive: the whole set as frozen; the same files give the same bytes (sorted, no times or owners).
+names = sorted(n for n in os.listdir(".") if not n.startswith(".") and os.path.isfile(n)) + sorted(glob.glob("saves/*.json"))
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode="w") as tar:
+    for name in names:
+        info = tar.gettarinfo(name, arcname=f"{set_name}-{version}/{name}")
+        info.mtime, info.uid, info.gid, info.uname, info.gname = 0, 0, 0, "", ""
+        with open(name, "rb") as f:
+            tar.addfile(info, f)
+with open(f".version/{version}.tar.gz", "wb") as f:
+    f.write(gzip.compress(buf.getvalue(), mtime=0))
+digest = sha(f".version/{version}.tar.gz")
+with open(".version/frozen.json", "w") as f:
+    json.dump({"version": version, "sha256": digest, "frozen": manifest["frozen"], "counts": manifest["counts"]}, f, indent=1)
+c = manifest["counts"]
+print(f"{set_name} {version}: {c['lines']} lines, {c['done']} done ({c['done_test']} test, {c['done_train']} train), "
+      f"{c['unsure']} unsure, {c['skip']} can't use; archive sha256 {digest[:16]}…")
+PY
+  aws s3 cp ".version/$version.tar.gz" "${remote}versions/" --only-show-errors
+  aws s3 cp ".version/$version.manifest.json" "${remote}versions/" --only-show-errors
+  aws s3 cp .version/frozen.json "$remote" --only-show-errors # last: frozen once the version is safely there
+  echo "Frozen as $version: versions/$version.tar.gz and its manifest in $remote; the set is read-only now."
+  ;;
+
+unfreeze)
+  in_bucket frozen.json || { echo "$set isn't frozen."; exit 0; }
+  version=$(frozen_version)
+  printf "Unfreeze %s (frozen as %s)? Its versions stay; the next freeze makes a new one. Type the set's name: " "$set" "$version"
+  read -r answer || answer=
+  [ "$answer" = "$set" ] || { echo "Not unfrozen." >&2; exit 1; }
+  aws s3 rm "${remote}frozen.json" --only-show-errors
+  echo "Unfrozen: $set can be checked and pushed again; $version stays in versions/."
+  ;;
+esac
