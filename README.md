@@ -1,8 +1,5 @@
 # rtlbook
 
-> **Status: early (0.5).** Exported Persian PDFs convert end to end to EPUB; scanned books aren't supported
-> yet. Expect breaking changes between versions. See [Status](#status).
-
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. EPUB is the only output,
 made for reading apps built on [Readium](https://readium.org/), such as
 [Thorium Reader](https://thorium.edrlab.org/). Converting to a device's own format (Kindle, Kobo) is out of scope.
@@ -37,10 +34,7 @@ the same inside and outside the container, relative or absolute, including when 
 subfolder. Running it from outside the repo stops with an error. Your local `src/` is mounted too, so
 code changes apply without a rebuild.
 
-## Status
-
-rtlbook is **early (version 0.5)**: it does one kind of book well and is being extended one document type at a
-time (see the [roadmap](docs/ROADMAP.md)). `rtlbook version` prints the version.
+## Limitations
 
 What has been verified:
 - 8 Persian novels (3,231 pages, born-digital PDFs from Word, pdfFactory, iText and others) converted to
