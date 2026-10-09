@@ -4,8 +4,7 @@
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
 # and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
-# When to bump (CLAUDE.md): a change in what the engine produces or how it's used gets a new middle number (0.6.0),
-# a fix the last one (0.5.1); docs, experiments and the training tools need none.
+# When to bump, and the version history: docs/VERSIONS.md.
 set -e
 cd "$(dirname "$0")/.."
 usage() { echo "usage: tools/release bump X.Y.Z | tag [note]" >&2; exit 2; }
