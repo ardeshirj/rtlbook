@@ -1,0 +1,56 @@
+#!/bin/sh
+# Versions and tags. The version lives in pyproject.toml, src/rtlbook/__init__.py and uv.lock; bump sets all three.
+#   tools/release bump 0.6.0         (make bump V=0.6.0)  then commit
+#   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
+# tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
+# and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
+# When to bump (CLAUDE.md): a change in what the engine produces or how it's used gets a new middle number (0.6.0),
+# a fix the last one (0.5.1); docs, experiments and the training tools need none.
+set -e
+cd "$(dirname "$0")/.."
+usage() { echo "usage: tools/release bump X.Y.Z | tag [note]" >&2; exit 2; }
+
+current() { sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml; }
+in_init() { sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/rtlbook/__init__.py; }
+in_lock() { sed -n '/^name = "rtlbook"$/{n;s/^version = "\(.*\)"$/\1/p;}' uv.lock; }
+# sed -i differs between macOS and Linux: write a copy and move it over
+subst() { sed "$1" "$2" >"$2.tmp" && mv "$2.tmp" "$2"; }
+
+case "$1" in
+bump)
+  [ $# -eq 2 ] || usage
+  new=$2
+  echo "$new" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Version: X.Y.Z, e.g. 0.6.0" >&2; exit 2; }
+  old=$(current)
+  [ "$new" != "$old" ] || { echo "Already $old." >&2; exit 1; }
+  subst "s/^version = \"$old\"\$/version = \"$new\"/" pyproject.toml
+  subst "s/^__version__ = \"$old\"\$/__version__ = \"$new\"/" src/rtlbook/__init__.py
+  subst "/^name = \"rtlbook\"\$/{n;s/^version = \"$old\"\$/version = \"$new\"/;}" uv.lock
+  [ "$(in_init)" = "$new" ] && [ "$(in_lock)" = "$new" ] || { echo "Not all three changed: check by hand." >&2; exit 1; }
+  echo "$old → $new in pyproject.toml, src/rtlbook/__init__.py and uv.lock. Commit it, then: make tag"
+  ;;
+tag)
+  [ $# -le 2 ] || usage
+  v=$(current)
+  t="v$v"
+  [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "Tag on main." >&2; exit 1; }
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "Commit or stash your changes first." >&2; exit 1; }
+  [ "$(in_init)" = "$v" ] && [ "$(in_lock)" = "$v" ] || {
+    echo "Versions differ: pyproject.toml $v, __init__.py $(in_init), uv.lock $(in_lock). Use tools/release bump." >&2
+    exit 1
+  }
+  if git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
+    echo "$t exists already (on $(git rev-list -n 1 --abbrev-commit "$t")). Bump the version first." >&2
+    exit 1
+  fi
+  last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
+  {
+    echo "rtlbook $v"
+    echo
+    if [ -n "$2" ]; then echo "$2"; echo; fi
+    if [ -n "$last" ]; then echo "Since $last:"; git log --format='- %s' "$last..HEAD"; fi
+  } | git tag -a "$t" -F -
+  echo "Tagged $t on $(git rev-parse --short HEAD). Check it with git show $t, then push: git push origin main $t"
+  ;;
+*) usage ;;
+esac

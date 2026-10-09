@@ -24,3 +24,7 @@ and planned work, and `LESSONS.md` for troubleshooting.
   ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no service or library plans.
 - Prefer simple, general rules over per-PDF special cases; every page is OCR'd (the PDF's own text layer isn't used).
 - Small commits with a clear message explaining why.
+- **Versions:** one number, in `pyproject.toml` (also `__init__.py` and `uv.lock`; `make bump V=X.Y.Z` sets all
+  three). A change in what the engine produces or how it's used gets a new middle number (0.6.0), a fix the last
+  one; docs, experiments and the training tools need none. Commit the bump, then `make tag` (tag `vX.Y.Z` with the
+  commits since the last tag) and push the tag with the commit.
