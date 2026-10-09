@@ -15,7 +15,6 @@ output/
 .kpf-*/
 # The training bucket's key (training.env.example).
 training.env
-training.*.env
 # Local working plan, kept out of git on purpose.
 /PLAN.md
 .DS_Store
