@@ -1,0 +1,57 @@
+# On every push and pull request: no book files in git, then build the image and run the tests in it.
+# The tests use only what's in the repository (tests/data: public-domain pages and their OCR results); tests that
+# need real books in input/ skip themselves here.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-book-files:
+    # .gitignore keeps books out, but not a forced add or a renamed folder: this repository is public.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: No PDFs, EPUBs, scans or input/output files are committed
+        run: |
+          found=$(git ls-files | grep -Ei '^(input|output)/|\.(pdf|epub|kfx|kpf|azw3|mobi|djvu|png|jpe?g|jp2|tiff?|webp|gif)$' || true)
+          if [ -n "$found" ]; then
+            echo "Book files or images must not be committed (CLAUDE.md, \"No book text in git\"):"
+            echo "$found"
+            exit 1
+          fi
+
+  test:
+    # linux/amd64, native here: the same image other projects deploy (--target core).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: core
+          platforms: linux/amd64
+          tags: rtlbook:dev
+          load: true
+          cache-from: type=gha,scope=rtlbook
+          cache-to: type=gha,mode=max,scope=rtlbook
+      - name: The version the CLI prints is pyproject.toml's
+        run: |
+          want=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
+          got=$(docker run --rm rtlbook:dev version)
+          echo "pyproject.toml $want, rtlbook version $got"
+          [ "$want" = "$got" ]
+      - name: Tests
+        run: docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
