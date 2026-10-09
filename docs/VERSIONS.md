@@ -39,7 +39,7 @@ git push origin main v0.6.0
 
 ## History
 
-### 0.5.0 (not tagged yet)
+### 0.5.0 (2026-10-08)
 The first tagged version.
 - **EPUB 3 is the only output**, made for reading systems built on Readium, such as Thorium Reader. The `kfx`
   command and calibre are gone: converting for a device (Kindle, Kobo) is out of scope.
