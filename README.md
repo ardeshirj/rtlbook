@@ -141,6 +141,9 @@ docker run --rm -v "$PWD/src":/app/src:ro -v "$PWD/tests":/app/tests:ro -w /app 
   --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
 ```
 
+GitHub Actions (`.github/workflows/ci.yml`) runs them on every push and pull request, in the image built for
+linux/amd64, and fails if a PDF, EPUB, scan or anything in `input/`/`output/` has been committed.
+
 ## Versions
 
 `rtlbook version` prints the version; releases are git tags named `vX.Y.Z`. When the version changes, how to

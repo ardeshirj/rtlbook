@@ -98,7 +98,6 @@ prototype in `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-
 - **Review page:** reviewing disagreements between two OCR engines; proofreading a whole book.
 - **Readers:** check the EPUBs in Thorium Reader (Readium) and fix what renders wrong there: page direction, the
   embedded font, the page list, the TOC.
-- **Repository:** CI that builds the image and runs the tests.
 
 ## 3. Later
 - Typewritten books (none found yet).
