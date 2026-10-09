@@ -1,5 +1,7 @@
 # rtlbook
 
+[![CI](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml)
+
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. EPUB is the only output,
 made for reading apps built on [Readium](https://readium.org/), such as
 [Thorium Reader](https://thorium.edrlab.org/). Converting to a device's own format (Kindle, Kobo) is out of scope.
