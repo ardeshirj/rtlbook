@@ -5,7 +5,7 @@
 #   tools/transcribe/bucket push output/poc/my-book/lines my-book
 #   tools/transcribe/bucket pull output/poc/my-book/lines my-book
 #   tools/transcribe/bucket freeze my-book          every line decided: versions/vN in the bucket, then read-only
-#   tools/transcribe/bucket unfreeze my-book        to change it again (the next freeze is vN+1)
+#   tools/transcribe/bucket reopen my-book          to change it again: vN stays as it was, the next freeze is vN+1
 # Once a set is pushed, it's checked in the bucket, not in the folder: pull before preparing pages again. Push
 # refuses a frozen set, and a folder that isn't up to date with the bucket's decisions (pull leaves their
 # fingerprint in .pulled); when it is up to date, push sends the folder's decisions too (prepare.py may have
@@ -14,12 +14,12 @@
 set -e
 cd "$(dirname "$0")/../.."
 usage() {
-  echo "usage: tools/transcribe/bucket push|pull FOLDER SET, or freeze|unfreeze SET" >&2
+  echo "usage: tools/transcribe/bucket push|pull FOLDER SET, or freeze|reopen SET" >&2
   exit 2
 }
 case "$1" in
   push | pull) [ $# -eq 3 ] || usage; cmd=$1 dir=$2 set=$3 ;;
-  freeze | unfreeze) [ $# -eq 2 ] || usage; cmd=$1 set=$2 dir=output/.bucket-$2 ;;
+  freeze | reopen) [ $# -eq 2 ] || usage; cmd=$1 set=$2 dir=output/.bucket-$2 ;;
   *) usage ;;
 esac
 case "$set" in "" | -* | *[!a-z0-9-]*) echo "SET: lowercase letters, digits and -" >&2; exit 2 ;; esac
@@ -28,9 +28,9 @@ case "$set" in "" | -* | *[!a-z0-9-]*) echo "SET: lowercase letters, digits and 
 mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 remote="s3://$S3_BUCKET/$set/"
-case "$cmd" in freeze | unfreeze) trap 'rm -rf "$dir"' EXIT ;; esac # their scratch folder goes, whatever happens
+case "$cmd" in freeze | reopen) trap 'rm -rf "$dir"' EXIT ;; esac # their scratch folder goes, whatever happens
 
-aws() { # no -i: it would read the input meant for unfreeze's question
+aws() { # no -i: it would read the input meant for reopen's question
   docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$dir":/set -w /set \
     -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
     -e AWS_DEFAULT_REGION="${S3_REGION:-auto}" amazon/aws-cli:2.31.8 --endpoint-url "$S3_ENDPOINT" "$@"
@@ -44,7 +44,7 @@ remote_review() { if in_bucket review.json; then aws s3 cp "${remote}review.json
 frozen_version() { aws s3 cp "${remote}frozen.json" - 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p'; }
 refuse_frozen() {
   if in_bucket frozen.json; then
-    echo "$set is frozen as $(frozen_version): read-only. To change it: tools/transcribe/bucket unfreeze $set" >&2
+    echo "$set is frozen as $(frozen_version): read-only. To change it: tools/transcribe/bucket reopen $set" >&2
     exit 1
   fi
 }
@@ -172,13 +172,14 @@ PY
   echo "Frozen as $version: versions/$version.tar.gz and its manifest in $remote; the set is read-only now."
   ;;
 
-unfreeze)
+reopen)
   in_bucket frozen.json || { echo "$set isn't frozen."; exit 0; }
   version=$(frozen_version)
-  printf "Unfreeze %s (frozen as %s)? Its versions stay; the next freeze makes a new one. Type the set's name: " "$set" "$version"
+  next=v$(( ${version#v} + 1 ))
+  printf "Reopen %s to work toward %s? %s stays as it was. Type the set's name: " "$set" "$next" "$version"
   read -r answer || answer=
-  [ "$answer" = "$set" ] || { echo "Not unfrozen." >&2; exit 1; }
+  [ "$answer" = "$set" ] || { echo "Not reopened." >&2; exit 1; }
   aws s3 rm "${remote}frozen.json" --only-show-errors
-  echo "Unfrozen: $set can be checked and pushed again; $version stays in versions/."
+  echo "Reopened: working toward $next; $version stays as it was in versions/."
   ;;
 esac

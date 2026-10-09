@@ -25,6 +25,8 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 | `examples.json` | a person, optional | crops of this book that illustrate the rules (below) |
 | `<id>.gt.txt` | the checking tool | the checked text, only for lines marked `done` |
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
+| `.pulled` | pull, in a folder only | the fingerprint of the bucket's decisions at the last pull, so push can tell whether the folder is up to date (below) |
+| `frozen.json`, `versions/` | freeze, in a bucket | a finished set's numbered versions, and while `frozen.json` is there, read-only ("Frozen versions", below) |
 
 Line IDs are `p<page, 3 digits>-<line on the page, 2 digits>`, e.g. `p028-04`, counted top to bottom in reading
 order. Re-preparing a page renumbers its lines; `prepare.py` carries over the decisions by position on the page.
@@ -125,8 +127,8 @@ set, so a result can always be traced to exact data. In the bucket:
 | `frozen.json` | `{"version", "sha256" (of the archive), "frozen", "counts"}`: the set is frozen at that version |
 
 While `frozen.json` is there the set is read-only: a checking tool must refuse saves, and push refuses the set.
-Unfreezing removes `frozen.json` (the versions stay); the next freeze is `v<N+1>`. `tools/transcribe/bucket freeze`
-and `unfreeze` do both.
+A version never changes: reopening a set removes `frozen.json` so it can be checked again, toward `v<N+1>`, while
+`v<N>` stays as it was. `tools/transcribe/bucket freeze` and `reopen` do both.
 
 ## Transcription rules, version 1
 
