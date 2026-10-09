@@ -2,13 +2,10 @@
 
 [![CI](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml)
 
-Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3. EPUB is the only output,
-made for reading apps built on [Readium](https://readium.org/), such as
-[Thorium Reader](https://thorium.edrlab.org/). Converting to a device's own format (Kindle, Kobo) is out of scope.
-So far it supports PDFs exported from a word processor (born-digital). Scanned and typewritten books
-are planned: they convert, but with more errors. `inspect` tells you which kind you have, and checks the book
-is in the right script (not English, say). See
-[docs/DESIGN.md](docs/DESIGN.md) for how it works and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 for reading apps built on
+[Readium](https://readium.org/), such as [Thorium Reader](https://thorium.edrlab.org/). It supports PDFs exported
+from a word processor; scanned books convert with more errors and are next on the [roadmap](docs/ROADMAP.md).
+How it works: [docs/DESIGN.md](docs/DESIGN.md).
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
 > [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
@@ -130,9 +127,7 @@ the pages (a whole chapter for a page that shows only its end) is trimmed to the
 ## Reading the output
 
 Open the EPUB in [Thorium Reader](https://thorium.edrlab.org/) (Windows, macOS, Linux) or another app built on
-Readium: that is what rtlbook's output is made for. Other reading apps may also open it, but they
-aren't targets, and turning the EPUB into a device's own format (Kindle's KFX or AZW3, Kobo's KEPUB) is out of
-scope.
+Readium.
 
 ## Tests
 
