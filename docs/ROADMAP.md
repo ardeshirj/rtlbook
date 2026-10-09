@@ -103,3 +103,8 @@ prototype in `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-
 - Typewritten books (none found yet).
 - Arabic, Urdu and Hebrew, as configuration where possible.
 - Side outputs: searchable PDF, Markdown/HTML/DOCX, hOCR/ALTO; fixed-layout EPUB as a fallback where reflow fails.
+- Narrated EPUBs (EPUB 3 media overlays): audio synced to the text, sentence by sentence, so the book reads aloud
+  with the text highlighted even where the device has no Farsi voice (Thorium plays them). The audio comes from a
+  Farsi TTS voice (Azure's neural voices) or aligned from a recording. Farsi doesn't write short vowels or the
+  ezafe, so a voice misreads some words; verse needs vowel marks or a pronunciation list. Try first: DAISY
+  Pipeline 2's EPUB 3 enhancer (TTS), Storyteller (aligns a recording with Whisper).
