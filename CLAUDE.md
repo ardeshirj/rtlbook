@@ -19,7 +19,8 @@ and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versio
 - **Measure changes to OCR or text handling** with `rtlbook eval` and the ground-truth tests
   (`tests/test_ground_truth.py`); keep or improve the baselines noted in `tests/data/*/README.md`.
 - Experiments and their notes go in `output/poc/<NN>-<name>/` (git-ignored); record outcomes worth keeping in
-  `DESIGN.md` (engine decisions) or `LESSONS.md` (practical lessons).
+  `DESIGN.md` (engine decisions) or `LESSONS.md` (practical lessons), with the numbers, and never cite those folders
+  in the docs: a reader can't open them.
 - `DESIGN.md` is about the engine only, and only what is built (or dropped). Plans go in `ROADMAP.md`; when an item
   ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no service or library plans.
 - Prefer simple, general rules over per-PDF special cases; every page is OCR'd (the PDF's own text layer isn't used).
