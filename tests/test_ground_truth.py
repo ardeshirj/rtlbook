@@ -10,7 +10,7 @@ from rtlbook.layout import reading_order
 from rtlbook.model import Page
 
 DATA = Path(__file__).parent / "data" / "three-drops"
-SCAN = Path(__file__).parents[1] / "input" / "Three-Drops-of-Blood.pdf"
+SCAN = Path(__file__).parents[1] / "input" / "public-domain" / "three-drops-1932.pdf"
 # Baseline CER per page (2026-10-01) plus a little slack. Lower these when OCR gets better.
 MAX_CER = {76: 0.07, 77: 0.09}
 

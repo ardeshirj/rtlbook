@@ -8,7 +8,8 @@ and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versio
 ## Running things
 - Everything runs in Docker: build with `make build` (`docker build -f docker/Dockerfile -t rtlbook:dev .`; `make`
   lists the rest: `core`, `core-amd64`, `test`); use the `./rtlbook`
-  wrapper (it only shares this repository folder with the container, so inputs go in `input/`).
+  wrapper (it only shares this repository folder with the container, so inputs go in `input/`: `input/public-domain/`
+  for scans of public-domain editions, `input/test/` for the rest; records in `input/BOOKS.md`).
 - Tests: `docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests`
   (with the whole repo mounted, tests that need PDFs in `input/` also run; otherwise they're skipped).
 

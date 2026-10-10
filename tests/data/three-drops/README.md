@@ -17,7 +17,7 @@ the exception because the book is in the public domain.
 
 No scans are included. `tests/test_ground_truth.py` runs everything after OCR (reading order, then
 `rtlbook eval`) on the saved OCR result, and fails if accuracy drops below the baseline. To also re-run
-OCR itself, put the scan in `input/Three-Drops-of-Blood.pdf` and run the tests with the whole repo mounted:
+OCR itself, put the scan in `input/public-domain/three-drops-1932.pdf` and run the tests with the whole repo mounted:
 
 ```bash
 docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
