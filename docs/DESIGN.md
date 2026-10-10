@@ -193,8 +193,8 @@ needed while each book is one `convert` with a page cache).
 
 A local page for a person to settle what the engine can't: for each uncertain spot, a crop of the scan line, the
 candidate readings as buttons, and a box to type the right text. A "save" button writes the decisions to a JSON
-file, which a script applies to the text. A prototype was used to check OCR ground truth against scans
-(`output/poc/27-eval/`, git-ignored): far quicker and more reliable than correcting OCR text by eye.
+file, which a script applies to the text. A prototype was used to check OCR ground truth against scans: far quicker and more reliable than correcting OCR
+text by eye.
 
 ---
 
@@ -275,7 +275,6 @@ Moved to [ROADMAP.md](ROADMAP.md).
 - **Font-specific OCR quirks:** the Persian comma is read as `»`/`ء`, and closing parentheses come out mirrored. Both are fixed in post-processing, gated on book-level detection so books that OCR correctly aren't changed.
 - **Paragraph rebuilding:** uses dialogue markers (`Name- …`), sentence-final punctuation, full-width lines (the RTL line end reaches the left margin), and large vertical gaps. Paragraphs join across page breaks.
 - **Output:** a valid EPUB 3.3 (epubcheck: 0 errors, 0 warnings) with RTL page progression, the embedded font, a cover, and a print page list.
-- Detailed log and all intermediate outputs: `output/poc/NOTES.md` (git-ignored because it contains book text).
 
 **Batch of 8 novels (3,231 pages).** All 8 converted to valid EPUB and KFX, about 13 minutes of OCR in total.
 - **Not one had a usable text layer.** 3 had garbled glyph mappings. 5 stored words in **reversed (visual) order**: sentence punctuation started 28–52% of lines and ended ≤4%. One also split words at glyph boundaries. The per-page function-word score missed reversed order, so the checks were extended to the **book level** (punctuation position, share of one-letter words), before the text-layer route was dropped altogether (§12).
@@ -317,7 +316,7 @@ no open `«` in its paragraph is read as a Persian comma.
 **Support grows by document type.** Phase 1 is exported PDFs (prose). Scans come later. Experiments on scans,
 for later phases: on 1932 letterpress, Kraken with OpenITI's Persian model misread 1.9% of letters against
 6–8% for Tesseract, but did worse on 1960s type; an AI vision model read a hard two-column verse page best
-and also handled its layout. Notes: `output/poc/26`–`31` (git-ignored).
+and also handled its layout.
 
 **Removed:** AZW3 output (KFX replaced it), the Ganjoor download command (only needed for verse, later).
 

@@ -43,7 +43,6 @@ the next.
 - **Next:** a clean start on a book that is public domain everywhere, the 1932 Hedayat printing in `tests/data/`
   (1930s type; a 1960s book follows). Its lines are checked in a separate tool that reads the set from the private
   bucket (push and pull, [TRAINING-DATA.md](TRAINING-DATA.md)).
-- **Notes:** `output/poc/35-period-type/` (git-ignored).
 
 ### Verse layout (phase 3)
 - Free verse: keep one printed line per line instead of joining lines into prose paragraphs.
@@ -77,8 +76,7 @@ Decorative fonts defeat Tesseract. `convert` warns (mean confidence below 70) bu
 book (a handwriting-style font, confidence 55): no Tesseract setting helped (resolution, binarization,
 `ara`/`fas+ara`, `--psm 6`: word recall 37–45%); the PDF's own stored text, rebuilt from character positions, had
 **every letter right** but stray spaces inside about 1 word in 5. Options: an opt-in text-layer fallback (perfect
-letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple;
-prototype in `output/poc/31-type-a/geometry.py`, measurements in `output/poc/33-decorative/` (git-ignored).
+letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple.
 
 ### Planned, by stage
 - **Input:** a folder of page images instead of a PDF, for scans: old books are often only available as page
