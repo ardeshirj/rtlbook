@@ -7,7 +7,7 @@ rtlbook has one version number, which `rtlbook version` prints. Each release is 
 - **A new middle number** (0.5.0 → 0.6.0) for a change in what rtlbook produces or how it's used: a new kind of
   book supported, a change to the EPUB, a command or option added, removed or renamed.
 - **A new last number** (0.5.0 → 0.5.1) for a fix that doesn't change any of that.
-- **No change** for docs, experiments and the training tools (`tools/transcribe/`).
+- **No change** for docs, experiments and the training tool (`tools/transcribe/prepare.py`).
 
 While the version is below 1.0, any release may break how rtlbook is used; the history below says how.
 

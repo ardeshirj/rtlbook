@@ -7,8 +7,6 @@ __pycache__/
 input/
 output/
 *.epub
-# The training bucket's key (training.env.example).
-training.env
 # Local working plan, kept out of git on purpose.
 /PLAN.md
 .DS_Store

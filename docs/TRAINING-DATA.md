@@ -4,11 +4,11 @@ The format of rtlbook's training data: line images cut from scanned pages, the O
 text a person checked against the image. It's the ground truth for measuring OCR and for fine-tuning Tesseract
 (the [tesstrain](https://github.com/tesseract-ocr/tesstrain) layout: `<id>.png` next to `<id>.gt.txt`).
 
-rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones; it has no checking tool of
-its own. Push, pull and freeze (`tools/transcribe/bucket`; the bucket and its key in `training.env`, from
-`training.env.example`) copy a set to and from an S3 bucket, where any program can be the checking tool: it reads
-the files below and writes the decisions. The bucket is private: it keeps sets for checking and training, public
-domain or not. Whether a set may also be published is its `public_domain` field, set before the first push.
+rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones, from folders; it has no
+checking tool of its own, and no tool to copy sets anywhere. A set can also be kept in an S3 bucket, one prefix per
+set laid out as below, where any program can be the checking tool: it reads the files below and writes the
+decisions. Keep such a bucket private, since it holds sets for checking and training, public domain or not. Whether
+a set may also be published is its `public_domain` field, set before the set is first shared.
 
 Format version 1. New fields may be added at any time, so readers must ignore fields they don't know; renaming or
 removing a field, or changing what one means, raises the version.
@@ -107,7 +107,8 @@ published.
 `review.json` can always be rebuilt from the history (the last save of each line). A checking tool writes one save
 at a time, so `review.json` is never written by two at once.
 
-Pull brings back `review.json` and the `.gt.txt` files (and removes those of lines no longer `done`), writes
+A tool that copies sets between a folder and a bucket should work like this, so nothing checked is lost. Pull
+brings back `review.json` and the `.gt.txt` files (and removes those of lines no longer `done`), writes
 `saves.jsonl` from `saves/`, and leaves the bucket's `review.json` fingerprint (its sha256) in the folder's `.pulled`.
 Push refuses a folder whose `.pulled` doesn't match the bucket's decisions (lines were checked since its last pull,
 or it was never pulled): nothing is sent, so nothing checked is lost. When it matches, push sends the folder's
@@ -128,7 +129,7 @@ set, so a result can always be traced to exact data. In the bucket:
 
 While `frozen.json` is there the set is read-only: a checking tool must refuse saves, and push refuses the set.
 A version never changes: reopening a set removes `frozen.json` so it can be checked again, toward `v<N+1>`, while
-`v<N>` stays as it was. `tools/transcribe/bucket freeze` and `reopen` do both.
+`v<N>` stays as it was. Freezing and reopening are the bucket tool's to do.
 
 ## Transcription rules, version 1
 
