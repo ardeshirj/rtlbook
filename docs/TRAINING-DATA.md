@@ -26,6 +26,7 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 | `<id>.gt.txt` | the checking tool | the checked text, only for lines marked `done` |
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
 | `.pulled` | pull, in a folder only | the fingerprint of the bucket's decisions at the last pull, so push can tell whether the folder is up to date (below) |
+| `summary.json` | the bucket tool, in a bucket, optional | what a list of sets needs, so it doesn't read every `lines.json`: `book`, `source`, `public_domain`, `lines` (how many), `test` (how many in the test split), `recheck` (the ids with a `recheck` field); written again with every `lines.json`. Decisions aren't counted here: they're in `review.json` |
 | `frozen.json`, `versions/` | freeze, in a bucket | a finished set's numbered versions, and while `frozen.json` is there, read-only ("Frozen versions", below) |
 
 Line IDs are `p<page, 3 digits>-<line on the page, 2 digits>`, e.g. `p028-04`, counted top to bottom in reading
