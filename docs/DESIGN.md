@@ -235,7 +235,7 @@ Moved to [ROADMAP.md](ROADMAP.md).
 
 ## 9. Risks and decisions
 
-- **Licenses:** no AGPL dependencies (PyMuPDF and `ebooklib` avoided). Kraken's OpenITI models are CC0.
+- **Licenses:** no AGPL dependencies (PyMuPDF and `ebooklib` avoided).
 - **Privacy and copyright:** books may be copyrighted or private. Everything runs locally; the container only sees
   the repository folder. Outside services (AI vision) only ever opt-in. Book text is never committed, except
   public-domain test pages.
@@ -247,13 +247,13 @@ Moved to [ROADMAP.md](ROADMAP.md).
    for Kindle until 2026-10-08).
 3. **A local tool.**
 4. Cloud OCR / AI: **opt-in only**; not used yet.
-5. GPU: **none** (Apple Silicon CPU). Tesseract and Kraken both run on CPU.
+5. GPU: **none** (Apple Silicon CPU). Tesseract runs on CPU.
 6. Typewriter books: **none found yet.**
 
 ---
 
 ## 10. Key tools and references
-- OCR: Tesseract 5 + `tessdata_best` (`fas`, `ara`; `osd` for the script check); Kraken with OpenITI's printed Persian/Arabic-script models (Zenodo)
+- OCR: Tesseract 5 + `tessdata_best` (`fas`, `ara`; `osd` for the script check)
 - PDF and images: pypdfium2, Pillow
 - E-book: EPUB 3.3 (W3C), epubcheck; reading systems: Readium, Thorium Reader
 - Font: Parastoo (OFL); Vazirmatn until 2026-10-05

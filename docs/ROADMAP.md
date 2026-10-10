@@ -14,7 +14,7 @@ the next.
 | **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB you'd read without noticing errors, with measured accuracy on sample pages |
 | **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization; checked in Thorium Reader (Readium) | One complete book you'd happily recommend |
 | **3: Scans of modern print, then verse** | Deskew, spreads, low-resolution warnings; couplets laid out as verse in the EPUB | Measured accuracy on scanned pages; verse reads correctly |
-| **4: Old letterpress** | Second engine (Kraken and/or opt-in AI vision), engine choice per book, a review step for disagreements | A 1930s book converts with errors only a review can catch |
+| **4: Old letterpress** | A second reading (opt-in AI vision), a review step for disagreements; Kraken dropped for now (2026-10-10: better than Tesseract on 1932 type, far worse on 1960s) | A 1930s book converts with errors only a review can catch |
 | Later | Typewriter, other languages | — |
 
 ## 2. Work items
