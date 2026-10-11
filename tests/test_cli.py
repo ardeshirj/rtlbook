@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from rtlbook.cli import app
 
-TOMORROW = Path(__file__).parents[1] / "input" / "test" / "Hedayat-Tomorrow.pdf"  # public domain; not committed
+TOMORROW = Path(__file__).parents[1] / "input" / "public-domain" / "tomorrow-2006.pdf"  # not committed
 
 
 @pytest.mark.skipif(not TOMORROW.exists() or not shutil.which("tesseract"), reason="needs the PDF in input/ and Tesseract")
