@@ -145,8 +145,10 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
    verb prefix (میرفت, not می‌رفت), a preposition joined to its word (بخانه), the old spelling with ئ (جائی), a
    misprint as printed. Don't add words that aren't in the image, such as a page number OCR missed.
 2. **Spaces: first the letters, then the words.** Letters that connect are typed joined, even across two words
-   (بخانه, کتابها). Where they don't connect, two words always get a space, even when printed with no gap, as is
-   common after ا د ذ ر ز ژ و (در خانه, not درخانه or در‌خانه); when in doubt whether it's one word or two, it's two.
+   (بخانه, کتابها). Where they don't connect, two words always get a space, even when printed with no gap: touching
+   isn't joining. ا د ذ ر ز ژ و never join the letter after them, so a word printed right against them is still a new
+   word, most often a short one such as با، تا، از، و، را (تا صبح, او را, not تاصبح, اورا; در خانه, not درخانه or
+   در‌خانه); when in doubt whether it's one word or two, it's two.
    Within one word (a prefix such as می, a suffix such as ها or تر, the parts of a compound), follow the print: a
    letter that could connect but is printed apart without a gap gets a half-space, U+200C (کتاب‌ها); a letter that
    never connects needs nothing (دیوارها); a clear gap is a space (می رفت).
