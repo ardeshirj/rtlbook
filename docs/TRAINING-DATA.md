@@ -41,7 +41,7 @@ order. Re-preparing a page renumbers its lines; `prepare.py` carries over the de
   "public_domain": true,
   "lines": [
     {
-      "id": "p028-04", "page": 28, "split": "test", "rules": 1,
+      "id": "p028-04", "page": 28, "split": "test", "rules": 2,
       "box": [410, 1210, 2160, 1290],
       "ocr": "…", "start": "…", "prefilled": false, "hint": null,
       "words": [
@@ -132,15 +132,21 @@ While `frozen.json` is there the set is read-only: a checking tool must refuse s
 A version never changes: reopening a set removes `frozen.json` so it can be checked again, toward `v<N+1>`, while
 `v<N>` stays as it was. Freezing and reopening are the bucket tool's to do.
 
-## Transcription rules, version 1
+## Transcription rules, version 2
 
-Type exactly what is printed on the line:
+The aim is to teach OCR to read what's on the page: type what the ink shows, letter by letter, not what the sentence
+should say, what's correct today, or what you expect to read. When the print and the "right" word disagree, the
+print wins: that's the very case OCR has to learn. Type exactly what is printed on the line:
 
 1. **What is printed on this line, nothing more.** Keep the book's spelling, even old-fashioned or wrong: a joined
    verb prefix (میرفت, not می‌رفت), a preposition joined to its word (بخانه), the old spelling with ئ (جائی), a
    misprint as printed. Don't add words that aren't in the image, such as a page number OCR missed.
-2. **Spaces as printed.** A visible gap is a space (سر گردان); letters that connect are typed joined (کتابها); two
-   parts close together but not connected get a half-space, U+200C (کتاب‌ها).
+2. **Spaces: first the letters, then the words.** Letters that connect are typed joined, even across two words
+   (بخانه, کتابها). Where they don't connect, two words always get a space, even when printed with no gap, as is
+   common after ا د ذ ر ز ژ و (در خانه, not درخانه or در‌خانه); when in doubt whether it's one word or two, it's two.
+   Within one word (a prefix such as می, a suffix such as ها or تر, the parts of a compound), follow the print: a
+   letter that could connect but is printed apart without a gap gets a half-space, U+200C (کتاب‌ها); a letter that
+   never connects needs nothing (دیوارها); a clear gap is a space (می رفت).
 3. **Every printed mark, and only those**, in Persian forms: dashes as `-`, three dots as `...`, Persian comma ،,
    question mark ؟ and quotes « », a footnote asterisk where it's printed, a small hamza over ه only where printed
    (خانهٔ), no tanvin unless printed. Persian ی and ک for Arabic-style ي and ك; Persian digits (۱۲, not 12 or ١٢).
@@ -151,3 +157,7 @@ Type exactly what is printed on the line:
 
 A change to these rules that changes what a checked line would contain raises the version; `prepare.py` stamps it
 on new lines (`RULES`), so lines checked under different rules can be told apart.
+
+Version 2 (2026-10-12) made rule 2 precise: version 1's "two parts close together but not connected get a
+half-space" read as a half-space between two words printed with no gap; they now get a space, and a suffix after a
+letter that never connects gets nothing.
