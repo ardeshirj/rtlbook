@@ -40,3 +40,11 @@ def test_known_joined_words():
     assert lex.known("ازیک")  # two common words printed joined
     assert lex.known("بخانه")  # ب joined to its word
     assert not lex.known("ازیکی")
+
+
+
+def test_ties_come_in_one_order():
+    """Candidates that rank the same (here: one letter added, none common, none counted) come alphabetically, so
+    the suggestions don't change from one run to the next."""
+    lex = Lexicon.build([], ["همیلرزید", "میلرزیده", "نمیلرزید", "میلرزیدی", "میلرزیدم"], [])
+    assert lex.suggest("میلرزید") == ["میلرزیدم", "میلرزیده", "میلرزیدی", "نمیلرزید", "همیلرزید"]

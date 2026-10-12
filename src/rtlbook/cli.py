@@ -315,3 +315,30 @@ def eval_cmd(
         json_out.write_text(json.dumps(res.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8")
     if diff:
         diff.write_text("".join(f"{r or '∅'}\n  → {h or '∅'}\n\n" for r, h in res.mismatches), encoding="utf-8")
+
+
+@app.command()
+def lines(
+    pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help=INPUT_HELP)],
+    pages: Annotated[str, typer.Option(help="Pages to cut into lines, e.g. 12,20-24")],
+    split: Annotated[str, typer.Option(help="train or test: test pages never go into training")],
+    out: Annotated[Path, typer.Option(help="The set's folder: lines.json and the line images go here")],
+    common: Annotated[Path, typer.Option(exists=True, dir_okay=False, help="Word list of common words, one per line")],
+    more: Annotated[Optional[Path], typer.Option(exists=True, dir_okay=False, help="A larger word list")] = None,
+    book: Annotated[Optional[Path], typer.Option(exists=True, file_okay=False, help="The book's convert work folder, for word counts")] = None,
+    prefill: Annotated[Optional[str], typer.Option(help="Checked text per page to start from, e.g. 'gt/p{n}.txt'")] = None,
+    dpi: int = 300,
+    lang: str = "fas",
+    psm: int = 4,
+    source: Annotated[Optional[str], typer.Option(help="The edition, e.g. 'first printing, Tehran 1932' (kept once set)")] = None,
+    public_domain: Annotated[Optional[str], typer.Option(help="yes or no: whether the source edition is public domain everywhere (kept once set)")] = None,
+) -> None:
+    """Cut pages into training lines for checking (docs/TRAINING-DATA.md): lines.json and an image per line."""
+    from rtlbook import lines as training_lines
+
+    if split not in ("train", "test") or public_domain not in (None, "yes", "no"):
+        console.print("[red]--split is train or test, --public-domain yes or no[/]")
+        raise typer.Exit(2)
+    n = training_lines.prepare(pdf_path, pages, split, out, common, more, book, prefill, dpi, lang, psm, source,
+                               None if public_domain is None else public_domain == "yes")
+    console.print(f"{n} lines in {out / 'lines.json'}")

@@ -124,6 +124,17 @@ When the last two are much better than the first, the words were read correctly 
 which is a layout problem (e.g. two-column verse) rather than misread letters. A reference longer than
 the pages (a whole chapter for a page that shows only its end) is trimmed to the part the OCR covers.
 
+## Training lines
+
+`lines` cuts pages of a book into one image per text line, with what OCR read and its uncertain words, for a person
+to check; the checked lines become ground truth and training data for Tesseract. The format, the rules for checking
+and how test lines are kept out of training: [docs/TRAINING-DATA.md](docs/TRAINING-DATA.md).
+
+```bash
+./rtlbook lines input/book.pdf --pages 30,54 --split test --out lines/book --common words.txt
+./rtlbook lines input/book.pdf --pages 1-29,31-53 --split train --out lines/book --common words.txt
+```
+
 ## Reading the output
 
 Open the EPUB in [Thorium Reader](https://thorium.edrlab.org/) (Windows, macOS, Linux) or another app built on

@@ -179,6 +179,7 @@ Runs in Docker through the `./rtlbook` wrapper, which only shares the repository
 ./rtlbook inspect input/book.pdf                       # exported PDF or scan? right script?
 ./rtlbook convert input/book.pdf --title "…" --author "…"   # → output/book.epub
 ./rtlbook eval output/book.rtlbook ref.txt --pages 24  # accuracy against a checked text
+./rtlbook lines input/book.pdf --pages 12-40 --split train --out lines/book --common words.txt  # training lines (docs/TRAINING-DATA.md)
 ```
 
 Main `convert` options: `--pages`, `-j/--jobs`, `--drop-lines REGEX`, `--min-line-conf`, `--crop`, `--digits`,

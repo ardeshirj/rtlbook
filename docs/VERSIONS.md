@@ -7,7 +7,7 @@ rtlbook has one version number, which `rtlbook version` prints. Each release is 
 - **A new middle number** (0.5.0 → 0.6.0) for a change in what rtlbook produces or how it's used: a new kind of
   book supported, a change to the EPUB, a command or option added, removed or renamed.
 - **A new last number** (0.5.0 → 0.5.1) for a fix that doesn't change any of that.
-- **No change** for docs, experiments and the training tool (`tools/transcribe/prepare.py`).
+- **No change** for docs and experiments.
 
 While the version is below 1.0, any release may break how rtlbook is used; the history below says how.
 
@@ -38,6 +38,15 @@ git push origin main v0.6.0
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
 
 ## History
+
+### 0.6.0 (2026-10-12)
+- **`rtlbook lines`** cuts a book's pages into training lines for checking (`docs/TRAINING-DATA.md`): what
+  `tools/transcribe/prepare.py` did, now a command released with rtlbook's versions, so a set can be cut by a known
+  version. `lines.json` records it (`engine`). `tools/transcribe/prepare.py` is gone.
+- **Suggestions come in one order on every run:** words that rank the same are listed alphabetically (they followed
+  an order that could change between runs).
+- **Transcription rules version 2:** two words printed with no gap get a space (version 1 read as a half-space); the
+  aim comes first: type what the ink shows. New lines are stamped `rules: 2`.
 
 ### 0.5.0 (2026-10-08)
 The first tagged version.

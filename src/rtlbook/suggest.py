@@ -101,6 +101,7 @@ class Lexicon:
 
         def rank(c: str) -> tuple:
             letters = SequenceMatcher(None, w, c, autojunk=False).ratio()
-            return (tiers[c], c not in self.common, -math.log1p(self.counts[c]), -letters)
+            # the word itself last: ties keep one order on every run (the candidates come from sets)
+            return (tiers[c], c not in self.common, -math.log1p(self.counts[c]), -letters, c)
 
         return sorted(tiers, key=rank)[:limit]

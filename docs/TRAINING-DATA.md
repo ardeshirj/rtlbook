@@ -4,7 +4,7 @@ The format of rtlbook's training data: line images cut from scanned pages, the O
 text a person checked against the image. It's the ground truth for measuring OCR and for fine-tuning Tesseract
 (the [tesstrain](https://github.com/tesseract-ocr/tesstrain) layout: `<id>.png` next to `<id>.gt.txt`).
 
-rtlbook makes the lines (`tools/transcribe/prepare.py`) and trains on the checked ones, from folders; it has no
+rtlbook makes the lines (`rtlbook lines`) and trains on the checked ones, from folders; it has no
 checking tool of its own, and no tool to copy sets anywhere. A set can also be kept in an S3 bucket, one prefix per
 set laid out as below, where any program can be the checking tool: it reads the files below and writes the
 decisions. Keep such a bucket private, since it holds sets for checking and training, public domain or not. Whether
@@ -20,8 +20,8 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 
 | File | Written by | What it is |
 |---|---|---|
-| `lines.json` | `prepare.py` | the lines: where each was cut, what OCR read, the uncertain words |
-| `<id>.png` | `prepare.py` | the line image, cut from the unbinarized page at the render resolution (300 dpi) |
+| `lines.json` | `rtlbook lines` | the lines: where each was cut, what OCR read, the uncertain words |
+| `<id>.png` | `rtlbook lines` | the line image, cut from the unbinarized page at the render resolution (300 dpi) |
 | `examples.json` | a person, optional | crops of this book that illustrate the rules (below) |
 | `<id>.gt.txt` | the checking tool | the checked text, only for lines marked `done` |
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
@@ -31,7 +31,7 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 | `frozen.json`, `versions/` | freeze, in a bucket | a finished set's numbered versions, and while `frozen.json` is there, read-only ("Frozen versions", below) |
 
 Line IDs are `p<page, 3 digits>-<line on the page, 2 digits>`, e.g. `p028-04`, counted top to bottom in reading
-order. Re-preparing a page renumbers its lines; `prepare.py` carries over the decisions by position on the page.
+order. Cutting a page again renumbers its lines; `rtlbook lines` carries over the decisions by position on the page.
 
 ## lines.json
 
@@ -40,6 +40,7 @@ order. Re-preparing a page renumbers its lines; `prepare.py` carries over the de
   "book": "book.pdf",
   "source": "first printing, Tehran 1932",
   "public_domain": true,
+  "engine": "0.6.0",
   "lines": [
     {
       "id": "p028-04", "page": 28, "split": "test", "rules": 2,
@@ -58,6 +59,7 @@ order. Re-preparing a page renumbers its lines; `prepare.py` carries over the de
 | `book` | the source file's name |
 | `source` | optional: the edition the scan is of (printing, place, year) |
 | `public_domain` | optional: `true` when that edition is public domain everywhere, so the set's lines may be published; `false` or missing: keep the set private |
+| `engine` | the rtlbook version that cut the lines last (`rtlbook version`); missing in sets cut before 0.6.0 |
 | `id`, `page` | the line ID; the page number in the PDF, from 1 |
 | `split` | `train` or `test`. Test lines measure the OCR and must never be used for training. |
 | `rules` | the version of the transcription rules (below) the line is to be checked under |
@@ -114,7 +116,7 @@ brings back `review.json` and the `.gt.txt` files (and removes those of lines no
 `saves.jsonl` from `saves/`, and leaves the bucket's `review.json` fingerprint (its sha256) in the folder's `.pulled`.
 Push refuses a folder whose `.pulled` doesn't match the bucket's decisions (lines were checked since its last pull,
 or it was never pulled): nothing is sent, so nothing checked is lost. When it matches, push sends the folder's
-decisions with the lines, since they're the current ones (`prepare.py` renumbers re-cut pages and carries the checked
+decisions with the lines, since they're the current ones (`rtlbook lines` renumbers re-cut pages and carries the checked
 text over); the history keeps the old numbers. A set's first push sends the folder's decisions too, if it has some
 (a set checked before it had a bucket), turning `saves.jsonl` into `saves/`.
 
@@ -156,8 +158,8 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
    lines in one image.
 5. **Unsure (`unsure`)** when a word can't be read for certain: type the best guess.
 
-A change to these rules that changes what a checked line would contain raises the version; `prepare.py` stamps it
-on new lines (`RULES`), so lines checked under different rules can be told apart.
+A change to these rules that changes what a checked line would contain raises the version; `rtlbook lines` stamps it
+on new lines (`RULES` in `src/rtlbook/lines.py`), so lines checked under different rules can be told apart.
 
 Version 2 (2026-10-12) made rule 2 precise: version 1's "two parts close together but not connected get a
 half-space" read as a half-space between two words printed with no gap; they now get a space, and a suffix after a

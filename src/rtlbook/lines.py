@@ -1,29 +1,22 @@
-"""Prepare pages of a book for line transcription (ground truth and training lines for fine-tuning Tesseract).
+"""Training lines from a book's pages: ground truth and training lines for fine-tuning Tesseract (`rtlbook lines`).
 
 For each page: render, OCR with word boxes, crop every text line from the unbinarized page, and flag words that
 are uncertain (low confidence, or not in the word lists) with dot-aware suggestions. Writes <out>/lines.json and
 <out>/<id>.png; a checking tool then writes <id>.gt.txt next to each image (the tesstrain layout). The format:
-docs/TRAINING-DATA.md. Re-running for a page replaces its OCR and crops; checked text (.gt.txt, review.json) is kept.
-
-Run in the container from the repo root, e.g.:
-  python tools/transcribe/prepare.py input/book.pdf --pages 40,86-87 --split test \\
-      --out output/poc/35-period-type/lines --common dict/common.txt --more dict/more.txt \\
-      --source "first printing, 1963" --public-domain no
+docs/TRAINING-DATA.md. Running it again for a page replaces its OCR and crops; checked text (.gt.txt, review.json)
+is kept. lines.json records the rtlbook version that cut the lines last (`engine`).
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
-import sys
 from difflib import SequenceMatcher
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-from rtlbook import ocr, pdf, preprocess  # noqa: E402
-from rtlbook.suggest import Lexicon, normalize  # noqa: E402
-from rtlbook.text import normalize_text, persian_digits  # noqa: E402
+from rtlbook import __version__, ocr, pdf, preprocess
+from rtlbook.suggest import Lexicon, normalize
+from rtlbook.text import normalize_text, persian_digits
 
 RULES = 2  # version of the transcription rules (docs/TRAINING-DATA.md); stored with every line
 FLAG_CONF = 60  # words OCR'd below this confidence are flagged even when they are real words
@@ -84,7 +77,7 @@ def overlap(a, b) -> float:
     return inter / union if union else 0.0
 
 
-def carry_over(out: Path, old: list[dict], new: list[dict]) -> None:
+def carry_over(out: Path, old: list[dict], new: list[dict], log=print) -> None:
     """Keep what was already checked on re-prepared pages. Lines are matched by position on the page (their
     numbers may change); a checked line whose crop changed must be checked again, starting from its saved text."""
     review_path = out / "review.json"
@@ -114,55 +107,43 @@ def carry_over(out: Path, old: list[dict], new: list[dict]) -> None:
     lost = len(saved_old) - kept - changed
     if review or review_path.exists():  # no empty file in a new folder: push would take it for local checking
         review_path.write_text(json.dumps(review, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"checked lines: {kept} kept, {changed} to check again (new crop), {lost} with no matching line")
+    log(f"checked lines: {kept} kept, {changed} to check again (new crop), {lost} with no matching line")
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("pdf", type=Path)
-    ap.add_argument("--pages", required=True, help="e.g. 12,20-24")
-    ap.add_argument("--split", required=True, choices=["train", "test"], help="test pages never go into training")
-    ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--common", type=Path, required=True, help="word list of common words (one per line)")
-    ap.add_argument("--more", type=Path, help="a larger word list")
-    ap.add_argument("--book", type=Path, help="the book's convert work folder, for word counts")
-    ap.add_argument("--prefill", help="checked text per page to start from, e.g. 'gt/p{n}.txt'")
-    ap.add_argument("--dpi", type=int, default=300)
-    ap.add_argument("--lang", default="fas")
-    ap.add_argument("--psm", type=int, default=4)
-    ap.add_argument("--source", help="the edition, e.g. 'first printing, Tehran 1932' (kept once set)")
-    ap.add_argument("--public-domain", choices=["yes", "no"],
-                    help="whether the source edition is public domain everywhere (kept once set)")
-    args = ap.parse_args()
-
+def prepare(pdf_path: Path, pages_spec: str, split: str, out: Path, common: Path, more_words: Path | None = None,
+            book: Path | None = None, prefill_spec: str | None = None, dpi: int = 300, lang: str = "fas", psm: int = 4,
+            source: str | None = None, public_domain: bool | None = None, log=print) -> int:
+    """Cut the pages (pages_spec, e.g. "12,20-24") into lines in out, all in one split ("train" or "test").
+    Returns the number of lines in the set."""
     book_words = []
-    if args.book:
-        for f in sorted((args.book / "pages").glob("*.json")):
+    if book:
+        for f in sorted((book / "pages").glob("*.json")):
             book_words += [w for ln in json.loads(f.read_text())["lines"] for w in ln["text"].split()]
-    more = args.more.read_text(encoding="utf-8").split() if args.more else []
-    lex = Lexicon.build(args.common.read_text(encoding="utf-8").split(), more, book_words)
+    more = more_words.read_text(encoding="utf-8").split() if more_words else []
+    lex = Lexicon.build(common.read_text(encoding="utf-8").split(), more, book_words)
 
-    args.out.mkdir(parents=True, exist_ok=True)
-    index_path = args.out / "lines.json"
-    index = json.loads(index_path.read_text()) if index_path.exists() else {"book": args.pdf.name, "lines": []}
-    if args.source:
-        index["source"] = args.source
-    if args.public_domain:
-        index["public_domain"] = args.public_domain == "yes"
-    pages = page_numbers(args.pages)
+    out.mkdir(parents=True, exist_ok=True)
+    index_path = out / "lines.json"
+    index = json.loads(index_path.read_text()) if index_path.exists() else {"book": pdf_path.name, "lines": []}
+    if source:
+        index["source"] = source
+    if public_domain is not None:
+        index["public_domain"] = public_domain
+    index["engine"] = __version__
+    pages = page_numbers(pages_spec)
     kept = [ln for ln in index["lines"] if ln["page"] not in pages]
-    doc = pdf.open_book(args.pdf)
+    doc = pdf.open_book(pdf_path)
     new = []
     for n in pages:
-        img = pdf.render(doc, n - 1, args.dpi)
-        for old_png in args.out.glob(f"p{n:03d}-*.png"):
+        img = pdf.render(doc, n - 1, dpi)
+        for old_png in out.glob(f"p{n:03d}-*.png"):
             old_png.unlink()
         checked = []
-        if args.prefill and (p := Path(args.prefill.format(n=n))).exists():
+        if prefill_spec and (p := Path(prefill_spec.format(n=n))).exists():
             checked = [t for t in p.read_text(encoding="utf-8").splitlines() if t.strip()]
         found = 0
         segments = []  # keep marks without letters (- « *) so the crop includes them; drop parts with no letters
-        for line in ocr.ocr_words(preprocess.prepare(img), args.lang, args.psm):
+        for line in ocr.ocr_words(preprocess.prepare(img), lang, psm):
             segments += [part for part in split_at_gaps(line) if any(WORD_CHARS.search(w.text) for w in part)]
         for words in segments:
             if max(w.y1 for w in words) - min(w.y0 for w in words) < MIN_LINE_H:
@@ -170,7 +151,7 @@ def main() -> None:
             found += 1
             line_id = f"p{n:03d}-{found:02d}"
             box = crop_box(words, img.width, img.height)
-            img.crop(box).save(args.out / f"{line_id}.png")
+            img.crop(box).save(out / f"{line_id}.png")
             items = []
             for w in words:
                 t = clean(w.text)
@@ -184,17 +165,13 @@ def main() -> None:
                 start = " ".join(clean(t) for t in start.split())
                 if len(start.split()) != len(items):  # the checked line also covers words OCR missed: hint only
                     start, hint = None, start
-            new.append({"id": line_id, "page": n, "split": args.split, "rules": RULES, "box": box,
+            new.append({"id": line_id, "page": n, "split": split, "rules": RULES, "box": box,
                         "ocr": text, "start": start or text, "prefilled": bool(start), "hint": hint,
                         "words": items})
-        print(f"page {n}: {found} lines, {sum(w['flag'] for ln in new if ln['page'] == n for w in ln['words'])} "
+        log(f"page {n}: {found} lines, {sum(w['flag'] for ln in new if ln['page'] == n for w in ln['words'])} "
               f"flagged words")
-    carry_over(args.out, [ln for ln in index["lines"] if ln["page"] in pages], new)
+    carry_over(out, [ln for ln in index["lines"] if ln["page"] in pages], new, log)
     index["lines"] = sorted(kept + new, key=lambda ln: (ln["split"] != "test", ln["page"], ln["id"]))
-    index = {k: index[k] for k in ("book", "source", "public_domain") if k in index} | {"lines": index["lines"]}
+    index = {k: index[k] for k in ("book", "source", "public_domain", "engine") if k in index} | {"lines": index["lines"]}
     index_path.write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"{len(index['lines'])} lines in {index_path}")
-
-
-if __name__ == "__main__":
-    main()
+    return len(index["lines"])
