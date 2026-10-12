@@ -27,6 +27,7 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
 | `.pulled` | pull, in a folder only | the fingerprint of the bucket's decisions at the last pull, so push can tell whether the folder is up to date (below) |
 | `summary.json` | the bucket tool, in a bucket, optional | what a list of sets needs, so it doesn't read every `lines.json`: `book`, `source`, `public_domain`, `lines` (how many), `test` (how many in the test split), `recheck` (the ids with a `recheck` field), and optionally `title`, `title_en`, `author`, `edition` from a record of the book kept with the set; written again with every `lines.json`. Decisions aren't counted here: they're in `review.json` |
+| `index.json`, `pages/p<NNN>.json` | the bucket tool, in a bucket, optional | for a checking tool that loads a set a page at a time: `index.json` has every line in brief (`id`, `page`, `split`, `recheck`, and how readers of the line compared, if any), `pages/` each page's lines in full as in `lines.json`, with any readings of them; built from `lines.json` and written again with it. Training and testing never read them |
 | `frozen.json`, `versions/` | freeze, in a bucket | a finished set's numbered versions, and while `frozen.json` is there, read-only ("Frozen versions", below) |
 
 Line IDs are `p<page, 3 digits>-<line on the page, 2 digits>`, e.g. `p028-04`, counted top to bottom in reading
