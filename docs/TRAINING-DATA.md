@@ -87,8 +87,9 @@ Optional: real crops that show each rule in this book's type, keyed by the rule'
 `line` is the line whose image holds the example, `x0`/`x1` the part to show, `type` and `dont` the right and
 wrong way to type it. The names: for rule 2 (spaces), by what to type: a half-space `sp-hs-suffix`, `sp-hs-prefix`;
 a space `sp-gap`, `sp-touching`, `sp-ra`, `sp-word-gap`; nothing `sp-jn-prefix`, `sp-jn-suffix`, `sp-jn-words`,
-`sp-jn-after`. For rules 1 and 3: `old-spelling`, `dash`, `comma`, `question`, `quotes`, `hamza`, `arabic-letters`,
-`page-number`. (Version 1's `joined-prefix`, `joined-preposition`, `gap`, `joined` and `half-space` aren't shown any
+`sp-jn-after`. For rules 1 and 3: `old-spelling`, `comma`, `question`, `quotes`, `dash`, `dots`, `hamza`,
+`arabic-letters`, `page-number`. For rule 4, whole lines (`x0` 0, `x1` the line's width): `skip-two`, `skip-cut`,
+`skip-speck`, `skip-hand`, `skip-mark`. (Version 1's `joined-prefix`, `joined-preposition`, `gap`, `joined` and `half-space` aren't shown any
 more.)
 
 ## Decisions
