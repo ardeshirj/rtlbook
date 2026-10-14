@@ -168,6 +168,10 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
 - **epubcheck** on every build; any error fails `convert`.
 - **Accuracy:** `rtlbook eval` against checked text, and `tests/test_ground_truth.py`, which fails if accuracy on
   the public-domain pages in `tests/data/` drops below the baseline.
+- **Scorecard:** `rtlbook bench` (`make bench SET=<a training set's folder>`) scores a line reader (`readers.py`)
+  on a set's checked test lines read one by one, whole pages through `convert`'s OCR, and an exported PDF, with
+  spacing counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
+  compared with the last. Lines and pages compare only between runs on the same checked data.
 
 ---
 

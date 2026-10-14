@@ -49,9 +49,15 @@ Line finding, text clean-up, structure, the EPUB builder and validation hold up;
      - speed and size: seconds a page, memory, image size.
 
      A case joins when work on its weak spot starts (1960s type, two-column verse), not before.
+     **Built (2026-10-14):** `rtlbook bench`, `make bench SET=…`, results in `bench/results.jsonl`. Tesseract's
+     baseline on 54 checked test lines and 3 whole pages of the 1932 book: 6.4% letters wrong reading each line
+     alone, 13.3% of word gaps wrong; whole pages 7.0%; the exported PDF 0.52%; 0.05 s a line, 1.3 s a page.
   2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns
      its text and confidence (today all of it is one Tesseract call, `ocr.ocr_lines`). First with only Tesseract
-     behind it: the scorecard must not move. The reader joins the OCR cache key.
+     behind it. The reader joins the OCR cache key. `readers.py` has the slot, used by the scorecard so far.
+     Found on the way: Tesseract reading a cut line as a raw line (`--psm 13`) misreads 6.4% of the test lines'
+     letters, against 9.6% when it reads the whole page (and 19.8% with `--psm 7`), so the slot may be a gain
+     with Tesseract alone: the whole-page row will tell.
   3. *ParisaOCR as the scan reader:* speed (its own converter took ~12 s a page against Tesseract's 1–2), image
      size (it ships with PyTorch; ONNX Runtime is likely far smaller), its own confidence scale (the warning below
      70, headings at 60 and `--min-line-conf` are tuned to Tesseract's), and which clean-up fixes aimed at

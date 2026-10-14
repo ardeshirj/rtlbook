@@ -318,6 +318,98 @@ def eval_cmd(
 
 
 @app.command()
+def bench(
+    reader: Annotated[str, typer.Option(help="The line reader to score: tesseract")] = "tesseract",
+    set_dir: Annotated[Optional[Path], typer.Option("--set", file_okay=False, help="A training set's folder (docs/TRAINING-DATA.md): its checked test lines")] = None,
+    scan: Annotated[Path, typer.Option(help="The scan the set and the page texts are from")] = Path("input/public-domain/three-drops-1932.pdf"),
+    page_texts: Annotated[Path, typer.Option(help="Checked whole pages, p<N>.txt")] = Path("tests/data/three-drops"),
+    exported: Annotated[Path, typer.Option(help="An exported PDF")] = Path("input/public-domain/tomorrow-2006.pdf"),
+    exported_text: Annotated[Path, typer.Option(help="Its reference text")] = Path("tests/data/tomorrow/reference.txt"),
+    save: Annotated[Optional[Path], typer.Option(help="Add the results to this file (JSON lines) and compare with its last entry")] = None,
+    image_mb: Annotated[Optional[int], typer.Option(help="The image's size, measured outside it")] = None,
+    commit: Annotated[Optional[str], typer.Option(help="The source's commit, recorded with the results")] = None,
+    jobs: int = 2,
+) -> None:
+    """The scorecard: the reader alone on checked lines, whole pages, an exported PDF, speed (ROADMAP.md)."""
+    from rtlbook import bench as scorecard, readers
+
+    r = readers.get(reader)
+    skipped = []
+    lines_score = pages_score = exported_score = None
+    if set_dir and (set_dir / "lines.json").exists():
+        console.print(f"Reading the checked test lines of {set_dir.name} with {r.name}…")
+        lines_score = scorecard.score_lines(set_dir, r)
+    else:
+        skipped.append("lines (no --set)")
+    refs = scorecard.page_references(set_dir, page_texts if page_texts.is_dir() else None)
+    if scan.exists() and refs:
+        console.print(f"Whole pages {', '.join(map(str, sorted(refs)))} of {scan.name}…")
+        pages_score = scorecard.score_pages(scan, refs, jobs)
+    else:
+        skipped.append(f"pages ({scan} missing)" if not scan.exists() else "pages (no checked pages)")
+    if exported.exists() and exported_text.exists():
+        console.print(f"The exported PDF {exported.name}…")
+        exported_score = scorecard.score_exported(exported, exported_text, jobs)
+    else:
+        skipped.append(f"exported ({exported} missing)")
+    rec = scorecard.record(r, commit=commit, lines=lines_score, pages=pages_score, exported=exported_score,
+                           memory_mb=scorecard.peak_memory_mb(), image_mb=image_mb)
+
+    last = None
+    if save and save.exists():
+        entries = [json.loads(x) for x in save.read_text(encoding="utf-8").splitlines() if x.strip()]
+        last = entries[-1] if entries else None
+    t = Table(title=f"Scorecard: rtlbook {__version__}, {r.name}")
+    for col in ("case", "measure", "this run"):
+        t.add_column(col, justify="right" if col == "this run" else "left")
+    if last:
+        t.add_column(f"last saved ({last['reader']}, {last['date'][:10]})", justify="right")
+    pct = lambda v: f"{v:.2%}"
+    rows = [
+        ("lines", "letters_wrong", "Reader alone: letters wrong", pct),
+        ("lines", "exact", "Reader alone: lines with every letter right", str),
+        ("lines", "spacing_wrong", "Reader alone: word gaps wrong (space, half-space)", pct),
+        ("lines", "seconds_a_line", "Reader alone: seconds a line", str),
+        ("pages", "letters_wrong", "Whole pages: letters wrong", pct),
+        ("pages", "letters_wrong_by_line", "Whole pages: letters wrong, line by line", pct),
+        ("pages", "lines_missing", "Whole pages: lines lost or merged", str),
+        ("pages", "lines_extra", "Whole pages: extra lines", str),
+        ("pages", "seconds_a_page", "Whole pages: seconds a page", str),
+        ("exported", "letters_wrong", "Exported PDF: letters wrong", pct),
+        ("exported", "seconds_a_page", "Exported PDF: seconds a page", str),
+        (None, "memory_mb", "Peak memory, MB", str),
+        (None, "image_mb", "Image size, MB", str),
+    ]
+    for case, key, label, fmt in rows:
+        now = (rec.get(case) or {}).get(key) if case else rec.get(key)
+        if now is None:
+            continue
+        cells = [case or "", label, fmt(now)]
+        if last:
+            before = (last.get(case) or {}).get(key) if case else last.get(key)
+            cells.append(fmt(before) if before is not None else "")
+        t.add_row(*cells)
+    console.print(t)
+    if lines_score:
+        console.print(f"[dim]Lines: {lines_score['lines']} checked test lines of {lines_score['set']} "
+                      f"(data {lines_score['data']}: compare only runs on the same data)[/]")
+    if pages_score:
+        console.print(f"[dim]Pages: {', '.join(map(str, pages_score['pages']))}, {pages_score['lines']} lines, "
+                      "through convert's own OCR[/]")
+    if last and last.get("lines", {}).get("data") != (lines_score or {}).get("data"):
+        console.print("[yellow]The checked lines changed since the last saved run: their numbers don't compare[/]")
+    if last and last.get("pages", {}).get("pages") != (pages_score or {}).get("pages"):
+        console.print("[yellow]The checked pages changed since the last saved run: their numbers don't compare[/]")
+    for s in skipped:
+        console.print(f"[dim]Skipped: {s}[/]")
+    if save:
+        save.parent.mkdir(parents=True, exist_ok=True)
+        with save.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        console.print(f"Saved to {save}")
+
+
+@app.command()
 def lines(
     pdf_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help=INPUT_HELP)],
     pages: Annotated[str, typer.Option(help="Pages to cut into lines, e.g. 12,20-24")],

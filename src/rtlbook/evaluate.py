@@ -64,6 +64,7 @@ class Result:
     line_ref_chars: int = 0  # line-matched scoring (ignores reading order); 0 = not computed
     line_char_errors: int = 0
     extra_ocr_lines: int = 0  # OCR lines with no reference line (footnotes, headers, page numbers)
+    missing_lines: int = 0  # reference lines with no OCR line (lost, or merged into another)
     line_pairs: int = 0  # consecutive reference lines that were both found in the OCR text...
     line_pairs_in_order: int = 0  # ...and also follow each other there
     confusions: collections.Counter = field(default_factory=collections.Counter)
@@ -96,6 +97,7 @@ class Result:
             "word_recall_unordered": round(self.word_recall_unordered, 4),
             "line_cer": round(self.line_cer, 4) if self.line_cer is not None else None,
             "extra_ocr_lines": self.extra_ocr_lines,
+            "missing_lines": self.missing_lines,
             "line_order": round(self.line_order, 4) if self.line_order is not None else None,
             "ref_chars": self.ref_chars,
             "char_errors": self.char_errors,
@@ -181,6 +183,7 @@ def _line_scores(ref_lines: list[str], hyp_lines: list[str], res: Result) -> Non
         _char_edits(r, hyp_lines[match[i]])[0] if i in match else len(r) for i, r in enumerate(ref_lines)
     )
     res.extra_ocr_lines = len(hyp_lines) - len(used)
+    res.missing_lines = len(ref_lines) - len(match)
     # Reading order: does the next reference line also come next among the matched OCR lines?
     rank = {j: k for k, j in enumerate(sorted(used))}
     for i in range(len(ref_lines) - 1):
