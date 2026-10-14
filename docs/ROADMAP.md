@@ -14,17 +14,61 @@ the next.
 | **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB you'd read without noticing errors, with measured accuracy on sample pages |
 | **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization; checked in Thorium Reader (Readium) | One complete book you'd happily recommend |
 | **3: Scans of modern print, then verse** | Deskew, spreads, low-resolution warnings; couplets laid out as verse in the EPUB | Measured accuracy on scanned pages; verse reads correctly |
-| **4: Old letterpress** | A second reading (opt-in AI vision), a review step for disagreements; Kraken dropped for now (2026-10-10: better than Tesseract on 1932 type, far worse on 1960s) | A 1930s book converts with errors only a review can catch |
+| **4: Old letterpress** | A modern reader for scans in the reader slot (see the first work item); a second reading (opt-in AI vision), a review step for disagreements | A 1930s book converts with errors only a review can catch |
 | Later | Typewriter, other languages | — |
 
 ## 2. Work items
 
-### Letterpress type (1930s–60s) — trial done; first training set next (ahead of phases 3–4)
+Where the engine is weakest, in the order to work on it (2026-10-14):
+1. **The reader on scans** (next item): about ten times more letters wrong than a modern reader.
+2. **Spacing:** half-spaces and spaces between words (text clean-up, below); every book, exported PDFs too.
+3. **Scan preprocessing:** deskew, spreads, uneven backgrounds, low resolution (below).
+4. **Layout:** two-column verse with a narrow gutter (~46% of words found), footnotes, bold titles.
+5. **Readers' marks in scans** (below).
+6. **Unusual fonts** (below).
+
+Line finding, text clean-up, structure, the EPUB builder and validation hold up; they wait until the letters are right.
+
+### Reader slot and scorecard — current focus (2026-10-14)
+- **Problem:** Tesseract's `fas` model caps accuracy on scans: 6–14% of letters wrong on 1932 letterpress. The
+  model shrinks each line to 48 pixels high, where the dots that tell ب ت ن ی apart are a pixel or two, and it was
+  trained on text rendered in computer fonts (`synth20170629`). Retraining doesn't lift the cap: `fas_print` (`fas`
+  fine-tuned on Persian print, tessdata_contrib) still misreads 7–12% of the same lines. On the very line images
+  rtlbook cuts, ParisaOCR's model (Apache-2.0; PaddleOCR's PP-OCRv6 recognizer design run by Kraken, 3.1M
+  parameters, lines 96 pixels high) misreads 1.3%. Line finding isn't the limit; the reader is.
+- **Goal:** the reader chosen by document type: Tesseract for exported PDFs (0.5–0.8%, 1–2 s a page), a modern
+  reader for scans; every change measured on the scorecard before it ships.
+- **Approach:**
+  1. *Scorecard* (`make bench`): fixed public-domain cases, one number per weak spot, saved per engine version so
+     changes compare:
+     - the reader alone: the 1932 book's checked test lines as fixed line images; letters wrong;
+     - whole pages (line finding + reader + reading order): the same book's five test pages; letters wrong, lines
+       lost or merged;
+     - spacing, counted apart from letters: spaces and half-spaces;
+     - the exported PDF in `tests/data/tomorrow/`: must not get worse;
+     - speed and size: seconds a page, memory, image size.
+
+     A case joins when work on its weak spot starts (1960s type, two-column verse), not before.
+  2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns
+     its text and confidence (today all of it is one Tesseract call, `ocr.ocr_lines`). First with only Tesseract
+     behind it: the scorecard must not move. The reader joins the OCR cache key.
+  3. *ParisaOCR as the scan reader:* speed (its own converter took ~12 s a page against Tesseract's 1–2), image
+     size (it ships with PyTorch; ONNX Runtime is likely far smaller), its own confidence scale (the warning below
+     70, headings at 60 and `--min-line-conf` are tuned to Tesseract's), and which clean-up fixes aimed at
+     Tesseract's habits (`»` for the Persian comma, `!` read as `ا`) still help.
+  4. *Later:* continue training the scan reader on checked lines (Kraken's tools); a second slot for line finding
+     (Kraken's segmenter, PaddleOCR's layout model) with verse and footnotes; Calamari as another trainable reader
+     to measure. Swappable parts, not a plugin framework: a few built-in choices per slot, kept only when they win.
+- **Not used:** parts under AGPL or with restricted weights (YOLO-based layout models, Surya); readers measured
+  weaker on this type (Hezar's CRNN, 38.6%).
+- **Open:** ParisaOCR isn't measured on 1960s type yet, where Kraken's stock Persian model misread 20–30%.
+
+### Letterpress type (1930s–60s) — training set in progress (ahead of phases 3–4)
 - **Problem:** Tesseract misreads 6–12% of letters on a 1963 poetry printing and 6–8% on a 1932 prose printing
   (two hand-checked pages each). Most errors are dots (ی→ب, ن→ت, پ→د), گ read as ک, bold titles garbled, and specks
   read as characters. Kraken's stock Persian model does worse on the 1963 type (20–30%), better on the 1932 (2%).
-- **Goal:** halve the letter error rate on held-out pages of the training book, with no loss on the baselines in
-  `tests/data/`; then check a second book printed in the same type.
+- **Goal:** checked lines of old type: the test set the scorecard measures readers with, and later the data to
+  fine-tune the scan reader on (not Tesseract: see the item above).
 - **Approach:**
   1. *Line transcription page:* the review page (DESIGN.md §6) for whole lines: the line image, the OCR text
      filled in, and uncertain words (low confidence, or not in a word list) highlighted with suggestions. Its
@@ -32,9 +76,9 @@ the next.
   2. *Dot-aware word suggestions:* for a word that isn't in the word list, real words with the same letter shapes
      but other dots (ب پ ت ث ن ی, ج چ ح خ, د ذ, ر ز ژ, س ش, ک گ, …), ranked by how often they occur elsewhere in
      the book. Offered on the review page, not applied automatically, until measured.
-  3. *Fine-tuned Tesseract model:* continue training `fas` (`tessdata_best`) on the checked lines. A separate
-     model chosen per book from a reviewed sample page, not a replacement for `fas`. Training lines are scans and
-     never go into git; only the model might ship.
+  3. *Fine-tuned Tesseract model, dropped (2026-10-14):* Tesseract's model caps the gain (`fas_print`, fine-tuned
+     on more lines than one book has, still misreads 7–12%). The checked lines measure readers instead, and train
+     a modern one later. Training lines are scans and never go into git; only a model might ship.
 - **Not covered here:** layout (next item).
 - **Trial (2026-10-07):** the line transcription page was tried on the 1963 printing: 349 lines decided, 324 of
   them checked. The data was then dropped for a clean start; the lessons were kept: settle the rules (with real
@@ -84,7 +128,7 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
 - **Preprocessing (scans):** deskew, two-page spread splitting (right-hand page first), denoise, adaptive
   binarization, low-resolution warnings.
 - **Layout:** footnotes, page furniture in Latin script, multi-column prose.
-- **OCR engines (phase 4):** a small engine interface when a second engine is added; choose the engine per book
+- **OCR engines (phase 4):** the reader slot is now the current focus (above). Still planned: choose the engine per book
   from a reviewed sample page; where two engines disagree, a person decides on the review page. An AI vision
   engine would send page images to an outside service: opt-in only, never the default.
 - **Document model:** block types (footnote, verse, table), printed page labels.
