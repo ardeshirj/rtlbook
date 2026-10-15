@@ -2,7 +2,8 @@
 per engine version so that a change shows what it gained or lost.
 
 - lines: a set's checked test lines (docs/TRAINING-DATA.md), each line image read on its own by a reader (readers.py);
-- pages: whole pages through `convert`'s own OCR (line finding, reading, reading order) against checked text;
+- pages: whole pages through `convert`'s own OCR (line finding, reading, reading order, joined words split in a scan)
+  against checked text; the book's words for the splitter come from the scored pages only, not the whole book;
 - exported: an exported PDF through everything after OCR (paragraphs) against its reference text;
 - speed: seconds a line and a page, peak memory.
 
@@ -25,7 +26,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from rtlbook import __version__, evaluate, pdf, pipeline
+from rtlbook import __version__, evaluate, joined, pdf, pipeline
+from rtlbook.doctype import document_type, page_kind
 from rtlbook.layout import reading_order
 from rtlbook.readers import Reader
 
@@ -123,20 +125,35 @@ def _ocr(pdf_path: Path, numbers: list[int], jobs: int) -> list:
         return pipeline.extract_pages(pdf_path, numbers, Path(cache), pipeline.OcrSettings(), jobs)
 
 
+def _split_joined(pdf_path: Path, pages: list) -> int | None:
+    """As `convert`: joined words split in a scan only (None otherwise, or without the word lists)."""
+    doc = pdf.open_book(pdf_path)
+    if document_type([page_kind(pdf.page_info(doc, p.number - 1)) for p in pages]).kind != "scan":
+        return None
+    return joined.split_pages(pages)
+
+
 def score_pages(pdf_path: Path, refs: dict[int, str], jobs: int) -> dict:
     pages = _ocr(pdf_path, sorted(refs), jobs)
+    for page in pages:
+        page.lines = reading_order(page.lines)
+    split = _split_joined(pdf_path, pages)
     total = {"ref_chars": 0, "char_errors": 0, "line_ref_chars": 0, "line_char_errors": 0, "missing_lines": 0,
              "extra_ocr_lines": 0}
-    ref_lines = 0
+    ref_lines = sp_errors = sp_gaps = 0
     for page in pages:
-        r = evaluate.compare(refs[page.number], "\n".join(ln.text for ln in reading_order(page.lines)), trim=False)
+        text = "\n".join(ln.text for ln in page.lines)
+        r = evaluate.compare(refs[page.number], text, trim=False)
         for k in total:
             total[k] += getattr(r, k)
+        e, g = spacing(refs[page.number], text)
+        sp_errors, sp_gaps = sp_errors + e, sp_gaps + g
         ref_lines += sum(1 for t in refs[page.number].splitlines() if evaluate.words(t))
     return {"pages": sorted(refs), "lines": ref_lines,
             "letters_wrong": round(total["char_errors"] / max(1, total["ref_chars"]), 4),
             "letters_wrong_by_line": round(total["line_char_errors"] / max(1, total["line_ref_chars"]), 4),
             "lines_missing": total["missing_lines"], "lines_extra": total["extra_ocr_lines"],
+            "spacing_wrong": round(sp_errors / max(1, sp_gaps), 4), "joined_split": split,
             "seconds_a_page": round(sum(p.seconds for p in pages) / max(1, len(pages)), 2)}
 
 
@@ -146,9 +163,13 @@ def score_exported(pdf_path: Path, reference: Path, jobs: int) -> dict:
     pages = _ocr(pdf_path, list(range(1, len(pdf.open_book(pdf_path)) + 1)), jobs)
     for page in pages:
         page.lines = reading_order(page.lines)
+    split = _split_joined(pdf_path, pages)
     text = "\n".join(p.text for p in build_paragraphs(pages))
-    r = evaluate.compare(reference.read_text(encoding="utf-8"), text)
+    ref = reference.read_text(encoding="utf-8")
+    r = evaluate.compare(ref, text)
+    e, g = spacing(ref, text)
     return {"pdf": pdf_path.name, "pages": len(pages), "letters_wrong": round(r.cer, 4),
+            "spacing_wrong": round(e / max(1, g), 4), "joined_split": split,
             "seconds_a_page": round(sum(p.seconds for p in pages) / max(1, len(pages)), 2)}
 
 
@@ -236,13 +257,16 @@ def report(entries: list[dict]) -> dict[str, str]:
         e = with_pages[-1]
         out += ["## Whole pages and an exported PDF, through `convert`", "",
                 "`convert`'s own OCR (Tesseract finds and reads the lines in one call, whatever the reader above).", "",
-                "| Case | Letters wrong | More | Seconds a page |", "|---|---|---|---|"]
+                "| Case | Letters wrong | Word gaps wrong | More | Seconds a page |", "|---|---|---|---|---|"]
+        gaps = lambda d: f"{d['spacing_wrong']:.1%}" if "spacing_wrong" in d else ""
+        split = lambda d: f"words split: {d['joined_split']}" if d.get("joined_split") is not None else ""
         if pg := e.get("pages"):
             out.append(f"| Pages {', '.join(map(str, pg['pages']))} ({pg['lines']} lines) | {pg['letters_wrong']:.2%} "
-                       f"| lines lost or merged: {pg['lines_missing']}, extra: {pg['lines_extra']} | {pg['seconds_a_page']} |")
+                       f"| {gaps(pg)} | lines lost or merged: {pg['lines_missing']}, extra: {pg['lines_extra']}"
+                       f"{', ' + split(pg) if split(pg) else ''} | {pg['seconds_a_page']} |")
         if ex := e.get("exported"):
-            out.append(f"| Exported PDF, `{ex['pdf']}` ({ex['pages']} pages) | {ex['letters_wrong']:.2%} | | "
-                       f"{ex['seconds_a_page']} |")
+            out.append(f"| Exported PDF, `{ex['pdf']}` ({ex['pages']} pages) | {ex['letters_wrong']:.2%} | {gaps(ex)} | "
+                       f"{split(ex)} | {ex['seconds_a_page']} |")
         out += ["", f"From the run of {e['date'][:10]} (`{e.get('commit', '')}`, rtlbook {e['engine']}).", ""]
     out += ["## Every run", "", "Newest first. Lines and pages compare only between runs on the same data.", "",
             "| Date | Commit | rtlbook | Reader | Lines (data) | Letters wrong | Word gaps wrong | Pages, letters wrong "

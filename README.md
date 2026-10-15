@@ -88,12 +88,14 @@ Useful `convert` options:
 | `--crop 0.075` | Cut page frames/borders before OCR |
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
+| `--no-split-joined` | Keep words run together as read (scans only; see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |
 
 What `convert` does automatically:
 - **OCRs every page.** The text stored inside Persian PDFs is rarely usable as is: wrong character codes, words in reversed (visual) order, missing spaces. On an exported story whose stored text could be rebuilt, OCR still got over 99% of letters right.
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
+- **Splits words run together** in scans of old type, where the gap after a letter that doesn't join the next is a hair wide (`ورفتم` → `و رفتم`), using word lists; `report.json` counts them (`joined_words_split`).
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
 - **Builds a valid EPUB 3** (epubcheck) with RTL page direction, the Parastoo font, cover, and print page list.
@@ -166,11 +168,12 @@ release, and what changed in each version: [docs/VERSIONS.md](docs/VERSIONS.md).
   `tessdata_best` models (Apache-2.0) · [PDFium](https://pdfium.googlesource.com/pdfium/) via
   [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) · [W3C EPUBCheck](https://github.com/w3c/epubcheck)
   · [Parastoo](https://github.com/rastikerdar/parastoo-font) font by Saber Rastikerdar (SIL OFL 1.1),
-  embedded in the EPUBs.
+  embedded in the EPUBs · [Lilak](https://github.com/b00f/lilak), a Persian spelling dictionary by Mostafa Sedaghat
+  Joo (Apache-2.0), whose word list splits joined words.
 
 ## License
 
 [Apache-2.0](LICENSE). The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
-license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck) and the
-Parastoo font keep their own licenses; none of them is stored in this
+license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck), the
+Parastoo font and Lilak's word list keep their own licenses; none of them is stored in this
 repository.

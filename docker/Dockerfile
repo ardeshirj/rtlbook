@@ -10,6 +10,7 @@ FROM debian:bookworm-slim AS downloads
 ARG EPUBCHECK_VERSION=5.1.0
 ARG TESSDATA_LANGS="fas ara osd"  # osd: orientation and script detection (the script check)
 ARG PARASTOO_VERSION=2.0.1
+ARG LILAK_COMMIT=4f1f426113e764ea099865232fd5e0fa34563c60
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
 # Tesseract "best" (float) models, more accurate than distro packages
@@ -28,6 +29,12 @@ RUN curl -fsSL -o /tmp/parastoo.zip \
     && mkdir -p /opt/fonts \
     && unzip -q -j /tmp/parastoo.zip web/Parastoo.ttf web/Parastoo-Bold.ttf LICENSE -d /opt/fonts \
     && mv /opt/fonts/LICENSE /opt/fonts/OFL.txt
+# Lilak (Apache-2.0), a Persian spelling dictionary by Mostafa Sedaghat Joo: its words, the large list for joined words
+# (joined.py); the first field of each lexicon line, sorted bytewise (a UTF-8 locale's sort collapses Persian words)
+RUN mkdir -p /opt/words \
+    && curl -fsSL https://raw.githubusercontent.com/b00f/lilak/${LILAK_COMMIT}/src/data/lexicon \
+        | grep -v '^#' | cut -d, -f1 | grep -v '^$' | LC_ALL=C sort -u > /opt/words/lilak-words.txt \
+    && curl -fsSL -o /opt/words/LICENSE-lilak.txt https://raw.githubusercontent.com/b00f/lilak/${LILAK_COMMIT}/LICENSE
 
 # ---- Python environment, built with uv ----
 FROM ${PYTHON_IMAGE} AS venv
@@ -48,6 +55,7 @@ ENV PYTHONUNBUFFERED=1 \
     OMP_THREAD_LIMIT=1 \
     EPUBCHECK_JAR=/opt/epubcheck/epubcheck.jar \
     RTLBOOK_FONTS=/opt/fonts \
+    RTLBOOK_WORDS=/opt/words \
     HOME=/tmp
 # Tesseract, and Java for epubcheck
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr default-jre-headless \
@@ -55,6 +63,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr d
 COPY --from=downloads /opt/tessdata /opt/tessdata
 COPY --from=downloads /opt/epubcheck /opt/epubcheck
 COPY --from=downloads /opt/fonts /opt/fonts
+COPY --from=downloads /opt/words /opt/words
+# Tesseract's own Farsi word list, unpacked from the model: the everyday list for joined words (joined.py)
+RUN cd /tmp && combine_tessdata -u /opt/tessdata/fas.traineddata fas. >/dev/null \
+    && dawg2wordlist fas.lstm-unicharset fas.lstm-word-dawg words.txt >/dev/null 2>&1 \
+    && LC_ALL=C sort -u words.txt > /opt/words/words.txt && rm -f /tmp/fas.* /tmp/words.txt
 COPY --from=venv /opt/venv /opt/venv
 COPY --from=venv /app /app
 WORKDIR /work

@@ -148,6 +148,16 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
 - Arabic `ي`/`ك` → Persian `ی`/`ک`; tatweel removed; Persian digits by default (`--digits`); the Persian
   comma misread as `»` (a `»` with no open `«` in its paragraph) or as a word-final `ء`; mirrored parentheses;
   OCR debris lines; dropping lines by regex (`--drop-lines`) or below a confidence (`--min-line-conf`).
+- **Joined words** (Farsi scans, `joined.py`; `--no-split-joined` turns it off): in old type the gap after a letter
+  that never joins the next (ا د ذ ر ز ژ و) can be a hair wide, and Tesseract reads two words as one. A word no word
+  list knows is split, only after such a letter, into the fewest known pieces: three letters or more from the
+  everyday list or the book's own words seen three times or more, or one of a few short words (و از در با را…); an
+  ending (ها، ترین، شان…) never stands alone, and a word in the large list is never split. The lists are built into
+  the image: Tesseract's own Farsi word list (13,892 words, unpacked from `fas.traineddata`) and Lilak's (85,838
+  words, Apache-2.0, a pinned commit). On the 1932 book's whole test pages, word gaps wrong 9.7% → 8.8%, letters
+  untouched; 815 words split in the book, in 0.1 s. Most wrong splits are inside words already misread. Exported
+  PDFs are left alone: their gaps are the ones typed, and some typists leave out the space after such a letter as a
+  habit (on the exported story, 43 of 46 splits went against its text).
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
   dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.
@@ -176,8 +186,8 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
 - **Accuracy:** `rtlbook eval` against checked text, and `tests/test_ground_truth.py`, which fails if accuracy on
   the public-domain pages in `tests/data/` drops below the baseline.
 - **Scorecard:** `rtlbook bench` (`make bench SET=<a training set's folder>`) scores a line reader (`readers.py`)
-  on a set's checked test lines read one by one, whole pages through `convert`'s OCR, and an exported PDF, with
-  spacing counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
+  on a set's checked test lines read one by one, whole pages through `convert`'s OCR and joined-word splitting, and
+  an exported PDF, with spacing (word gaps) counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
   compared with the last. Lines and pages compare only between runs on the same checked data. `bench/README.md` shows
   the readers side by side, with bar charts it draws itself as SVG (`bench/charts/`: Mermaid's bars start before
   their axis's zero). Readers other than Tesseract run in their own image (`make readers`).

@@ -21,7 +21,8 @@ the next.
 
 Where the engine is weakest, in the order to work on it (2026-10-14):
 1. **The reader on scans** (next item): about ten times more letters wrong than a modern reader.
-2. **Spacing:** half-spaces and spaces between words (text clean-up, below); every book, exported PDFs too.
+2. **Spacing:** half-spaces and spaces between words (text clean-up, below); every book, exported PDFs too. Words
+   run together after a non-joining letter in scans are split since 2026-10-15 (DESIGN.md §4.7, "Joined words").
 3. **Scan preprocessing:** deskew, spreads, uneven backgrounds, low resolution (below).
 4. **Layout:** two-column verse with a narrow gutter (~46% of words found), footnotes, bold titles.
 5. **Readers' marks in scans** (below).
@@ -105,7 +106,7 @@ flowchart LR
      | Hezar `crnn-fa-printed-96-long` | 36.77% | 6 of 109 | 8.6% | 0.17 | 577 MB |
 
      `convert` today on whole pages 30, 54, 76 and 77 (91 lines): 8.4% letters wrong, 2 lines lost or merged and 3
-     extra, 1.2 s a page; the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
+     extra, 1.2 s a page; word gaps wrong 8.8% (9.7% before joined words were split); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
      (6.4%): the lines checked later are harder for it. The other readers run in their own image (`make readers`,
      `docker/Dockerfile.readers`, 2.7 GB with PyTorch), not rtlbook's.
   2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns
@@ -198,7 +199,9 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
   from a reviewed sample page; where two engines disagree, a person decides on the review page. An AI vision
   engine would send page images to an outside service: opt-in only, never the default.
 - **Document model:** block types (footnote, verse, table), printed page labels.
-- **Text clean-up:** half-space (ZWNJ) normalization (`می گویم` → `می‌گویم`); in some bold fonts `!` without a
+- **Text clean-up:** half-space (ZWNJ) normalization (`می گویم` → `می‌گویم`), and spaces read as half-spaces
+  (`داشته‌بود` for `داشته بود`); joined words from the whole book's words in the scorecard too (it takes them from the
+  scored pages); in some bold fonts `!` without a
   following space OCRs as `ا` and merges words, fixable with corpus word statistics.
 - **AI correction (opt-in):** correct low-confidence lines with a vision model, compared back to the OCR output;
   large edits are flagged, not accepted. Off by default.

@@ -127,9 +127,10 @@ def convert(
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
     check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
+    split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
-    from rtlbook import epub, frontmatter, layout, ocr, text
+    from rtlbook import epub, frontmatter, joined, layout, ocr, text
     from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
     from rtlbook.validate import epubcheck
 
@@ -180,6 +181,11 @@ def convert(
             conf = f" conf={p.mean_conf:.1f}" if p.mean_conf is not None else ""
             f.write(f"\n===== page {p.number} [{p.route}{conf}, {p.seconds}s] =====\n")
             f.write("\n".join(ln.text for ln in p.lines) + "\n")
+
+    t0 = time.perf_counter()
+    scan = document_type(kinds).kind == "scan"  # an exported PDF's gaps are the ones typed
+    split = joined.split_pages(page_results) if split_joined and scan and lang.startswith("fas") else None
+    timings["joined"] = time.perf_counter() - t0
 
     found_title, found_author = frontmatter.guess_title_author(page_results)
     title_from = "--title" if title else "title page" if found_title else "file name"
@@ -238,6 +244,7 @@ def convert(
         ),
         "mean_confidence": round(sum(confs) / len(confs), 1) if confs else None,
         "low_confidence_pages": low,
+        "joined_words_split": split,
         "script": {"expected": scripts.expected, "found": scripts.found, "pages": scripts.seen} if check_script else None,
         "warning": confidence_message(round(sum(confs) / len(confs), 1) if confs else None),
         "paragraphs": len(paras),
@@ -374,8 +381,12 @@ def bench(
         ("pages", "letters_wrong_by_line", "Whole pages: letters wrong, line by line", pct),
         ("pages", "lines_missing", "Whole pages: lines lost or merged", str),
         ("pages", "lines_extra", "Whole pages: extra lines", str),
+        ("pages", "spacing_wrong", "Whole pages: word gaps wrong", pct),
+        ("pages", "joined_split", "Whole pages: joined words split", str),
         ("pages", "seconds_a_page", "Whole pages: seconds a page", str),
         ("exported", "letters_wrong", "Exported PDF: letters wrong", pct),
+        ("exported", "spacing_wrong", "Exported PDF: word gaps wrong", pct),
+        ("exported", "joined_split", "Exported PDF: joined words split", str),
         ("exported", "seconds_a_page", "Exported PDF: seconds a page", str),
         (None, "memory_mb", "Peak memory, MB", str),
         (None, "image_mb", "Image size, MB", str),
