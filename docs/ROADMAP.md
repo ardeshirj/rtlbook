@@ -41,18 +41,19 @@ Line finding, text clean-up, structure, the EPUB builder and validation hold up;
 - **Where it leads** (DESIGN.md §3 has today's pipeline):
 
 ```mermaid
-flowchart TD
-    D[Preprocessed page] --> F[Find lines: a slot<br/>Tesseract today · Kraken or PaddleOCR later, with verse and footnotes]
-    F --> X[Cut each line image]
-    X --> R{Reader slot<br/>chosen by document type}
+flowchart LR
+    D[Page image] --> F[Find lines] --> X[Cut lines] --> R{Reader}
     R -- exported PDF --> T[Tesseract fas<br/>raw line]
-    R -- scan --> M[A modern reader<br/>ParisaOCR first · later trained further on checked lines]
-    T --> C[Confidence on one scale<br/>the low-confidence warning, headings, --min-line-conf]
+    R -- scan --> M[Modern reader<br/>ParisaOCR first]
+    T --> C[Confidence<br/>one scale]
     M --> C
-    C --> O[Reading order · clean-up · structure · EPUB · epubcheck<br/>unchanged]
-    S[[Scorecard]] -. every change measured .-> F
-    S -. every change measured .-> R
+    C --> O[Rest of convert<br/>unchanged]
+    classDef slot stroke-dasharray: 6 4
+    class F,R slot
 ```
+
+  Dashed: a slot, where parts can be swapped (find lines: Tesseract today, Kraken or PaddleOCR later for verse and
+  footnotes; the scan reader: trained further on checked lines later). The scorecard measures every change to one.
 - **Approach:**
   1. *Scorecard* (`make bench`): fixed public-domain cases, one number per weak spot, saved per engine version so
      changes compare:

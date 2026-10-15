@@ -52,27 +52,27 @@ differently. rtlbook therefore OCRs every page (§4.1, §12).
 
 ```mermaid
 flowchart TD
-    A[PDF] --> B[Inspect<br/>exported PDF or scan · script check]
+    A[PDF] --> B[Inspect<br/>type · script]
     B --> P
-    subgraph P [Each page, in parallel, cached]
-        C[Render<br/>300 DPI, grayscale] --> D[Preprocess<br/>binarize · optional crop]
-        D --> E1[Find lines: Tesseract<br/>single-column mode · split lines at column gaps]
-        E1 --> E2[Read lines: Tesseract fas<br/>in the same call as finding them]
+    subgraph P [Each page · parallel · cached]
+        direction LR
+        C[Render<br/>300 DPI] --> D[Preprocess<br/>binarize] --> E1[Find lines<br/>Tesseract] --> E2[Read lines<br/>Tesseract fas]
     end
-    P --> F[Reading order<br/>side-by-side lines as rows, right to left]
-    F --> G[Title and author<br/>from the title page]
-    G --> H[Text clean-up<br/>letters · digits · commas · parentheses · running headers · debris]
-    H --> I[Structure<br/>paragraphs · dialogue · title and contents pages kept apart ·<br/>chapter headings, checked against the contents page · sections · page markers]
-    I --> J[EPUB 3 builder<br/>cover · Parastoo · TOC · page list]
-    J --> K[epubcheck]
-    K --> R[report.json<br/>confidence warning · title and author found]
-    S[[Scorecard: rtlbook bench<br/>a line reader on checked lines · whole pages · an exported PDF]] -. measures .-> E2
-    S -. measures .-> P
-    S -. measures .-> K
+    P --> T
+    subgraph T [Text]
+        direction LR
+        F[Reading order<br/>rows, right to left] --> G[Title, author] --> H[Clean-up<br/>letters · headers]
+    end
+    T --> K
+    subgraph K [Book]
+        direction LR
+        I[Structure<br/>paragraphs · headings] --> J[EPUB 3<br/>TOC · page list] --> V[epubcheck] --> R[report.json]
+    end
 ```
 
-The scorecard (§4.10) reads a set's checked lines through the reader slot (`readers.py`) on its own; `convert`
-doesn't use the slot yet (ROADMAP.md, "Reader slot and scorecard", has the pipeline it leads to).
+Finding and reading the lines are one Tesseract call today. The scorecard (§4.10) reads a set's checked lines through
+the reader slot (`readers.py`) on its own; `convert` doesn't use the slot yet (ROADMAP.md, "Reader slot and
+scorecard", has the pipeline it leads to).
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
 settings. Re-running with other text or EPUB options takes seconds. Pages are OCR'd in parallel.
