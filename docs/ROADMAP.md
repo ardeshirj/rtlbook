@@ -11,7 +11,7 @@ the next.
 
 | Phase | Scope | Done when |
 |---|---|---|
-| **1: Exported PDFs, prose** (current) | OCR every page ✅, document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB you'd read without noticing errors, with measured accuracy on sample pages |
+| **1: Exported PDFs, prose** (current) | OCR every page ✅, - document type in `inspect` ✅, low-confidence warning ✅, title pages / TOC pages kept out of the text ✅, Latin footers kept out of the text, chapters ✅, title and author ✅, an exported-PDF regression test ✅ | Every exported prose book converts to an EPUB you'd read without noticing errors, with measured accuracy on sample pages |
 | **2: Publishable output** | Front matter, the book's own TOC, footnotes, half-space normalization; checked in Thorium Reader (Readium) | One complete book you'd happily recommend |
 | **3: Scans of modern print, then verse** | Deskew, spreads, low-resolution warnings; couplets laid out as verse in the EPUB | Measured accuracy on scanned pages; verse reads correctly |
 | **4: Old letterpress** | A modern reader for scans in the reader slot (see the first work item); a second reading (opt-in AI vision), a review step for disagreements | A 1930s book converts with errors only a review can catch |
@@ -28,6 +28,33 @@ Where the engine is weakest, in the order to work on it (2026-10-14):
 6. **Unusual fonts** (below).
 
 Line finding, text clean-up, structure, the EPUB builder and validation hold up; they wait until the letters are right.
+
+```mermaid
+flowchart TD
+    A[PDF] --> B[Inspect<br/>type · script]
+    B --> P
+    subgraph P [Each page]
+        direction LR
+        C[Render] --> D[Preprocess<br/>3 deskew · spreads] --> F[Find lines<br/>4 verse · footnotes] --> X[Cut lines] --> R[Reader<br/>1 by document type<br/>6 font fallback]
+    end
+    P --> T
+    subgraph T [Text]
+        direction LR
+        N[Confidence<br/>1 one scale] --> O[Reading order] --> H[Clean-up<br/>2 spacing<br/>5 handwriting]
+    end
+    T --> K
+    subgraph K [Book]
+        direction LR
+        I[Structure<br/>4 verse · footnotes] --> J[EPUB 3] --> V[epubcheck]
+    end
+    classDef planned fill:#fff1c2,stroke:#b8860b,color:#000
+    classDef slot fill:#fff1c2,stroke:#b8860b,color:#000,stroke-dasharray: 6 4
+    class D,H,I,N planned
+    class F,R slot
+```
+
+Yellow: a change planned, numbered as the list above; dashed: a slot, where parts can be swapped. Plain: built and
+holding up (DESIGN.md §3).
 
 ### Reader slot and scorecard — current focus (2026-10-14)
 - **Problem:** Tesseract's `fas` model caps accuracy on scans: 6–14% of letters wrong on 1932 letterpress. The
