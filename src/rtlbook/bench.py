@@ -8,7 +8,7 @@ per engine version so that a change shows what it gained or lost.
 - speed: seconds a line and a page, peak memory.
 
 Letters wrong ignore spaces and half-spaces (evaluate.compare); spacing is counted on its own (spacing()). Pages and
-the exported PDF go through `convert`'s Tesseract whatever the reader, until the slot reaches `convert`.
+the exported PDF go through `convert`'s own reading whatever the reader above (its reader chosen by document type).
 """
 
 from __future__ import annotations
@@ -120,21 +120,27 @@ def page_references(set_dir: Path | None, ref_dir: Path | None) -> dict[int, str
     return refs
 
 
-def _ocr(pdf_path: Path, numbers: list[int], jobs: int) -> list:
+def _document(pdf_path: Path, numbers: list[int]) -> str:
+    doc = pdf.open_book(pdf_path)
+    return document_type([page_kind(pdf.page_info(doc, n - 1)) for n in numbers]).kind
+
+
+def _ocr(pdf_path: Path, numbers: list[int], jobs: int) -> tuple[list, str]:
+    """The pages as `convert` reads them (its reader chosen by document type), and that reader."""
+    reader = pipeline.reader_for("auto", _document(pdf_path, numbers))
     with tempfile.TemporaryDirectory() as cache:
-        return pipeline.extract_pages(pdf_path, numbers, Path(cache), pipeline.OcrSettings(), jobs)
+        return pipeline.extract_pages(pdf_path, numbers, Path(cache), pipeline.OcrSettings(reader=reader), jobs), reader
 
 
 def _split_joined(pdf_path: Path, pages: list) -> int | None:
     """As `convert`: joined words split in a scan only (None otherwise, or without the word lists)."""
-    doc = pdf.open_book(pdf_path)
-    if document_type([page_kind(pdf.page_info(doc, p.number - 1)) for p in pages]).kind != "scan":
+    if _document(pdf_path, [p.number for p in pages]) != "scan":
         return None
     return joined.split_pages(pages)
 
 
 def score_pages(pdf_path: Path, refs: dict[int, str], jobs: int) -> dict:
-    pages = _ocr(pdf_path, sorted(refs), jobs)
+    pages, reader = _ocr(pdf_path, sorted(refs), jobs)
     for page in pages:
         page.lines = reading_order(page.lines)
     split = _split_joined(pdf_path, pages)
@@ -153,14 +159,14 @@ def score_pages(pdf_path: Path, refs: dict[int, str], jobs: int) -> dict:
             "letters_wrong": round(total["char_errors"] / max(1, total["ref_chars"]), 4),
             "letters_wrong_by_line": round(total["line_char_errors"] / max(1, total["line_ref_chars"]), 4),
             "lines_missing": total["missing_lines"], "lines_extra": total["extra_ocr_lines"],
-            "spacing_wrong": round(sp_errors / max(1, sp_gaps), 4), "joined_split": split,
+            "spacing_wrong": round(sp_errors / max(1, sp_gaps), 4), "joined_split": split, "reader": reader,
             "seconds_a_page": round(sum(p.seconds for p in pages) / max(1, len(pages)), 2)}
 
 
 def score_exported(pdf_path: Path, reference: Path, jobs: int) -> dict:
     from rtlbook.text import build_paragraphs
 
-    pages = _ocr(pdf_path, list(range(1, len(pdf.open_book(pdf_path)) + 1)), jobs)
+    pages, reader = _ocr(pdf_path, list(range(1, len(pdf.open_book(pdf_path)) + 1)), jobs)
     for page in pages:
         page.lines = reading_order(page.lines)
     split = _split_joined(pdf_path, pages)
@@ -169,7 +175,7 @@ def score_exported(pdf_path: Path, reference: Path, jobs: int) -> dict:
     r = evaluate.compare(ref, text)
     e, g = spacing(ref, text)
     return {"pdf": pdf_path.name, "pages": len(pages), "letters_wrong": round(r.cer, 4),
-            "spacing_wrong": round(e / max(1, g), 4), "joined_split": split,
+            "spacing_wrong": round(e / max(1, g), 4), "joined_split": split, "reader": reader,
             "seconds_a_page": round(sum(p.seconds for p in pages) / max(1, len(pages)), 2)}
 
 
@@ -256,16 +262,18 @@ def report(entries: list[dict]) -> dict[str, str]:
     if with_pages:
         e = with_pages[-1]
         out += ["## Whole pages and an exported PDF, through `convert`", "",
-                "`convert`'s own OCR (Tesseract finds and reads the lines in one call, whatever the reader above).", "",
-                "| Case | Letters wrong | Word gaps wrong | More | Seconds a page |", "|---|---|---|---|---|"]
+                "`convert`'s own OCR, whatever the reader above: Tesseract finds the lines; a scan's are cut and read one "
+                "by one (`--reader auto`), an exported PDF's whole pages in one call (`page`).", "",
+                "| Case | Read with | Letters wrong | Word gaps wrong | More | Seconds a page |", "|---|---|---|---|---|---|"]
+        via = lambda d: f"`{d.get('reader', 'page')}`"
         gaps = lambda d: f"{d['spacing_wrong']:.1%}" if "spacing_wrong" in d else ""
         split = lambda d: f"words split: {d['joined_split']}" if d.get("joined_split") is not None else ""
         if pg := e.get("pages"):
-            out.append(f"| Pages {', '.join(map(str, pg['pages']))} ({pg['lines']} lines) | {pg['letters_wrong']:.2%} "
+            out.append(f"| Pages {', '.join(map(str, pg['pages']))} ({pg['lines']} lines) | {via(pg)} | {pg['letters_wrong']:.2%} "
                        f"| {gaps(pg)} | lines lost or merged: {pg['lines_missing']}, extra: {pg['lines_extra']}"
                        f"{', ' + split(pg) if split(pg) else ''} | {pg['seconds_a_page']} |")
         if ex := e.get("exported"):
-            out.append(f"| Exported PDF, `{ex['pdf']}` ({ex['pages']} pages) | {ex['letters_wrong']:.2%} | {gaps(ex)} | "
+            out.append(f"| Exported PDF, `{ex['pdf']}` ({ex['pages']} pages) | {via(ex)} | {ex['letters_wrong']:.2%} | {gaps(ex)} | "
                        f"{split(ex)} | {ex['seconds_a_page']} |")
         out += ["", f"From the run of {e['date'][:10]} (`{e.get('commit', '')}`, rtlbook {e['engine']}).", ""]
     out += ["## Every run", "", "Newest first. Lines and pages compare only between runs on the same data.", "",

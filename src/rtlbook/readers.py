@@ -1,8 +1,9 @@
 """Line readers: one printed line's image in, its text and confidence out (ROADMAP.md "Reader slot and scorecard").
 
-Only the scorecard (`rtlbook bench`) reads through this slot so far; `convert` still reads whole pages with Tesseract
-(`ocr.ocr_lines`), which finds the lines and reads them in one call. Tesseract `fas` is in rtlbook's image; the
-others are open models measured for the scorecard, in a separate image (`docker/Dockerfile.readers`).
+`convert` reads a scan's lines through this slot (`pipeline.read_lines`: Tesseract finds the lines, each is cut and
+read alone) and an exported PDF's whole pages in Tesseract's one call (`ocr.ocr_lines`); the scorecard (`rtlbook
+bench`) scores each reader on checked lines. Tesseract is in rtlbook's image; the others are open models measured for
+the scorecard, in a separate image (`docker/Dockerfile.readers`).
 """
 
 from __future__ import annotations

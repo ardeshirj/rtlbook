@@ -106,16 +106,12 @@ flowchart LR
      | Hezar `crnn-fa-printed-96-long` | 36.77% | 6 of 109 | 8.6% | 0.17 | 577 MB |
 
      `convert` today on whole pages 30, 54 and 76 (68 lines; 104 and 128 join when their last lines are decided):
-     8.7% letters wrong, 1 line lost or merged and 2 extra, 1.2 s a page; word gaps wrong 9.5% (11.5% before joined
-     words were split); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
+     6.5% letters wrong (8.7% before the reader slot), 2 lines lost or merged and 3 extra, 2.3 s a page; word gaps
+     wrong 9.2% (11.5% before joined words were split and the slot); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
      (6.4%): the lines checked later are harder for it. The other readers run in their own image (`make readers`,
      `docker/Dockerfile.readers`, 2.7 GB with PyTorch), not rtlbook's.
-  2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns
-     its text and confidence (today all of it is one Tesseract call, `ocr.ocr_lines`). First with only Tesseract
-     behind it. The reader joins the OCR cache key. `readers.py` has the slot, used by the scorecard so far.
-     Found on the way: Tesseract reading a cut line as a raw line (`--psm 13`) misreads 6.4% of the test lines'
-     letters, against 9.6% when it reads the whole page (and 19.8% with `--psm 7`), so the slot may be a gain
-     with Tesseract alone: the whole-page row will tell.
+  2. *Reader slot:* **built (2026-10-15)**, DESIGN.md §4.5: in a scan, Tesseract finds the lines and each cut line is
+     read alone, Tesseract behind the slot for now; whole pages 8.7% → 6.5% letters wrong, at twice the time.
   3. *ParisaOCR as the scan reader:* speed (its own converter took ~12 s a page against Tesseract's 1–2), image
      size (it ships with PyTorch; ONNX Runtime is likely far smaller), its own confidence scale (the warning below
      70, headings at 60 and `--min-line-conf` are tuned to Tesseract's), and which clean-up fixes aimed at

@@ -9,10 +9,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from rtlbook import ocr, pdf, preprocess
-from rtlbook.model import Page, Paragraph, Section
+from rtlbook import ocr, pdf, preprocess, readers
+from rtlbook.model import Line, Page, Paragraph, Section
 
 _DOC = None  # the PDF, opened once per worker process
+_READERS: dict = {}  # line readers, made once per worker process
+PAGE = "page"  # the reader setting for whole pages read in Tesseract's one call
+LINE_PAD = (6, 12)  # pixels above and below, and at each end, around a cut line at 300 dpi (DESIGN.md §4.5)
 
 
 @dataclass(frozen=True)
@@ -22,6 +25,7 @@ class OcrSettings:
     psm: int = 4
     binarize: bool = True
     crop: float = 0.0
+    reader: str = PAGE  # PAGE, or a line reader (readers.READERS) for lines cut from the page
 
 
 def _init_worker(pdf_path: str) -> None:
@@ -32,12 +36,43 @@ def _init_worker(pdf_path: str) -> None:
 def _process_page(number: int, settings: dict) -> dict:
     start = time.perf_counter()
     page = Page(number, "ocr", settings=settings)
-    img = pdf.render(_DOC, number - 1, settings["dpi"])
-    img = preprocess.prepare(img, binarize_=settings["binarize"], crop=settings["crop"])
+    gray = preprocess.crop_margins(pdf.render(_DOC, number - 1, settings["dpi"]), settings["crop"])
+    img = preprocess.binarize(gray) if settings["binarize"] else gray
     page.width, page.height = img.size
-    page.lines = ocr.ocr_lines(img, settings["lang"], settings["psm"])
+    if settings.get("reader", PAGE) == PAGE:
+        page.lines = ocr.ocr_lines(img, settings["lang"], settings["psm"])
+    else:
+        page.lines = read_lines(gray, img, settings)
     page.seconds = round(time.perf_counter() - start, 2)
     return page.to_dict()
+
+
+def read_lines(gray, img, settings: dict) -> list[Line]:
+    """Tesseract finds the lines (and column gaps) on the page; each line is cut from the unbinarized page with a
+    little padding and read alone by the line reader. Lines it reads as nothing are dropped."""
+    name = settings["reader"]
+    if name not in _READERS:  # Tesseract in the book's language(s), e.g. fas+ara
+        _READERS[name] = readers.Tesseract(settings["lang"]) if name == "tesseract" else readers.get(name)
+    reader = _READERS[name]
+    py, px = (round(p * settings["dpi"] / 300) for p in LINE_PAD)
+    lines = []
+    for words in ocr.split_columns(ocr.ocr_words(img, settings["lang"], settings["psm"])):
+        x0, x1 = min(w.x0 for w in words), max(w.x1 for w in words)
+        y0, y1 = min(w.y0 for w in words), max(w.y1 for w in words)
+        text, conf = reader.read(gray.crop((max(0, x0 - px), max(0, y0 - py), min(gray.width, x1 + px),
+                                            min(gray.height, y1 + py))))
+        if text.strip():
+            lines.append(Line(text, (x0, y0, x1, y1), conf))
+    return lines
+
+
+def reader_for(choice: str, document: str) -> str:
+    """The reader setting for --reader `choice` ("auto", PAGE or a line reader) and the document type: auto reads a
+    scan's lines one by one with Tesseract (fewer letters wrong, twice the time) and an exported PDF's whole pages
+    (no gain from cut lines there)."""
+    if choice != "auto":
+        return choice
+    return "tesseract" if document == "scan" else PAGE
 
 
 def extract_pages(
@@ -54,6 +89,8 @@ def extract_pages(
     todo: list[int] = []
     s = {"route": "ocr", "dpi": settings.dpi, "lang": settings.lang, "psm": settings.psm,
          "binarize": settings.binarize, "crop": settings.crop}
+    if settings.reader != PAGE:  # pages cached before the slot existed stay valid for PAGE
+        s["reader"] = settings.reader
 
     for number in numbers:
         f = cache_dir / f"{number:04d}.json"

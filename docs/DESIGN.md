@@ -56,7 +56,7 @@ flowchart TD
     B --> P
     subgraph P [Each page · parallel · cached]
         direction LR
-        C[Render<br/>300 DPI] --> D[Preprocess<br/>binarize] --> E1[Find lines<br/>Tesseract] --> E2[Read lines<br/>Tesseract fas]
+        C[Render<br/>300 DPI] --> D[Preprocess<br/>binarize] --> E1[Find lines<br/>Tesseract] --> E2[Read lines<br/>reader slot]
     end
     P --> T
     subgraph T [Text]
@@ -70,9 +70,9 @@ flowchart TD
     end
 ```
 
-Finding and reading the lines are one Tesseract call today. The scorecard (§4.10) reads a set's checked lines through
-the reader slot (`readers.py`) on its own; `convert` doesn't use the slot yet (ROADMAP.md, "Reader slot and
-scorecard", has the pipeline it leads to).
+Tesseract finds the lines. In a scan each line is then cut from the page and read alone by a line reader, the reader
+slot (`readers.py`; Tesseract today); in an exported PDF finding and reading stay one Tesseract call (§4.5). The
+scorecard (§4.10) scores the readers on checked lines.
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
 settings. Re-running with other text or EPUB options takes seconds. Pages are OCR'd in parallel.
@@ -121,7 +121,15 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
   OCR variants of them (a misread letter, or only part of the header).
 
 ### 4.5 OCR engines and accuracy
-- **Built:** Tesseract 5 with `tessdata_best` (`fas`). About 1–2 s per page per core.
+- **Built:** Tesseract 5 with `tessdata_best` (`fas`). About 1–2 s per page per core for an exported PDF.
+- **The reader slot** (2026-10-15, `--reader`, default `auto`): in a scan, Tesseract finds the lines on the binarized
+  page, and each line is cut from the unbinarized page (6 pixels above and below, 12 at the ends, at 300 dpi) and read
+  alone as a raw line (`--psm 13`, binarized on its own). On the 1932 book's checked pages 8.7% → 6.5% letters wrong,
+  word gaps 9.5% → 9.2%, at twice the time (2.3 s a page). The padding was chosen on 531 checked training lines (4–6
+  pixels best; padding in proportion to each line's height was worse, it gives tall lines too much); the 68 lines of
+  the test pages alone would have chosen none, the worst on the training lines. An exported PDF gains nothing (0.52%
+  either way, twice the time), so `auto` reads its whole pages in one call (`--reader page`). The reader joins the
+  cache key; a line it reads as nothing is dropped.
 - **Measured** with `rtlbook eval` (character and word error rates against a checked text; spelling conventions
   such as ي/ی, digits, half-spaces and vowel marks count as equal):
 

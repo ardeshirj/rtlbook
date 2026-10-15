@@ -127,11 +127,12 @@ def convert(
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
     check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
+    reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one, an exported PDF's whole pages), page (Tesseract reads whole pages in one call), or a line reader: tesseract")] = "auto",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
     from rtlbook import epub, frontmatter, joined, layout, ocr, text
-    from rtlbook.pipeline import OcrSettings, extract_pages, split_sections
+    from rtlbook.pipeline import OcrSettings, extract_pages, reader_for, split_sections
     from rtlbook.validate import epubcheck
 
     timings: dict[str, float] = {}
@@ -154,6 +155,7 @@ def convert(
     emit(event="start", pages=len(numbers), document=document_type(kinds).kind,
          script=scripts.found, script_expected=scripts.expected)
 
+    read_with = reader_for(reader, document_type(kinds).kind)
     t0 = time.perf_counter()
     cached = 0
     finished = 0
@@ -169,7 +171,7 @@ def convert(
             emit(event="page", page=page.number, done=finished, total=len(numbers), cached=from_cache)
 
         page_results = extract_pages(
-            pdf_path, numbers, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop), max(1, jobs), done
+            pdf_path, numbers, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop, read_with), max(1, jobs), done
         )
     timings["extract"] = time.perf_counter() - t0
     for p in page_results:  # side-by-side lines (two-column verse) read row by row, right to left
@@ -238,7 +240,8 @@ def convert(
         "pages": len(page_results),
         "pages_from_cache": cached,
         "ocr_engine": ocr.tesseract_version(),
-        "ocr_settings": {"dpi": dpi, "lang": lang, "psm": psm, "binarize": binarize, "crop": crop, "jobs": jobs},
+        "ocr_settings": {"dpi": dpi, "lang": lang, "psm": psm, "binarize": binarize, "crop": crop, "jobs": jobs,
+                         "reader": read_with},
         "ocr_seconds_per_page_single_thread": round(
             sum(p.seconds for p in page_results) / max(1, len(page_results)), 2
         ),
