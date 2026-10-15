@@ -1,0 +1,20 @@
+# The scorecard's other line readers (rtlbook bench --reader …): open models measured against Tesseract, not part of
+# rtlbook's image. On top of rtlbook:dev: PyTorch (CPU), ParisaOCR (with Kraken), Hezar and WeightedAI's
+# Persian_OCR. Build with `make readers`.
+FROM rtlbook:dev
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+ENV UV_CACHE_DIR=/tmp/uv-cache HF_HOME=/opt/hf RTLBOOK_MODELS=/opt/models
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends curl libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+# --torch-backend cpu: PyTorch from its CPU-only index, for every package that asks for it (else a GPU build, gigabytes)
+RUN uv pip install --python /opt/venv/bin/python --torch-backend cpu torch torchvision parisaocr==0.7.2 hezar==1.0.0 \
+    && rm -rf /tmp/uv-cache
+# Not Tesseract's fas_print (tessdata_contrib pull request #19, 4.75% letters wrong against fas's 6.38% on the
+# 1932 lines): an unreviewed pull request, from a branch that can change. Back when tessdata_contrib merges it.
+# Not Kraken's OpenITI Persian model (10.5281/zenodo.7051644): Kraken 7 reads it as gibberish (rtlbook measured it
+# at 1.9% letters wrong on 1932 type with an older Kraken, DESIGN.md §4.5)
+RUN python -c "from hezar.models import Model; Model.load('hezarai/crnn-fa-printed-96-long')" && chmod -R a+rX /opt/hf
+# WeightedAI/Persian_OCR (Apache-2.0): its weights, vocabulary and model definition (model.py, plain PyTorch)
+RUN python -c "from huggingface_hub import snapshot_download as d; \
+d('WeightedAI/Persian_OCR', local_dir='/opt/models/weightedai-persian-ocr', allow_patterns=['*.json', 'model.py', '*.bin'])"

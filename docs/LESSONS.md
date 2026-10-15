@@ -63,6 +63,10 @@ which records the decisions and results. Book text is deliberately not quoted he
   becomes plain text. Request TSV with `-c tessedit_create_tsv=1` instead.
 - **macOS ships bash 3.2:** `"${arr[@]}"` on an empty array fails under `set -u`. Use `${arr[@]+"${arr[@]}"}`.
 - **pypdfium2 v5** renamed `PdfObject.get_pos()` to `get_bounds()`.
+- **PyTorch ignores `OMP_THREAD_LIMIT`.** rtlbook's image sets it to 1 (pages run side by side, one Tesseract
+  thread each); PyTorch still starts a thread per CPU, and they wait on each other: a model loaded in seconds and
+  then never finished its first line (an hour at 100% of one CPU). `readers.py` sets PyTorch's threads to the limit.
+  Kraken's OpenITI model hanging while it loaded was most likely the same.
 
 ## How quality was judged (no ground truth yet)
 
