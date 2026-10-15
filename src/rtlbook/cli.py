@@ -329,7 +329,7 @@ def bench(
     reader: Annotated[str, typer.Option(help="The line reader to score: tesseract")] = "tesseract",
     set_dir: Annotated[Optional[Path], typer.Option("--set", file_okay=False, help="A training set's folder (docs/TRAINING-DATA.md): its checked test lines")] = None,
     scan: Annotated[Path, typer.Option(help="The scan the set and the page texts are from")] = Path("input/public-domain/three-drops-1932.pdf"),
-    page_texts: Annotated[Path, typer.Option(help="Checked whole pages, p<N>.txt")] = Path("tests/data/three-drops"),
+    page_texts: Annotated[Path, typer.Option(help="Checked whole pages, p<N>.txt, used without --set (the set's pages follow its spacing rules; these may not)")] = Path("tests/data/three-drops"),
     exported: Annotated[Path, typer.Option(help="An exported PDF")] = Path("input/public-domain/tomorrow-2006.pdf"),
     exported_text: Annotated[Path, typer.Option(help="Its reference text")] = Path("tests/data/tomorrow/reference.txt"),
     save: Annotated[Optional[Path], typer.Option(help="Add the results to this file (JSON lines), compare with its last entry for this reader, and write README.md beside it")] = None,
@@ -348,7 +348,7 @@ def bench(
         lines_score = scorecard.score_lines(set_dir, r)
     else:
         skipped.append("lines (no --set)")
-    refs = scorecard.page_references(set_dir, page_texts if page_texts.is_dir() else None)
+    refs = scorecard.page_references(set_dir, None if set_dir or not page_texts.is_dir() else page_texts)
     if scan.exists() and refs:
         console.print(f"Whole pages {', '.join(map(str, sorted(refs)))} of {scan.name}…")
         pages_score = scorecard.score_pages(scan, refs, jobs)
