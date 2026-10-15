@@ -105,8 +105,9 @@ flowchart LR
      | WeightedAI Persian_OCR | 13.18% | 0 of 109 | 11.7% | 0.55 | 1,097 MB |
      | Hezar `crnn-fa-printed-96-long` | 36.77% | 6 of 109 | 8.6% | 0.17 | 577 MB |
 
-     `convert` today on whole pages 30, 54, 76 and 77 (91 lines): 8.4% letters wrong, 2 lines lost or merged and 3
-     extra, 1.2 s a page; word gaps wrong 8.8% (9.7% before joined words were split); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
+     `convert` today on whole pages 30, 54 and 76 (68 lines; 104 and 128 join when their last lines are decided):
+     8.7% letters wrong, 1 line lost or merged and 2 extra, 1.2 s a page; word gaps wrong 9.5% (11.5% before joined
+     words were split); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
      (6.4%): the lines checked later are harder for it. The other readers run in their own image (`make readers`,
      `docker/Dockerfile.readers`, 2.7 GB with PyTorch), not rtlbook's.
   2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns

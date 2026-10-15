@@ -154,8 +154,9 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
   everyday list or the book's own words seen three times or more, or one of a few short words (و از در با را…); an
   ending (ها، ترین، شان…) never stands alone, and a word in the large list is never split. The lists are built into
   the image: Tesseract's own Farsi word list (13,892 words, unpacked from `fas.traineddata`) and Lilak's (85,838
-  words, Apache-2.0, a pinned commit). On the 1932 book's whole test pages, word gaps wrong 9.7% → 8.8%, letters
-  untouched; 815 words split in the book, in 0.1 s. Most wrong splits are inside words already misread. Exported
+  words, Apache-2.0, a pinned commit). On the 1932 book's whole test pages, word gaps wrong 11.5% → 9.5%, letters
+  untouched (24 splits: 15 right, none wrong, the rest inside words already misread); 815 words split in the book, in
+  0.1 s. Exported
   PDFs are left alone: their gaps are the ones typed, and some typists leave out the space after such a letter as a
   habit (on the exported story, 43 of 46 splits went against its text).
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
@@ -186,7 +187,8 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
 - **Accuracy:** `rtlbook eval` against checked text, and `tests/test_ground_truth.py`, which fails if accuracy on
   the public-domain pages in `tests/data/` drops below the baseline.
 - **Scorecard:** `rtlbook bench` (`make bench SET=<a training set's folder>`) scores a line reader (`readers.py`)
-  on a set's checked test lines read one by one, whole pages through `convert`'s OCR and joined-word splitting, and
+  on a set's checked test lines read one by one, whole pages through `convert`'s OCR and joined-word splitting (the
+  set's test pages whose every line is decided: older page texts don't follow its spacing rules), and
   an exported PDF, with spacing (word gaps) counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
   compared with the last. Lines and pages compare only between runs on the same checked data. `bench/README.md` shows
   the readers side by side, with bar charts it draws itself as SVG (`bench/charts/`: Mermaid's bars start before
