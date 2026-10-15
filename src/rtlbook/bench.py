@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import html
 import json
 import re
 import resource
@@ -160,3 +161,96 @@ def peak_memory_mb() -> int:
 def record(reader: Reader, **parts) -> dict:
     return {"date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "engine": __version__,
             "reader": reader.name, **{k: v for k, v in parts.items() if v is not None}}
+
+
+BEST, WORST, REST = "#2f6fb0", "#e07b24", "#9a9a9a"  # bar colours
+
+
+def _chart(title: str, labels: list[str], values: list[float], show) -> str:
+    """A horizontal bar chart as SVG, fewer is better: the lowest bar blue and the highest orange when one reader
+    alone holds it, each value at its bar's end. Drawn here, not in Mermaid: its bars start a little before the
+    axis's zero, and its values on bars all shrink to fit the shortest bar."""
+    width, left, row, top = 640, 230, 28, 32
+    span = (width - left - 80) / (max(values + [0]) or 1)
+    best = min(values) if values.count(min(values)) == 1 and len(set(values)) > 1 else None
+    worst = max(values) if values.count(max(values)) == 1 and len(set(values)) > 1 else None
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{top + row * len(values) + 4}" '
+           'font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13">',
+           "<style>text { fill: #1f2328 } .label { fill: #59636e } @media (prefers-color-scheme: dark) "
+           "{ text { fill: #e6edf3 } .label { fill: #9198a1 } }</style>",
+           f'<text x="0" y="18" font-size="14" font-weight="600">{html.escape(title)}</text>']
+    for k, (label, v) in enumerate(zip(labels, values)):
+        y, w = top + row * k, round(v * span, 1)
+        colour = BEST if v == best else WORST if v == worst else REST
+        out += [f'<text class="label" x="{left - 10}" y="{y + row / 2}" dy="0.35em" text-anchor="end">'
+                f"{html.escape(label)}</text>",
+                f'<rect x="{left}" y="{y + 5}" width="{w}" height="{row - 10}" rx="2" fill="{colour}"/>',
+                f'<text x="{left + w + 6}" y="{y + row / 2}" dy="0.35em">{html.escape(show(v))}</text>']
+    out.append(f'<line x1="{left}" x2="{left}" y1="{top}" y2="{top + row * len(values)}" stroke="#8c959f"/>')
+    return "\n".join(out + ["</svg>"]) + "\n"
+
+
+def report(entries: list[dict]) -> dict[str, str]:
+    """bench/README.md (the readers side by side on the newest checked lines, convert's own numbers, and every run)
+    and its charts in charts/, by path."""
+    out = ["# Scorecard", "",
+           "Written by `make bench` from [`results.jsonl`](results.jsonl) after every run: don't edit by hand. What each "
+           "number means: `src/rtlbook/bench.py` and docs/ROADMAP.md (\"Reader slot and scorecard\").", ""]
+    charts = {}
+    with_lines = [e for e in entries if e.get("lines")]
+    if with_lines:
+        data = with_lines[-1]["lines"]["data"]
+        latest = {}
+        for e in with_lines:
+            if e["lines"]["data"] == data:
+                latest[e["reader"]] = e
+        rows = sorted(latest.values(), key=lambda e: e["lines"]["letters_wrong"])
+        ln = rows[0]["lines"]
+        out += ["## Line readers on the same checked lines", "",
+                f"Each reader reads the {ln['lines']} checked test lines of `{ln['set']}` (data `{data}`) one line "
+                "image at a time, cut by rtlbook. Letters wrong ignore spaces and half-spaces; word gaps wrong count "
+                "only those. Fewer is better. Image size: rtlbook's own image for Tesseract `fas`, the readers image "
+                "(all the other readers together) for the rest.", "",
+                "| Reader | Letters wrong | Lines all right | Word gaps wrong | Seconds a line | Memory, MB | Image, MB "
+                "| Run |", "|---|---|---|---|---|---|---|---|"]
+        for e in rows:
+            ln = e["lines"]
+            out.append(f"| {e['reader']} | {ln['letters_wrong']:.2%} | {ln['exact']} of {ln['lines']} | "
+                       f"{ln['spacing_wrong']:.1%} | {ln['seconds_a_line']} | {e.get('memory_mb', '')} | "
+                       f"{e.get('image_mb', '')} | {e['date'][:10]}, `{e.get('commit', '')}` |")
+        names = [e["reader"] for e in rows]
+        charts = {
+            "charts/letters-wrong.svg": _chart("Letters wrong", names, [100 * e["lines"]["letters_wrong"] for e in rows],
+                                               lambda v: f"{v:.2f}%"),
+            "charts/word-gaps-wrong.svg": _chart("Word gaps wrong", names,
+                                                 [100 * e["lines"]["spacing_wrong"] for e in rows], lambda v: f"{v:.1f}%"),
+            "charts/time.svg": _chart("Milliseconds a line", names, [1000 * e["lines"]["seconds_a_line"] for e in rows],
+                                      lambda v: f"{v:.0f} ms"),
+            "charts/memory.svg": _chart("Memory", names, [e.get("memory_mb", 0) for e in rows], lambda v: f"{v} MB"),
+        }
+        out += ["", "Fewer is better in all four: the best blue, the worst orange. The first two: how well each reads; "
+                "the last two: what it costs to run, one CPU thread.", "",
+                *(f"![{path.split('/')[-1].removesuffix('.svg').replace('-', ' ')}]({path})\n" for path in charts)]
+    with_pages = [e for e in entries if e.get("pages") or e.get("exported")]
+    if with_pages:
+        e = with_pages[-1]
+        out += ["## Whole pages and an exported PDF, through `convert`", "",
+                "`convert`'s own OCR (Tesseract finds and reads the lines in one call, whatever the reader above).", "",
+                "| Case | Letters wrong | More | Seconds a page |", "|---|---|---|---|"]
+        if pg := e.get("pages"):
+            out.append(f"| Pages {', '.join(map(str, pg['pages']))} ({pg['lines']} lines) | {pg['letters_wrong']:.2%} "
+                       f"| lines lost or merged: {pg['lines_missing']}, extra: {pg['lines_extra']} | {pg['seconds_a_page']} |")
+        if ex := e.get("exported"):
+            out.append(f"| Exported PDF, `{ex['pdf']}` ({ex['pages']} pages) | {ex['letters_wrong']:.2%} | | "
+                       f"{ex['seconds_a_page']} |")
+        out += ["", f"From the run of {e['date'][:10]} (`{e.get('commit', '')}`, rtlbook {e['engine']}).", ""]
+    out += ["## Every run", "", "Newest first. Lines and pages compare only between runs on the same data.", "",
+            "| Date | Commit | rtlbook | Reader | Lines (data) | Letters wrong | Word gaps wrong | Pages, letters wrong "
+            "| Exported, letters wrong |", "|---|---|---|---|---|---|---|---|---|"]
+    for e in reversed(entries):
+        x, pg, ex = e.get("lines") or {}, e.get("pages") or {}, e.get("exported") or {}
+        pct = lambda d, k, f=".2%": format(d[k], f) if k in d else ""
+        out.append(f"| {e['date'][:16].replace('T', ' ')} | `{e.get('commit', '')}` | {e['engine']} | {e['reader']} | "
+                   f"{x.get('lines', '')} (`{x.get('data', '')}`) | {pct(x, 'letters_wrong')} | "
+                   f"{pct(x, 'spacing_wrong', '.1%')} | {pct(pg, 'letters_wrong')} | {pct(ex, 'letters_wrong')} |")
+    return {"README.md": "\n".join(out) + "\n", **charts}

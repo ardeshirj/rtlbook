@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="148" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+<style>text { fill: #1f2328 } .label { fill: #59636e } @media (prefers-color-scheme: dark) { text { fill: #e6edf3 } .label { fill: #9198a1 } }</style>
+<text x="0" y="18" font-size="14" font-weight="600">Letters wrong</text>
+<text class="label" x="220" y="46.0" dy="0.35em" text-anchor="end">parisaocr fa-0.1</text>
+<rect x="230" y="37" width="5.4" height="18" rx="2" fill="#2f6fb0"/>
+<text x="241.4" y="46.0" dy="0.35em">0.60%</text>
+<text class="label" x="220" y="74.0" dy="0.35em" text-anchor="end">tesseract 5.3.0 fas</text>
+<rect x="230" y="65" width="72.3" height="18" rx="2" fill="#9a9a9a"/>
+<text x="308.3" y="74.0" dy="0.35em">8.06%</text>
+<text class="label" x="220" y="102.0" dy="0.35em" text-anchor="end">weightedai persian_ocr</text>
+<rect x="230" y="93" width="118.3" height="18" rx="2" fill="#9a9a9a"/>
+<text x="354.3" y="102.0" dy="0.35em">13.18%</text>
+<text class="label" x="220" y="130.0" dy="0.35em" text-anchor="end">hezar crnn-fa-printed-96-long</text>
+<rect x="230" y="121" width="330.0" height="18" rx="2" fill="#e07b24"/>
+<text x="566.0" y="130.0" dy="0.35em">36.77%</text>
+<line x1="230" x2="230" y1="32" y2="144" stroke="#8c959f"/>
+</svg>

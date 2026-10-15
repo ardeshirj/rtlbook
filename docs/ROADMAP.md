@@ -92,9 +92,22 @@ flowchart LR
      - speed and size: seconds a page, memory, image size.
 
      A case joins when work on its weak spot starts (1960s type, two-column verse), not before.
-     **Built (2026-10-14):** `rtlbook bench`, `make bench SET=…`, results in `bench/results.jsonl`. Tesseract's
-     baseline on 54 checked test lines and 3 whole pages of the 1932 book: 6.4% letters wrong reading each line
-     alone, 13.3% of word gaps wrong; whole pages 7.0%; the exported PDF 0.52%; 0.05 s a line, 1.3 s a page.
+     **Built (2026-10-14):** `rtlbook bench`, `make bench SET=…`, results in `bench/results.jsonl` and the page
+     `bench/README.md`. **Baseline v1 (2026-10-15):** the 1932 book's five test pages, 109 checked lines, their
+     spacing rechecked against rule 2, kept as a fixed copy (data `9f4d258f7368`) so every reader is scored on
+     the same lines:
+
+     | Reader (each line alone) | Letters wrong | Lines all right | Word gaps wrong | Seconds a line | Memory |
+     |---|---|---|---|---|---|
+     | ParisaOCR fa-0.1 | 0.60% | 93 of 109 | 5.2% | 0.52 | 702 MB |
+     | Tesseract 5.3.0 `fas` (today) | 8.06% | 15 of 109 | 12.1% | 0.04 | 84 MB |
+     | WeightedAI Persian_OCR | 13.18% | 0 of 109 | 11.7% | 0.55 | 1,097 MB |
+     | Hezar `crnn-fa-printed-96-long` | 36.77% | 6 of 109 | 8.6% | 0.17 | 577 MB |
+
+     `convert` today on whole pages 30, 54, 76 and 77 (91 lines): 8.4% letters wrong, 2 lines lost or merged and 3
+     extra, 1.2 s a page; the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
+     (6.4%): the lines checked later are harder for it. The other readers run in their own image (`make readers`,
+     `docker/Dockerfile.readers`, 2.7 GB with PyTorch), not rtlbook's.
   2. *Reader slot:* Tesseract finds the lines (and column gaps), rtlbook cuts each line image, the reader returns
      its text and confidence (today all of it is one Tesseract call, `ocr.ocr_lines`). First with only Tesseract
      behind it. The reader joins the OCR cache key. `readers.py` has the slot, used by the scorecard so far.
@@ -109,7 +122,11 @@ flowchart LR
      (Kraken's segmenter, PaddleOCR's layout model) with verse and footnotes; Calamari as another trainable reader
      to measure. Swappable parts, not a plugin framework: a few built-in choices per slot, kept only when they win.
 - **Not used:** parts under AGPL or with restricted weights (YOLO-based layout models, Surya); readers measured
-  weaker on this type (Hezar's CRNN, 38.6%).
+  weaker on this type (WeightedAI's Persian_OCR, trained only on rendered lines, and Hezar's CRNN, above); readers
+  without Persian (TrOCR, Donut); `fas_print` on the scorecard (an unreviewed pull request to tessdata_contrib,
+  fetched from a branch that can change: 4.75% on the first 54 lines, against `fas`'s 6.38%; back if it's merged);
+  Kraken's OpenITI Persian model (10.5281/zenodo.7051644), whose output under Kraken 7 is gibberish (its 1.9% in
+  DESIGN.md came from an older Kraken).
 - **Open:** ParisaOCR isn't measured on 1960s type yet, where Kraken's stock Persian model misread 20–30%.
 
 ### Letterpress type (1930s–60s) — training set in progress (ahead of phases 3–4)

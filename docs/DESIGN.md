@@ -178,7 +178,9 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
 - **Scorecard:** `rtlbook bench` (`make bench SET=<a training set's folder>`) scores a line reader (`readers.py`)
   on a set's checked test lines read one by one, whole pages through `convert`'s OCR, and an exported PDF, with
   spacing counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
-  compared with the last. Lines and pages compare only between runs on the same checked data.
+  compared with the last. Lines and pages compare only between runs on the same checked data. `bench/README.md` shows
+  the readers side by side, with bar charts it draws itself as SVG (`bench/charts/`: Mermaid's bars start before
+  their axis's zero). Readers other than Tesseract run in their own image (`make readers`).
 
 ---
 

@@ -325,7 +325,7 @@ def bench(
     page_texts: Annotated[Path, typer.Option(help="Checked whole pages, p<N>.txt")] = Path("tests/data/three-drops"),
     exported: Annotated[Path, typer.Option(help="An exported PDF")] = Path("input/public-domain/tomorrow-2006.pdf"),
     exported_text: Annotated[Path, typer.Option(help="Its reference text")] = Path("tests/data/tomorrow/reference.txt"),
-    save: Annotated[Optional[Path], typer.Option(help="Add the results to this file (JSON lines) and compare with its last entry")] = None,
+    save: Annotated[Optional[Path], typer.Option(help="Add the results to this file (JSON lines), compare with its last entry for this reader, and write README.md beside it")] = None,
     image_mb: Annotated[Optional[int], typer.Option(help="The image's size, measured outside it")] = None,
     commit: Annotated[Optional[str], typer.Option(help="The source's commit, recorded with the results")] = None,
     jobs: int = 2,
@@ -355,10 +355,10 @@ def bench(
     rec = scorecard.record(r, commit=commit, lines=lines_score, pages=pages_score, exported=exported_score,
                            memory_mb=scorecard.peak_memory_mb(), image_mb=image_mb)
 
-    last = None
+    entries = []
     if save and save.exists():
         entries = [json.loads(x) for x in save.read_text(encoding="utf-8").splitlines() if x.strip()]
-        last = entries[-1] if entries else None
+    last = next((e for e in reversed(entries) if e["reader"] == r.name), None)
     t = Table(title=f"Scorecard: rtlbook {__version__}, {r.name}")
     for col in ("case", "measure", "this run"):
         t.add_column(col, justify="right" if col == "this run" else "left")
@@ -406,7 +406,10 @@ def bench(
         save.parent.mkdir(parents=True, exist_ok=True)
         with save.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        console.print(f"Saved to {save}")
+        for path, text in scorecard.report(entries + [rec]).items():
+            (save.parent / path).parent.mkdir(parents=True, exist_ok=True)
+            (save.parent / path).write_text(text, encoding="utf-8")
+        console.print(f"Saved to {save}, and the page {save.parent / 'README.md'}")
 
 
 @app.command()
