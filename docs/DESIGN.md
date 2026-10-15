@@ -158,8 +158,8 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
   untouched (24 splits: 15 right, none wrong, the rest inside words already misread); 815 words split in the book, in
   0.1 s. Exported
   PDFs are left alone: there a missing space after such a letter barely shows, while a wrong split visibly breaks a
-  word. On the exported story, whose typist often left those spaces out, about 27 of 39 splits were right by the
-  spacing rule, and about 12 broke words the lists lack (colloquial forms, a compound, a name).
+  word. On the exported story, whose typist often left those spaces out, about 27 of 37 splits were right by the
+  spacing rule, and about 10 broke words the lists lack (colloquial forms, a compound, a name).
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
   dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.
