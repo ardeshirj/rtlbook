@@ -56,7 +56,8 @@ flowchart TD
     B --> P
     subgraph P [Each page, in parallel, cached]
         C[Render<br/>300 DPI, grayscale] --> D[Preprocess<br/>binarize · optional crop]
-        D --> E[OCR: Tesseract fas<br/>single-column mode · split lines at column gaps]
+        D --> E1[Find lines: Tesseract<br/>single-column mode · split lines at column gaps]
+        E1 --> E2[Read lines: Tesseract fas<br/>in the same call as finding them]
     end
     P --> F[Reading order<br/>side-by-side lines as rows, right to left]
     F --> G[Title and author<br/>from the title page]
@@ -65,7 +66,13 @@ flowchart TD
     I --> J[EPUB 3 builder<br/>cover · Parastoo · TOC · page list]
     J --> K[epubcheck]
     K --> R[report.json<br/>confidence warning · title and author found]
+    S[[Scorecard: rtlbook bench<br/>a line reader on checked lines · whole pages · an exported PDF]] -. measures .-> E2
+    S -. measures .-> P
+    S -. measures .-> K
 ```
+
+The scorecard (§4.10) reads a set's checked lines through the reader slot (`readers.py`) on its own; `convert`
+doesn't use the slot yet (ROADMAP.md, "Reader slot and scorecard", has the pipeline it leads to).
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
 settings. Re-running with other text or EPUB options takes seconds. Pages are OCR'd in parallel.

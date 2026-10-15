@@ -38,6 +38,21 @@ Line finding, text clean-up, structure, the EPUB builder and validation hold up;
   parameters, lines 96 pixels high) misreads 1.3%. Line finding isn't the limit; the reader is.
 - **Goal:** the reader chosen by document type: Tesseract for exported PDFs (0.5–0.8%, 1–2 s a page), a modern
   reader for scans; every change measured on the scorecard before it ships.
+- **Where it leads** (DESIGN.md §3 has today's pipeline):
+
+```mermaid
+flowchart TD
+    D[Preprocessed page] --> F[Find lines: a slot<br/>Tesseract today · Kraken or PaddleOCR later, with verse and footnotes]
+    F --> X[Cut each line image]
+    X --> R{Reader slot<br/>chosen by document type}
+    R -- exported PDF --> T[Tesseract fas<br/>raw line]
+    R -- scan --> M[A modern reader<br/>ParisaOCR first · later trained further on checked lines]
+    T --> C[Confidence on one scale<br/>the low-confidence warning, headings, --min-line-conf]
+    M --> C
+    C --> O[Reading order · clean-up · structure · EPUB · epubcheck<br/>unchanged]
+    S[[Scorecard]] -. every change measured .-> F
+    S -. every change measured .-> R
+```
 - **Approach:**
   1. *Scorecard* (`make bench`): fixed public-domain cases, one number per weak spot, saved per engine version so
      changes compare:
