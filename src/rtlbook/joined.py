@@ -75,7 +75,7 @@ def _best(sp: Splitter, w: str) -> tuple[str, ...] | None:
         return (w,)
     options = []
     for i in range(1, len(w)):
-        if w[i - 1] not in NONJOIN or not sp._piece(head := w[:i]):
+        if w[i - 1] not in NONJOIN or not w[i].isalpha() or not sp._piece(head := w[:i]):  # not before a ":" or "«"
             continue
         if rest := _best(sp, w[i:]):
             options.append((head,) + rest)

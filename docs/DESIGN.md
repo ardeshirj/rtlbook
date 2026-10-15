@@ -157,8 +157,9 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
   words, Apache-2.0, a pinned commit). On the 1932 book's whole test pages, word gaps wrong 11.5% → 9.5%, letters
   untouched (24 splits: 15 right, none wrong, the rest inside words already misread); 815 words split in the book, in
   0.1 s. Exported
-  PDFs are left alone: their gaps are the ones typed, and some typists leave out the space after such a letter as a
-  habit (on the exported story, 43 of 46 splits went against its text).
+  PDFs are left alone: there a missing space after such a letter barely shows, while a wrong split visibly breaks a
+  word. On the exported story, whose typist often left those spaces out, about 27 of 39 splits were right by the
+  spacing rule, and about 12 broke words the lists lack (colloquial forms, a compound, a name).
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
   dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.

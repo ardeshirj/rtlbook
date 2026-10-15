@@ -10,6 +10,7 @@ def test_splits_after_a_letter_that_never_joins():
     assert sp.fix("ورفتم به خانه") == ("و رفتم به خانه", 1)
     assert sp.fix("کتاب رادیدم") == ("کتاب را دیدم", 1)
     assert sp.fix("«ازمدرسه»،") == ("«از مدرسه»،", 1)  # punctuation stays outside
+    assert sp.fix("بود:«رفتم") == ("بود:«رفتم", 0)  # never a space before a colon or a quote mark
 
 
 def test_never_splits_a_known_word_or_inside_a_joined_letter():
