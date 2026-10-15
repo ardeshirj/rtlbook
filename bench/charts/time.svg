@@ -5,8 +5,8 @@
 <rect x="230" y="37" width="312.1" height="18" rx="2" fill="#9a9a9a"/>
 <text x="548.1" y="46.0" dy="0.35em">522 ms</text>
 <text class="label" x="220" y="74.0" dy="0.35em" text-anchor="end">tesseract 5.3.0 fas</text>
-<rect x="230" y="65" width="25.1" height="18" rx="2" fill="#2f6fb0"/>
-<text x="261.1" y="74.0" dy="0.35em">42 ms</text>
+<rect x="230" y="65" width="24.5" height="18" rx="2" fill="#2f6fb0"/>
+<text x="260.5" y="74.0" dy="0.35em">41 ms</text>
 <text class="label" x="220" y="102.0" dy="0.35em" text-anchor="end">weightedai persian_ocr</text>
 <rect x="230" y="93" width="330.0" height="18" rx="2" fill="#e07b24"/>
 <text x="566.0" y="102.0" dy="0.35em">552 ms</text>

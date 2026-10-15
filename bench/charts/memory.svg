@@ -5,8 +5,8 @@
 <rect x="230" y="37" width="211.2" height="18" rx="2" fill="#9a9a9a"/>
 <text x="447.2" y="46.0" dy="0.35em">702 MB</text>
 <text class="label" x="220" y="74.0" dy="0.35em" text-anchor="end">tesseract 5.3.0 fas</text>
-<rect x="230" y="65" width="25.3" height="18" rx="2" fill="#2f6fb0"/>
-<text x="261.3" y="74.0" dy="0.35em">84 MB</text>
+<rect x="230" y="65" width="26.8" height="18" rx="2" fill="#2f6fb0"/>
+<text x="262.8" y="74.0" dy="0.35em">89 MB</text>
 <text class="label" x="220" y="102.0" dy="0.35em" text-anchor="end">weightedai persian_ocr</text>
 <rect x="230" y="93" width="330.0" height="18" rx="2" fill="#e07b24"/>
 <text x="566.0" y="102.0" dy="0.35em">1097 MB</text>
