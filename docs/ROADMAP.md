@@ -100,22 +100,33 @@ flowchart LR
 
      | Reader (each line alone) | Letters wrong | Lines all right | Word gaps wrong | Seconds a line | Memory |
      |---|---|---|---|---|---|
-     | ParisaOCR fa-0.1 | 0.60% | 93 of 109 | 5.2% | 0.52 | 702 MB |
+     | ParisaOCR fa-0.1 (ONNX, in rtlbook's image since 2026-10-16) | 0.60% | 93 of 109 | 5.2% | 0.18 | 364 MB |
+     | ParisaOCR fa-0.1 (its own reader, PyTorch) | 0.60% | 93 of 109 | 5.2% | 0.52 | 702 MB |
      | Tesseract 5.3.0 `fas` (today) | 8.06% | 15 of 109 | 12.1% | 0.04 | 84 MB |
      | WeightedAI Persian_OCR | 13.18% | 0 of 109 | 11.7% | 0.55 | 1,097 MB |
      | Hezar `crnn-fa-printed-96-long` | 36.77% | 6 of 109 | 8.6% | 0.17 | 577 MB |
 
-     `convert` today on whole pages 30, 54 and 76 (68 lines; 104 and 128 join when their last lines are decided):
-     5.8% letters wrong (8.7% before the reader slot), 2 lines lost or merged and 3 extra, 1.0 s a page; word gaps
-     wrong 8.9% (11.5% before joined words were split and the slot); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
+     `convert` today on whole pages 30, 54 and 76 (68 lines; 104 and 128 join when their last lines are decided),
+     reading a scan with ParisaOCR: 0.32% letters wrong (8.7% before the reader slot, 5.8% with it and Tesseract),
+     no line lost or merged and 1 extra, about 5.6 s a page; word gaps wrong 4.0% (11.5% before joined words were
+     split and the slot); the exported PDF 0.52%. The first baseline, on 54 of these lines, flattered Tesseract
      (6.4%): the lines checked later are harder for it. The other readers run in their own image (`make readers`,
      `docker/Dockerfile.readers`, 2.7 GB with PyTorch), not rtlbook's.
   2. *Reader slot:* **built (2026-10-15)**, DESIGN.md §4.5: in a scan, Tesseract finds the lines and each cut line is
      read alone, Tesseract behind the slot for now; whole pages 8.7% → 5.8% letters wrong, 1.0 s a page instead of 1.2.
-  3. *ParisaOCR as the scan reader:* speed (its own converter took ~12 s a page against Tesseract's 1–2), image
-     size (it ships with PyTorch; ONNX Runtime is likely far smaller), its own confidence scale (the warning below
-     70, headings at 60 and `--min-line-conf` are tuned to Tesseract's), and which clean-up fixes aimed at
-     Tesseract's habits (`»` for the Persian comma, `!` read as `ا`) still help.
+  3. *ParisaOCR as the scan reader:* **built (2026-10-16)**, DESIGN.md §4.5: through ONNX Runtime in rtlbook's
+     image (675 MB), its padding computed once (2.2 times faster), its confidence on Tesseract's scale. Still open:
+     - *Fragment lines:* layout analysis sometimes gives a half-height copy of a line, or a piece of one, as a line
+       of its own (pages 65, 124, 134 of the 1932 book); read, they are junk. ParisaOCR gives most of them 0 on
+       Tesseract's scale, real lines 80–100, but a few real ones (a verse line, a line in two pieces) fall in the
+       30s. A filter by confidence or by overlap, measured on whole pages before it's kept.
+     - *Clean-up fixes aimed at Tesseract's habits* (`»` for the Persian comma, `!` read as `ا`): whether they still
+       fire, and help, on ParisaOCR's text.
+     - *Time on the target machine:* 5.6 s a page on one Apple M2 thread; not yet measured on linux/amd64 hardware
+       (only under emulation, which is several times slower). Quantizing to 8 bits is 1.8 times faster at 0.91%
+       letters wrong instead of 0.71%, kept in reserve.
+     - *The confidence map* (100 − 10 × (100 − c)) rests on 22 of 531 training lines below 96: recheck it when harder
+       type (1960s) is checked.
   4. *Later:* continue training the scan reader on checked lines (Kraken's tools); a second slot for line finding
      (Kraken's segmenter, PaddleOCR's layout model) with verse and footnotes; Calamari as another trainable reader
      to measure. Swappable parts, not a plugin framework: a few built-in choices per slot, kept only when they win.

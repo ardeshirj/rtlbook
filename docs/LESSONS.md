@@ -52,6 +52,22 @@ which records the decisions and results. Book text is deliberately not quoted he
 - **Confidence averages mislead.** Most low-confidence lines are page numbers, stamps and headers, which are
   removed before the EPUB is built.
 
+## Neural line readers (ParisaOCR's model)
+
+- **Read a model's training code before trimming its input.** ParisaOCR's model was trained on lines padded to 2560
+  columns, and its squeeze-and-excitation blocks average over that whole width, padding included. Padding to 2048
+  instead took letters wrong from 0.68% to 18%; to the line's own width, 57%. Keeping the averages right (the line
+  plus a 128-column margin, the rest added by calculation) keeps the output identical.
+- **`torch.onnx.export` freezes Python numbers.** Sizes computed in Python (`x.shape[2]` in a pooling kernel,
+  `w_out / w_in` and `clamp(max=w_out)` for the output lengths) become constants of the sample's width, and longer
+  lines were silently cut. Compute them from `torch._shape_as_tensor(x)`, and check the file at several widths.
+- **Equal confidences aren't equal across readers.** ParisaOCR's sits near 100 even on poor lines (below 96 it is
+  already bad); map it to the scale the thresholds were tuned on, by errors, not by rank: ranking its values onto
+  Tesseract's spread would call a well-read book poor.
+- **A bidi round trip isn't exact.** ParisaOCR's model reads display order, turned into reading order with a line's
+  own base direction; a line with more Latin than Persian letters is taken as left to right, so its Persian words
+  come out in the wrong order. Rare in Persian books; test with lines that are mostly Persian.
+
 ## EPUB
 
 - **epubcheck forbids the CSS `direction` property.** RTL must come from `dir="rtl"` on `html`/`body`, plus

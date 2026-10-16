@@ -4,7 +4,8 @@
 
 Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 for reading apps built on
 [Readium](https://readium.org/), such as [Thorium Reader](https://thorium.edrlab.org/). It supports PDFs exported
-from a word processor; scanned books convert with more errors and are next on the [roadmap](docs/ROADMAP.md).
+from a word processor. Scanned books are read with ParisaOCR's model and work well on the one scan measured so far;
+more kinds of print are on the [roadmap](docs/ROADMAP.md).
 How it works: [docs/DESIGN.md](docs/DESIGN.md).
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
@@ -41,8 +42,9 @@ What has been verified:
 - Apple Silicon Mac (M2) with Docker Desktop.
 
 Not yet done or known to be weak:
-- **Scanned and typewritten books** aren't supported yet. They convert, but on a 1932 letterpress scan
-  6–8% of letters were misread, against under 1% on an exported PDF (measured with `rtlbook eval`).
+- **Scanned books are measured on one book so far:** on hand-checked pages of a 1932 letterpress scan, 0.3% of
+  letters are misread (Tesseract alone: 6%). Other type (1960s print, typewriters) isn't measured yet, and a scan
+  takes about five times as long as an exported PDF (about 5–6 s a page on one core).
 - **Accuracy is measured on few books so far:** one exported story against its own stored text, and two
   hand-checked pages of a scanned book (`tests/data/`).
 - **Persian only:** Arabic, Urdu and Hebrew are on the [roadmap](docs/ROADMAP.md), not built.
@@ -88,7 +90,7 @@ Useful `convert` options:
 | `--crop 0.075` | Cut page frames/borders before OCR |
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
-| `--reader page` | Read a scan's whole pages in one Tesseract call: more letters wrong (default `auto`: a scan's lines cut and read one by one, an exported PDF's whole pages) |
+| `--reader tesseract` | Read a scan's lines with Tesseract instead of ParisaOCR: five times faster, many more letters wrong (default `auto`: a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract; `page`: whole pages in one Tesseract call) |
 | `--no-split-joined` | Keep words run together as read (scans only; see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |
@@ -96,6 +98,7 @@ Useful `convert` options:
 What `convert` does automatically:
 - **OCRs every page.** The text stored inside Persian PDFs is rarely usable as is: wrong character codes, words in reversed (visual) order, missing spaces. On an exported story whose stored text could be rebuilt, OCR still got over 99% of letters right.
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
+- **Reads a scan's lines with ParisaOCR's model** (Tesseract finds the lines); an exported PDF's pages with Tesseract.
 - **Splits words run together** in scans of old type, where the gap after a letter that doesn't join the next is a hair wide (`ورفتم` → `و رفتم`), using word lists; `report.json` counts them (`joined_words_split`).
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
@@ -130,7 +133,7 @@ the pages (a whole chapter for a page that shows only its end) is trimmed to the
 ## Training lines
 
 `lines` cuts pages of a book into one image per text line, with what OCR read and its uncertain words, for a person
-to check; the checked lines become ground truth and training data for Tesseract. The format, the rules for checking
+to check; the checked lines become ground truth and training data for the line readers. The format, the rules for checking
 and how test lines are kept out of training: [docs/TRAINING-DATA.md](docs/TRAINING-DATA.md).
 
 ```bash
@@ -170,11 +173,15 @@ release, and what changed in each version: [docs/VERSIONS.md](docs/VERSIONS.md).
   [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) · [W3C EPUBCheck](https://github.com/w3c/epubcheck)
   · [Parastoo](https://github.com/rastikerdar/parastoo-font) font by Saber Rastikerdar (SIL OFL 1.1),
   embedded in the EPUBs · [Lilak](https://github.com/b00f/lilak), a Persian spelling dictionary by Mostafa Sedaghat
-  Joo (Apache-2.0), whose word list splits joined words.
+  Joo (Apache-2.0), whose word list splits joined words · [ParisaOCR](https://github.com/givia/ParisaOCR) by Ali
+  Javadi (Apache-2.0), whose recognition model reads scans, run by [ONNX Runtime](https://onnxruntime.ai/) (MIT) ·
+  [Kraken](https://github.com/mittagessen/kraken) by Benjamin Kiessling (Apache-2.0), whose bidi algorithm puts
+  ParisaOCR's output in reading order.
 
 ## License
 
 [Apache-2.0](LICENSE). The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
-license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, epubcheck), the
-Parastoo font and Lilak's word list keep their own licenses; none of them is stored in this
-repository.
+license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, ParisaOCR's model,
+ONNX Runtime, epubcheck), the Parastoo font and Lilak's word list keep their own licenses; none of them is stored in
+this repository. `src/rtlbook/bidi/` is Kraken's code with tables from Unicode's data, and `readers.py` follows
+ParisaOCR's code for its model: see [NOTICE](NOTICE).

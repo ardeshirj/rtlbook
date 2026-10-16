@@ -71,8 +71,8 @@ flowchart TD
 ```
 
 Tesseract finds the lines. In a scan it finds them by layout analysis alone, and each line is then cut from the page
-and read alone by a line reader, the reader slot (`readers.py`; Tesseract today); in an exported PDF finding and
-reading stay one Tesseract call (§4.5). The
+and read alone by a line reader, the reader slot (`readers.py`; ParisaOCR's model by default); in an exported PDF
+finding and reading stay one Tesseract call (§4.5). The
 scorecard (§4.10) scores the readers on checked lines.
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
@@ -135,6 +135,31 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
   chosen differently on every try. "Lines" under 12 pixels (specks) or over 400 (pictures) are skipped, and so is a
   line read as nothing. An exported PDF gains nothing from cut lines (0.52% either way), so `auto` reads its whole
   pages in one call (`--reader page`). The reader joins the cache key.
+- **ParisaOCR reads a scan's lines** (2026-10-16, `--reader auto`; `--reader tesseract` for Tesseract): ParisaOCR's
+  recognizer (Apache-2.0, ParisaOCR 0.7.2: PaddleOCR's PP-OCRv6 design trained with Kraken on Persian print, 3.0M
+  weights, lines 96 pixels high). On the 1932 book's checked pages 5.8% → 0.32% letters wrong, word gaps 8.9% → 4.0%,
+  no line lost (2 before); about 5.6 s a page on one thread instead of 1.0 (the whole book on 8 cores: 3.6 minutes
+  instead of half a minute). Exported PDFs keep Tesseract: ParisaOCR reads them barely better (0.44% against 0.52%)
+  at six times the time.
+  - *No PyTorch:* a build stage exports the model to ONNX (`docker/parisaocr_onnx.py`); the image runs it with ONNX
+    Runtime and numpy (image 550 → 675 MB, a 12 MB model). `readers.ParisaOCR` redoes Kraken's steps for a line
+    (grey to colour, 96 high, 16 white columns at each end, inverted, greedy CTC decoding) and ParisaOCR's (its
+    placeholder for ZWNJ, display order to reading order with Kraken's bidi algorithm, copied as `rtlbook.bidi`, a
+    line with more Latin than Arabic-script letters left to right, its clean-up of each word). The same text as
+    ParisaOCR's own reader on all 118 test lines, and the same confidences.
+  - *The padding, computed once:* the model was trained on lines padded on the right to 2560 columns, and its five
+    squeeze-and-excitation blocks average each channel over that whole width; with less padding it reads badly
+    (2048 columns: 0.68% → 18% letters wrong on 531 checked training lines). Lines are 1000–1500 columns wide at 96
+    pixels, so the padding was most of the time. Deep in the padding every column is the same, so the exported model
+    runs the line with a margin of 128 white columns and adds the rest of the padding to each average by
+    calculation: the same characters on all 531 lines (64 columns of margin were too few), 2.2 times faster. Quantized
+    to 8 bits it would be 1.8 times faster again, but with 0.91% letters wrong instead of 0.71%: not used.
+  - *One confidence scale:* ParisaOCR's confidence (its letters' probabilities, averaged by word, then by line)
+    crowds near 100: on the training lines, its lines below 96 have 12% or more letters wrong, as Tesseract's do below
+    70, and from 98 up almost none. `convert`'s thresholds are tuned to Tesseract (the low-confidence warning, pages
+    below 80, headings at 60, stray marks, `--min-line-conf`), so the reader puts its confidence on Tesseract's scale:
+    100 − 10 × (100 − c), so 95 → 50, 97 → 70, 99 → 90. The 1932 book then averages 86: no low-confidence warning,
+    rightly (with Tesseract, 64).
 - **Measured** with `rtlbook eval` (character and word error rates against a checked text; spelling conventions
   such as ي/ی, digits, half-spaces and vowel marks count as equal):
 
@@ -145,7 +170,8 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
 | 1960s poetry print | **6–12%** | 20–30% | — |
 | Two-column verse, narrow gutter | ~46% of words found | ~77% | **~89%**, layout handled |
 
-Kraken and AI vision were only measured in experiments; Tesseract is the only engine in the pipeline.
+Measured before the scorecard. ParisaOCR (on the line above, 0.32% on the 1932 book's checked pages) is in the
+pipeline for scans; the Kraken model and AI vision in this table were only measured in experiments.
 
 ### 4.6 Document model — built
 ```
@@ -206,7 +232,8 @@ Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to l
   an exported PDF, with spacing (word gaps) counted apart from letters and the speed and memory; each run is added to `bench/results.jsonl` and
   compared with the last. Lines and pages compare only between runs on the same checked data. `bench/README.md` shows
   the readers side by side, with bar charts it draws itself as SVG (`bench/charts/`: Mermaid's bars start before
-  their axis's zero). Readers other than Tesseract run in their own image (`make readers`).
+  their axis's zero). Tesseract and ParisaOCR are in rtlbook's image; the other readers run in their own
+  (`make readers`).
 
 ---
 
@@ -243,7 +270,7 @@ text by eye.
 ```
 rtlbook/
 ├─ rtlbook                   # wrapper: runs the CLI in Docker
-├─ docker/Dockerfile         # Tesseract, epubcheck, fonts, Python deps
+├─ docker/Dockerfile         # Tesseract, ParisaOCR's model (made by parisaocr_onnx.py), epubcheck, fonts, word lists
 ├─ src/rtlbook/
 │  ├─ cli.py                 # Typer commands: init, inspect, convert, eval
 │  ├─ doctype.py             # exported PDF or scan
@@ -251,6 +278,8 @@ rtlbook/
 │  ├─ pdf.py                 # PDFs: rendering, page info, cover image
 │  ├─ preprocess.py          # binarize, crop
 │  ├─ ocr.py                 # Tesseract, line boxes, column-gap splitting
+│  ├─ readers.py             # line readers: ParisaOCR, Tesseract, and the scorecard's others
+│  ├─ bidi/                  # the Unicode bidi algorithm (Kraken's), for ParisaOCR's output
 │  ├─ pipeline.py            # parallel OCR with a per-page cache; sections
 │  ├─ layout.py              # reading order (rows, right to left)
 │  ├─ text.py                # normalization, OCR fixes, headers/footers, paragraphs
