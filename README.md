@@ -93,6 +93,7 @@ Useful `convert` options:
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
 | `--reader tesseract` | Read a scan's lines with Tesseract instead of ParisaOCR: five times faster, many more letters wrong (default `auto`: a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract; `page`: whole pages in one Tesseract call) |
+| `--scan-reader tesseract` | With `--reader auto`, read a scan's lines with Tesseract instead of ParisaOCR; exported PDFs keep Tesseract's whole-page call |
 | `--no-split-joined` | Keep words run together as read (scans only; see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |

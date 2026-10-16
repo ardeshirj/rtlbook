@@ -128,6 +128,7 @@ def convert(
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
     check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
     reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract), page (Tesseract reads whole pages in one call), or a line reader: parisaocr, tesseract")] = "auto",
+    scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
@@ -155,7 +156,7 @@ def convert(
     emit(event="start", pages=len(numbers), document=document_type(kinds).kind,
          script=scripts.found, script_expected=scripts.expected)
 
-    read_with = reader_for(reader, document_type(kinds).kind)
+    read_with = reader_for(reader, document_type(kinds).kind, scan_reader)
     t0 = time.perf_counter()
     cached = 0
     finished = 0

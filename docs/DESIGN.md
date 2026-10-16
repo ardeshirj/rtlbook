@@ -135,7 +135,8 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
   chosen differently on every try. "Lines" under 12 pixels (specks) or over 400 (pictures) are skipped, and so is a
   line read as nothing. An exported PDF gains nothing from cut lines (0.52% either way), so `auto` reads its whole
   pages in one call (`--reader page`). The reader joins the cache key.
-- **ParisaOCR reads a scan's lines** (2026-10-16, `--reader auto`; `--reader tesseract` for Tesseract): ParisaOCR's
+- **ParisaOCR reads a scan's lines** (2026-10-16, `--reader auto`; `--scan-reader tesseract` for Tesseract on scans
+  only, exported PDFs keeping the whole-page call; `--reader tesseract` cuts every PDF's lines): ParisaOCR's
   recognizer (Apache-2.0, ParisaOCR 0.7.2: PaddleOCR's PP-OCRv6 design trained with Kraken on Persian print, 3.0M
   weights, lines 96 pixels high). On the 1932 book's checked pages 5.8% → 0.32% letters wrong, word gaps 8.9% → 4.0%,
   no line lost (2 before); about 5.6 s a page on one thread instead of 1.0 (the whole book on 8 cores: 3.6 minutes
