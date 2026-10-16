@@ -61,6 +61,7 @@ class ParisaOCR:
     own clean-up of each word. The same text as ParisaOCR's reader on the scorecard's test lines, 2.7 times faster.
     Its confidence is put on Tesseract's scale, which convert's thresholds are tuned to (DESIGN.md §4.5)."""
 
+    NAME = "parisaocr fa-0.1 onnx"  # the model docker/Dockerfile's parisaocr stage exports
     HEIGHT, PAD, MARGIN = 96, 16, 128
     PLACEHOLDER = "\u00a6"  # what the model writes for ZWNJ (Kraken's bidi would drop a ZWNJ, kraken#809)
 
@@ -74,7 +75,7 @@ class ParisaOCR:
         self._session = ort.InferenceSession(str(folder / "parisaocr.onnx"), options,
                                              providers=["CPUExecutionProvider"])
         self._chars = {int(k): v for k, v in json.loads((folder / "codec.json").read_text(encoding="utf-8")).items()}
-        self.name = "parisaocr fa-0.1 onnx"  # the model docker/Dockerfile's parisaocr stage exports
+        self.name = self.NAME
 
     @staticmethod
     def tesseract_scale(conf: float) -> float:
@@ -236,6 +237,14 @@ READERS = {
     "hezar-crnn": Hezar,
     "weightedai": WeightedAI,
 }
+
+
+def describe(setting: str, lang: str) -> dict[str, str]:
+    """What found and read the lines for a reader setting (pipeline.reader_for), for report.json, without loading a
+    model: names carry versions, so a changed model or Tesseract reads as another reader."""
+    tesseract = f"{ocr.tesseract_version()} {lang}"
+    read = {"page": f"{tesseract}, whole pages", "tesseract": tesseract, "parisaocr": ParisaOCR.NAME}
+    return {"lines_found_by": tesseract, "read_by": read.get(setting) or get(setting).name}
 
 
 def get(name: str) -> Reader:

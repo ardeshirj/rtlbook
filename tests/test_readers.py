@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from rtlbook.bidi import get_display
-from rtlbook.readers import ParisaOCR, _canonical, _reading_order_words
+from rtlbook.readers import ParisaOCR, _canonical, _reading_order_words, describe
 
 ZWNJ, PLACEHOLDER = "‌", "¦"
 
@@ -58,3 +58,10 @@ def test_a_blank_line_reads_as_nothing():
     reader = ParisaOCR()
     assert reader.read(Image.new("L", (600, 60), 255)) == ("", None)
     assert reader.read(Image.new("L", (1, 400), 255)) == ("", None)  # too narrow to scale
+
+
+def test_describe_names_what_found_and_read_the_lines():
+    d = describe("parisaocr", "fas")
+    assert d["read_by"] == ParisaOCR.NAME and d["lines_found_by"].endswith(" fas")
+    assert describe("page", "fas")["read_by"] == d["lines_found_by"] + ", whole pages"
+    assert describe("tesseract", "fas")["read_by"] == d["lines_found_by"]

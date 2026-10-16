@@ -131,7 +131,7 @@ def convert(
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
-    from rtlbook import epub, frontmatter, joined, layout, ocr, text
+    from rtlbook import epub, frontmatter, joined, layout, readers, text
     from rtlbook.pipeline import OcrSettings, extract_pages, reader_for, split_sections
     from rtlbook.validate import epubcheck
 
@@ -239,7 +239,7 @@ def convert(
         "author_from": author_from,
         "pages": len(page_results),
         "pages_from_cache": cached,
-        "ocr_engine": ocr.tesseract_version(),
+        "engine": {"rtlbook": __version__, "document": document_type(kinds).kind, **readers.describe(read_with, lang)},
         "ocr_settings": {"dpi": dpi, "lang": lang, "psm": psm, "binarize": binarize, "crop": crop, "jobs": jobs,
                          "reader": read_with},
         "ocr_seconds_per_page_single_thread": round(
