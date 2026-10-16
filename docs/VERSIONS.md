@@ -39,6 +39,24 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.7.0 (2026-10-16)
+- **Scans are read by ParisaOCR's model** (Apache-2.0), run by ONNX Runtime inside the image (675 MB, from 550; no
+  PyTorch). On the 1932 test pages 0.3% of letters are wrong, against 8.7% in 0.6.0; on a 1963 printing and three
+  modern editions it was judged right far more often than Tesseract. About five times slower than Tesseract on a
+  scan (5–6 s a page on one core). `--scan-reader tesseract` keeps scans on Tesseract.
+- **A scan's lines are found by Tesseract's layout analysis and read one by one** (the reader slot, `--reader`,
+  default `auto`): exported PDFs keep Tesseract's whole-page call, unchanged. `--reader page` reads a scan's whole
+  pages as 0.6.0 did.
+- **Words run together in scans are split** after a letter that never joins the next, with word lists built into the
+  image (Tesseract's own and Lilak's); `--no-split-joined` turns it off, and `report.json` counts them.
+- **The EPUB says how it was made:** `rtlbook:version`, `rtlbook:document`, `rtlbook:lines-found-by` and
+  `rtlbook:read-by` in its package metadata.
+- **`report.json`: `engine`** (rtlbook's version, scan or exported, what found and what read the lines) replaces
+  `ocr_engine`, which named Tesseract whatever read the book. ParisaOCR's confidence is put on Tesseract's scale,
+  so `mean_confidence`, the low-confidence warning and `--min-line-conf` mean the same as before.
+- **`rtlbook bench`**, the scorecard: line readers on a set's checked lines, whole pages and an exported PDF, saved
+  per run to `bench/` (`make bench`; the other readers in `make readers`).
+
 ### 0.6.0 (2026-10-12)
 - **`rtlbook lines`** cuts a book's pages into training lines for checking (`docs/TRAINING-DATA.md`): what
   `tools/transcribe/prepare.py` did, now a command released with rtlbook's versions, so a set can be cut by a known
