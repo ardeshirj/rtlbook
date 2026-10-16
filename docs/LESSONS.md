@@ -42,6 +42,13 @@ which records the decisions and results. Book text is deliberately not quoted he
   - In a bold font, `!` with no following space reads as `ا`, merging two words. Not fixed yet.
   - `فصل` is often read as `نصل`, and ordinals get mangled or split (`دو از دهم`). Heading detection uses edit
     distance against keywords and ordinals.
+- **Layout analysis alone** (`TessBaseAPIAnalyseLayout`, C API only: the command line always reads) finds the same
+  lines in a sixth of the time, but some word boxes come back as the whole page: take only word boxes inside their
+  line's box (`ocr.layout_words`), or a line is lost (two dialogue lines on one page of the 1932 book). Its boxes are
+  ~4 pixels tighter above and below than a reading's, so cut lines need a little more padding.
+- **A cut line reads better than the same line on the page** for Tesseract on old type (1932: 8.7% → 5.8% letters
+  wrong on whole pages), but not on an exported PDF (0.52% either way). Choose its padding on many lines: on 68 test
+  lines each padding tried gave a different "best".
 - **Confidence averages mislead.** Most low-confidence lines are page numbers, stamps and headers, which are
   removed before the EPUB is built.
 

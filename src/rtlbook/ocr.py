@@ -1,8 +1,12 @@
-"""Tesseract OCR engine (CLI via subprocess, TSV output for line boxes and confidences)."""
+"""Tesseract OCR engine: the CLI via subprocess (TSV output for line boxes and confidences) for whole pages, and its
+C API through ctypes for layout analysis alone and single lines (one model load per process, no program start)."""
 
 from __future__ import annotations
 
+import atexit
 import csv
+import ctypes
+import ctypes.util
 import io
 import subprocess
 from collections import defaultdict
@@ -98,3 +102,102 @@ def split_columns(lines: list[list[Word]]) -> list[list[Word]]:
             start = i
         out.append(line[start:])
     return out
+
+
+# ---- The C API (libtesseract, installed with the tesseract-ocr package) ----
+_TEXTLINE, _WORD = 2, 3  # TessPageIteratorLevel
+BIDI_MARKS = "\u200e\u200f"
+_lib = None
+_apis: dict[tuple[str, int], int] = {}
+
+
+def _capi():
+    global _lib
+    if _lib is None:
+        name = ctypes.util.find_library("tesseract")
+        if not name:
+            raise RuntimeError("libtesseract not found (it comes with the tesseract-ocr package)")
+        lib = ctypes.CDLL(name)
+        vp, ip = ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)
+        for fn, args, res in [
+            ("TessBaseAPICreate", [], vp), ("TessBaseAPIInit3", [vp, ctypes.c_char_p, ctypes.c_char_p], ctypes.c_int),
+            ("TessBaseAPISetPageSegMode", [vp, ctypes.c_int], None),
+            ("TessBaseAPISetImage", [vp, ctypes.c_char_p] + [ctypes.c_int] * 4, None),
+            ("TessBaseAPIAnalyseLayout", [vp], vp), ("TessBaseAPIGetUTF8Text", [vp], vp),
+            ("TessBaseAPIMeanTextConf", [vp], ctypes.c_int), ("TessDeleteText", [vp], None),
+            ("TessPageIteratorBoundingBox", [vp, ctypes.c_int, ip, ip, ip, ip], ctypes.c_int),
+            ("TessPageIteratorNext", [vp, ctypes.c_int], ctypes.c_int),
+            ("TessPageIteratorIsAtBeginningOf", [vp, ctypes.c_int], ctypes.c_int),
+            ("TessPageIteratorDelete", [vp], None), ("TessBaseAPIDelete", [vp], None),
+        ]:
+            f = getattr(lib, fn)
+            f.argtypes, f.restype = args, res
+        _lib = lib
+        atexit.register(lambda: [_lib.TessBaseAPIDelete(api) for api in _apis.values()])
+    return _lib
+
+
+def _api(lang: str, psm: int) -> int:
+    lib = _capi()
+    if (lang, psm) not in _apis:
+        api = lib.TessBaseAPICreate()
+        if lib.TessBaseAPIInit3(api, None, lang.encode()) != 0:  # models from TESSDATA_PREFIX
+            raise RuntimeError(f"Tesseract couldn't load the language {lang!r}")
+        lib.TessBaseAPISetPageSegMode(api, psm)
+        _apis[(lang, psm)] = api
+    return _apis[(lang, psm)]
+
+
+def _set_image(api: int, image: Image.Image) -> None:
+    img = image.convert("L")
+    _capi().TessBaseAPISetImage(api, img.tobytes(), img.width, img.height, 1, img.width)
+
+
+def layout_words(image: Image.Image, lang: str, psm: int = 4) -> list[list[Word]]:
+    """Tesseract's text lines found by layout analysis alone, without reading them (a sixth of the time of
+    ocr_words): each a list of word boxes, right to left, with no text. The boxes leave out some of the marks above
+    and below the letters that ocr_words' boxes include."""
+    lib, api = _capi(), _api(lang, psm)
+    _set_image(api, image)
+    it = lib.TessBaseAPIAnalyseLayout(api)
+    lines: list[list[Word]] = []
+    if not it:
+        return lines
+    box = [ctypes.c_int() for _ in range(4)]
+
+    def bounds(level: int) -> tuple[int, int, int, int] | None:
+        ok = lib.TessPageIteratorBoundingBox(it, level, *map(ctypes.byref, box))
+        return tuple(b.value for b in box) if ok else None
+
+    line_boxes: list[tuple[int, int, int, int]] = []
+    while True:
+        if not lines or lib.TessPageIteratorIsAtBeginningOf(it, _TEXTLINE):
+            lines.append([])
+            line_boxes.append(bounds(_TEXTLINE) or (0, 0, 0, 0))
+        lx0, ly0, lx1, ly1 = line_boxes[-1]
+        # some words come back with the whole page as their box: only boxes inside their line count
+        if (w := bounds(_WORD)) and lx0 <= w[0] and ly0 <= w[1] and w[2] <= lx1 and w[3] <= ly1:
+            lines[-1].append(Word("", w[0], w[2], w[1], w[3], 0.0))
+        if not lib.TessPageIteratorNext(it, _WORD):
+            break
+    lib.TessPageIteratorDelete(it)
+    out = []
+    for words, (x0, y0, x1, y1) in zip(lines, line_boxes):
+        if not words and x1 > x0:  # no usable word box: the line as one
+            words = [Word("", x0, x1, y0, y1, 0.0)]
+        if words:
+            out.append(sorted(words, key=lambda w: -w.x1))  # the layout doesn't know the script's direction
+    return out
+
+
+def read_line(image: Image.Image, lang: str) -> tuple[str, float | None]:
+    """One line image read as a raw line (`--psm 13`): its text and Tesseract's mean confidence, as the CLI gives
+    them (left-to-right marks dropped, as its word list does)."""
+    lib, api = _capi(), _api(lang, 13)
+    _set_image(api, image)
+    p = lib.TessBaseAPIGetUTF8Text(api)
+    text = ctypes.string_at(p).decode("utf-8") if p else ""
+    if p:
+        lib.TessDeleteText(p)
+    words = [w for w in text.split() if w.strip(BIDI_MARKS)]
+    return " ".join(words), (float(lib.TessBaseAPIMeanTextConf(api)) if words else None)

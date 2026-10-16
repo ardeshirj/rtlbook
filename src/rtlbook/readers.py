@@ -46,10 +46,7 @@ class Tesseract:
         self.name = f"{ocr.tesseract_version()} {lang}"  # e.g. "tesseract 5.3.0 fas": another version is another reader
 
     def read(self, image: Image.Image) -> tuple[str, float | None]:
-        words = [w for line in ocr.ocr_words(preprocess.prepare(image), self.lang, psm=13) for w in line]
-        if not words:
-            return "", None
-        return " ".join(w.text for w in words), round(sum(w.conf for w in words) / len(words), 1)
+        return ocr.read_line(preprocess.prepare(image), self.lang)  # through the C API: no program start a line
 
 
 class Kraken:

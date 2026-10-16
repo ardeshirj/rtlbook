@@ -88,7 +88,7 @@ Useful `convert` options:
 | `--crop 0.075` | Cut page frames/borders before OCR |
 | `--drop-lines REGEX` | Remove watermark or banner lines |
 | `--min-line-conf 40` | Drop OCR lines below this confidence |
-| `--reader page` | Read a scan's whole pages in one Tesseract call: twice as fast, more letters wrong (default `auto`: a scan's lines cut and read one by one, an exported PDF's whole pages) |
+| `--reader page` | Read a scan's whole pages in one Tesseract call: more letters wrong (default `auto`: a scan's lines cut and read one by one, an exported PDF's whole pages) |
 | `--no-split-joined` | Keep words run together as read (scans only; see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |

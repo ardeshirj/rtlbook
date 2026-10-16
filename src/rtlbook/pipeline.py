@@ -15,7 +15,8 @@ from rtlbook.model import Line, Page, Paragraph, Section
 _DOC = None  # the PDF, opened once per worker process
 _READERS: dict = {}  # line readers, made once per worker process
 PAGE = "page"  # the reader setting for whole pages read in Tesseract's one call
-LINE_PAD = (6, 12)  # pixels above and below, and at each end, around a cut line at 300 dpi (DESIGN.md §4.5)
+LINE_PAD = (8, 12)  # pixels above and below, and at each end, around a cut line at 300 dpi (DESIGN.md §4.5)
+MIN_LINE_H, MAX_LINE_H = 12, 400  # pixels at 300 dpi: a shorter "line" is a speck, a taller one a picture
 
 
 @dataclass(frozen=True)
@@ -48,17 +49,21 @@ def _process_page(number: int, settings: dict) -> dict:
 
 
 def read_lines(gray, img, settings: dict) -> list[Line]:
-    """Tesseract finds the lines (and column gaps) on the page; each line is cut from the unbinarized page with a
-    little padding and read alone by the line reader. Lines it reads as nothing are dropped."""
+    """Tesseract's layout analysis finds the lines (and column gaps) on the page without reading them; each line is cut
+    from the unbinarized page with a little padding and read alone by the line reader. Specks, pictures and lines read
+    as nothing are dropped (Tesseract reading the page drops them too: it finds no letters there)."""
     name = settings["reader"]
     if name not in _READERS:  # Tesseract in the book's language(s), e.g. fas+ara
         _READERS[name] = readers.Tesseract(settings["lang"]) if name == "tesseract" else readers.get(name)
     reader = _READERS[name]
-    py, px = (round(p * settings["dpi"] / 300) for p in LINE_PAD)
+    scale = settings["dpi"] / 300
+    py, px = (round(p * scale) for p in LINE_PAD)
     lines = []
-    for words in ocr.split_columns(ocr.ocr_words(img, settings["lang"], settings["psm"])):
+    for words in ocr.split_columns(ocr.layout_words(img, settings["lang"], settings["psm"])):
         x0, x1 = min(w.x0 for w in words), max(w.x1 for w in words)
         y0, y1 = min(w.y0 for w in words), max(w.y1 for w in words)
+        if not MIN_LINE_H * scale <= y1 - y0 <= MAX_LINE_H * scale:
+            continue
         text, conf = reader.read(gray.crop((max(0, x0 - px), max(0, y0 - py), min(gray.width, x1 + px),
                                             min(gray.height, y1 + py))))
         if text.strip():
@@ -68,8 +73,8 @@ def read_lines(gray, img, settings: dict) -> list[Line]:
 
 def reader_for(choice: str, document: str) -> str:
     """The reader setting for --reader `choice` ("auto", PAGE or a line reader) and the document type: auto reads a
-    scan's lines one by one with Tesseract (fewer letters wrong, twice the time) and an exported PDF's whole pages
-    (no gain from cut lines there)."""
+    scan's lines one by one with Tesseract (fewer letters wrong) and an exported PDF's whole pages (no gain from cut
+    lines there)."""
     if choice != "auto":
         return choice
     return "tesseract" if document == "scan" else PAGE

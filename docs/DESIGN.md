@@ -70,8 +70,9 @@ flowchart TD
     end
 ```
 
-Tesseract finds the lines. In a scan each line is then cut from the page and read alone by a line reader, the reader
-slot (`readers.py`; Tesseract today); in an exported PDF finding and reading stay one Tesseract call (§4.5). The
+Tesseract finds the lines. In a scan it finds them by layout analysis alone, and each line is then cut from the page
+and read alone by a line reader, the reader slot (`readers.py`; Tesseract today); in an exported PDF finding and
+reading stay one Tesseract call (§4.5). The
 scorecard (§4.10) scores the readers on checked lines.
 
 Each page's OCR result is cached in the book's work folder (`output/<name>.rtlbook/pages/`), keyed by the OCR
@@ -122,14 +123,18 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
 
 ### 4.5 OCR engines and accuracy
 - **Built:** Tesseract 5 with `tessdata_best` (`fas`). About 1–2 s per page per core for an exported PDF.
-- **The reader slot** (2026-10-15, `--reader`, default `auto`): in a scan, Tesseract finds the lines on the binarized
-  page, and each line is cut from the unbinarized page (6 pixels above and below, 12 at the ends, at 300 dpi) and read
-  alone as a raw line (`--psm 13`, binarized on its own). On the 1932 book's checked pages 8.7% → 6.5% letters wrong,
-  word gaps 9.5% → 9.2%, at twice the time (2.3 s a page). The padding was chosen on 531 checked training lines (4–6
-  pixels best; padding in proportion to each line's height was worse, it gives tall lines too much); the 68 lines of
-  the test pages alone would have chosen none, the worst on the training lines. An exported PDF gains nothing (0.52%
-  either way, twice the time), so `auto` reads its whole pages in one call (`--reader page`). The reader joins the
-  cache key; a line it reads as nothing is dropped.
+- **The reader slot** (2026-10-15, `--reader`, default `auto`): in a scan, Tesseract's layout analysis finds the
+  lines on the binarized page without reading them (0.16 s a page, a sixth of a whole-page reading), and each line is
+  cut from the unbinarized page (8 pixels above and below, 12 at the ends, at 300 dpi) and read alone as a raw line
+  (`--psm 13`, binarized on its own). Both go through Tesseract's C API (`ocr.layout_words`, `ocr.read_line`, ctypes,
+  nothing added to the image): the model loads once per process, and a line reads in 25 ms instead of 43 by the
+  command line, with the same text. On the 1932 book's checked pages 8.7% → 5.8% letters wrong, word gaps 9.5% →
+  8.9%, 1.0 s a page instead of 1.2; the whole book keeps 2% more letters. The padding was chosen on 531 checked
+  training lines (6–8 pixels best for layout boxes, which leave out some marks above and below; padding in proportion
+  to each line's height was worse, it gives tall lines too much); the 68 lines of the test pages alone would have
+  chosen differently on every try. "Lines" under 12 pixels (specks) or over 400 (pictures) are skipped, and so is a
+  line read as nothing. An exported PDF gains nothing from cut lines (0.52% either way), so `auto` reads its whole
+  pages in one call (`--reader page`). The reader joins the cache key.
 - **Measured** with `rtlbook eval` (character and word error rates against a checked text; spelling conventions
   such as ي/ی, digits, half-spaces and vowel marks count as equal):
 
