@@ -211,6 +211,7 @@ def convert(
     else:
         cover_img = pdf.largest_image(pdf.open_book(pdf_path), 0)
 
+    engine = {"rtlbook": __version__, "document": document_type(kinds).kind, **readers.describe(read_with, lang)}
     digest = pdf.digest(pdf_path)
     fonts_dir = Path(os.environ.get("RTLBOOK_FONTS", "/opt/fonts"))
     meta = epub.BookMeta(
@@ -220,6 +221,7 @@ def convert(
         identifier=f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, 'rtlbook:' + digest)}",
         cover=cover_img,
         fonts=tuple(sorted(fonts_dir.glob("*.ttf"))) if embed_font and fonts_dir.exists() else (),
+        engine={"version" if k == "rtlbook" else k: v for k, v in engine.items()},
     )
     epub.write_epub(output, meta, sections)
     timings["build"] = time.perf_counter() - t0
@@ -239,7 +241,7 @@ def convert(
         "author_from": author_from,
         "pages": len(page_results),
         "pages_from_cache": cached,
-        "engine": {"rtlbook": __version__, "document": document_type(kinds).kind, **readers.describe(read_with, lang)},
+        "engine": engine,
         "ocr_settings": {"dpi": dpi, "lang": lang, "psm": psm, "binarize": binarize, "crop": crop, "jobs": jobs,
                          "reader": read_with},
         "ocr_seconds_per_page_single_thread": round(

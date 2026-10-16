@@ -221,6 +221,10 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
 Written directly (a ZIP of XHTML, CSS and an OPF manifest), keeping full control of RTL details and avoiding
 AGPL dependencies. One XHTML file per section, `nav.xhtml` with TOC and page list plus `toc.ncx`, the
 Parastoo font (OFL, a book typeface) embedded by default (`--no-embed-font` to leave it to the reader).
+The package says how the book was made (2026-10-16), the same facts as `report.json`'s `engine`, under a declared
+`rtlbook:` prefix: `rtlbook:version`, `rtlbook:document` (scan or exported), `rtlbook:lines-found-by` and
+`rtlbook:read-by`, readers' names with their versions. A copy that comes back to its maker, separated from its
+records, still tells which engine and readers made it. Reading apps don't show these; epubcheck accepts them.
 
 ### 4.10 Validation — built
 - **epubcheck** on every build; any error fails `convert`.

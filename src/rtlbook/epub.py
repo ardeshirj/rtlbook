@@ -22,7 +22,10 @@ class BookMeta:
     identifier: str = ""  # stable id, e.g. derived from the source PDF hash
     cover: tuple[bytes, str] | None = None  # (bytes, media type)
     fonts: tuple[Path, ...] = ()
+    engine: dict[str, str] | None = None  # how the book was made (report.json's "engine"), kept in the package
 
+
+ENGINE_VOCAB = "https://github.com/ardeshirj/rtlbook#"  # the rtlbook: prefix of the engine's metadata
 
 CSS = """\
 {font_faces}
@@ -157,14 +160,18 @@ def write_epub(path: Path, meta: BookMeta, sections: list[Section]) -> None:
 
     creator = f"<dc:creator>{escape(meta.author)}</dc:creator>\n" if meta.author.strip() else ""
     cover_meta = '<meta name="cover" content="cover-image"/>' if meta.cover else ""
+    # How the book was made, so a copy that comes back says which engine and readers made it (DESIGN.md §4.9)
+    engine_meta = "".join(f'<meta property="rtlbook:{k.replace("_", "-")}">{escape(v)}</meta>\n'
+                          for k, v in (meta.engine or {}).items())
+    prefix = f' prefix="rtlbook: {ENGINE_VOCAB}"' if meta.engine else ""
     files["OEBPS/content.opf"] = f"""<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="{lang}" dir="rtl">
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="{lang}" dir="rtl"{prefix}>
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
 <dc:identifier id="bookid">{escape(book_id)}</dc:identifier>
 <dc:title>{escape(meta.title)}</dc:title>
 {creator}<dc:language>{lang}</dc:language>
 <meta property="dcterms:modified">{modified}</meta>
-{cover_meta}
+{engine_meta}{cover_meta}
 </metadata>
 <manifest>
 {chr(10).join(manifest)}

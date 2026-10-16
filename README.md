@@ -100,6 +100,7 @@ What `convert` does automatically:
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
 - **Reads a scan's lines with ParisaOCR's model** (Tesseract finds the lines); an exported PDF's pages with Tesseract.
 - **Splits words run together** in scans of old type, where the gap after a letter that doesn't join the next is a hair wide (`ورفتم` → `و رفتم`), using word lists; `report.json` counts them (`joined_words_split`).
+- **Records how the book was made** in the EPUB's metadata and `report.json` (`engine`): rtlbook's version, scan or exported, and which readers found and read the lines.
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
 - **Builds a valid EPUB 3** (epubcheck) with RTL page direction, the Parastoo font, cover, and print page list.
