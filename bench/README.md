@@ -4,12 +4,13 @@ Written by `make bench` from [`results.jsonl`](results.jsonl) after every run: d
 
 ## Line readers on the same checked lines
 
-Each reader reads the 109 checked test lines of `three-drops-1932-test-v1` (data `9f4d258f7368`) one line image at a time, cut by rtlbook. Letters wrong ignore spaces and half-spaces; word gaps wrong count only those. Fewer is better. Image size: rtlbook's own image for Tesseract `fas`, the readers image (all the other readers together) for the rest.
+Each reader reads the 109 checked test lines of `three-drops-1932-test-v1` (data `9f4d258f7368`) one line image at a time, cut by rtlbook. Letters wrong ignore spaces and half-spaces; word gaps wrong count only those. Fewer is better. Image size: rtlbook's own image for Tesseract `fas` and ParisaOCR, the readers image (all the other readers together) for the rest.
 
 | Reader | Letters wrong | Lines all right | Word gaps wrong | Seconds a line | Memory, MB | Image, MB | Run |
 |---|---|---|---|---|---|---|---|
 | parisaocr fa-0.1 | 0.60% | 93 of 109 | 5.2% | 0.522 | 702 | 2736 | 2026-10-15, `v0.6.0-8-gc6bc59b-dirty` |
-| tesseract 5.3.0 fas | 8.06% | 15 of 109 | 12.1% | 0.025 | 138 | 550 | 2026-10-16, `v0.6.0-19-g8a92d8b` |
+| parisaocr fa-0.1 onnx | 0.60% | 93 of 109 | 5.2% | 0.179 | 364 | 674 | 2026-10-16, `v0.6.0-21-g4a08059-dirty` |
+| tesseract 5.3.0 fas | 8.06% | 15 of 109 | 12.1% | 0.032 | 263 | 674 | 2026-10-16, `v0.6.0-21-g4a08059-dirty` |
 | weightedai persian_ocr | 13.18% | 0 of 109 | 11.7% | 0.552 | 1097 | 2736 | 2026-10-15, `v0.6.0-8-gc6bc59b-dirty` |
 | hezar crnn-fa-printed-96-long | 36.77% | 6 of 109 | 8.6% | 0.168 | 577 | 2736 | 2026-10-15, `v0.6.0-8-gc6bc59b-dirty` |
 
@@ -25,14 +26,14 @@ Fewer is better in all four: the best blue, the worst orange. The first two: how
 
 ## Whole pages and an exported PDF, through `convert`
 
-`convert`'s own OCR, whatever the reader above: Tesseract finds the lines; a scan's are cut and read one by one (`--reader auto`), an exported PDF's whole pages in one call (`page`).
+`convert`'s own OCR, whatever the reader above: Tesseract finds the lines; a scan's are cut and read one by one (`--reader auto`: ParisaOCR from 2026-10-16, Tesseract before), an exported PDF's whole pages in one Tesseract call (`page`).
 
 | Case | Read with | Letters wrong | Word gaps wrong | More | Seconds a page |
 |---|---|---|---|---|---|
-| Pages 30, 54, 76 (68 lines) | `tesseract` | 5.75% | 8.9% | lines lost or merged: 2, extra: 3, words split: 29 | 0.98 |
-| Exported PDF, `tomorrow-2006.pdf` (11 pages) | `page` | 0.52% | 13.8% |  | 1.88 |
+| Pages 30, 54, 76 (68 lines) | `parisaocr` | 0.32% | 4.0% | lines lost or merged: 0, extra: 1, words split: 18 | 8.31 |
+| Exported PDF, `tomorrow-2006.pdf` (11 pages) | `page` | 0.52% | 13.8% |  | 2.02 |
 
-From the run of 2026-10-16 (`v0.6.0-19-g8a92d8b`, rtlbook 0.6.0).
+From the run of 2026-10-16 (`v0.6.0-21-g4a08059-dirty`, rtlbook 0.6.0).
 
 ## Every run
 
@@ -40,6 +41,9 @@ Newest first. Lines and pages compare only between runs on the same data.
 
 | Date | Commit | rtlbook | Reader | Lines (data) | Letters wrong | Word gaps wrong | Pages, letters wrong | Exported, letters wrong |
 |---|---|---|---|---|---|---|---|---|
+| 2026-10-16 17:00 | `v0.6.0-21-g4a08059-dirty` | 0.6.0 | tesseract 5.3.0 fas | 109 (`9f4d258f7368`) | 8.06% | 12.1% | 0.32% | 0.52% |
+| 2026-10-16 16:59 | `v0.6.0-21-g4a08059-dirty` | 0.6.0 | parisaocr fa-0.1 onnx | 109 (`9f4d258f7368`) | 0.60% | 5.2% | 0.32% | 0.52% |
+| 2026-10-16 16:56 | `v0.6.0-21-g4a08059` | 0.6.0 | parisaocr fa-0.1 onnx | 109 (`9f4d258f7368`) | 0.60% | 5.2% | 0.32% | 0.52% |
 | 2026-10-16 00:17 | `v0.6.0-19-g8a92d8b` | 0.6.0 | tesseract 5.3.0 fas | 109 (`9f4d258f7368`) | 8.06% | 12.1% | 5.75% | 0.52% |
 | 2026-10-15 22:59 | `v0.6.0-17-g979dc07` | 0.6.0 | tesseract 5.3.0 fas | 109 (`9f4d258f7368`) | 8.06% | 12.1% | 6.50% | 0.52% |
 | 2026-10-15 22:13 | `v0.6.0-13-g3a0fe71` | 0.6.0 | tesseract 5.3.0 fas | 109 (`9f4d258f7368`) | 8.06% | 12.1% | 8.66% | 0.52% |
