@@ -3,6 +3,8 @@
 # The final stage is named core, the target other projects build (--target core -t rtlbook:core; make core).
 # Build-only tools (curl, unzip, uv) stay in the build stages and don't reach the final image.
 
+# bookworm: Tesseract 5.3.0. Trixie's 5.5.0 drops real lines (an exported PDF 0.52% -> 2.08% letters wrong,
+# 5 of 301 lines lost; docs/LESSONS.md): measure before moving
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
 # ---- Downloads: OCR models, epubcheck, font ----

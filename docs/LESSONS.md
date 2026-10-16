@@ -46,6 +46,9 @@ which records the decisions and results. Book text is deliberately not quoted he
   lines in a sixth of the time, but some word boxes come back as the whole page: take only word boxes inside their
   line's box (`ocr.layout_words`), or a line is lost (two dialogue lines on one page of the 1932 book). Its boxes are
   ~4 pixels tighter above and below than a reading's, so cut lines need a little more padding.
+- **Tesseract 5.5.0 (Debian trixie) finds fewer lines than 5.3.0** (2026-10-16): the same model reads the same,
+  but it dropped 5 of 301 lines of an exported story (0.52% → 2.08% letters wrong) and a line of the 1932 test pages
+  (0.32% → 1.26%), while finding fewer junk and merged lines on hard scans. The image stays on bookworm's 5.3.0.
 - **A cut line reads better than the same line on the page** for Tesseract on old type (1932: 8.7% → 5.8% letters
   wrong on whole pages), but not on an exported PDF (0.52% either way). Choose its padding on many lines: on 68 test
   lines each padding tried gave a different "best".
