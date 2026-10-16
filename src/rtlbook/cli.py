@@ -127,7 +127,7 @@ def convert(
     chunk_pages: Annotated[int, typer.Option(help="Pages per EPUB section when no chapters are found")] = 20,
     progress: Annotated[str, typer.Option(help="Progress output: bar, or json (one JSON line per event on stderr, for other programs)")] = "bar",
     check_script: Annotated[bool, typer.Option(help="Before OCR, check that a few pages are in the OCR language's script")] = True,
-    reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one, an exported PDF's whole pages), page (Tesseract reads whole pages in one call), or a line reader: tesseract")] = "auto",
+    reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract), page (Tesseract reads whole pages in one call), or a line reader: parisaocr, tesseract")] = "auto",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
@@ -329,7 +329,7 @@ def eval_cmd(
 
 @app.command()
 def bench(
-    reader: Annotated[str, typer.Option(help="The line reader to score: tesseract")] = "tesseract",
+    reader: Annotated[str, typer.Option(help="The line reader to score: tesseract, parisaocr (in rtlbook's image), hezar-crnn, weightedai (the readers image)")] = "tesseract",
     set_dir: Annotated[Optional[Path], typer.Option("--set", file_okay=False, help="A training set's folder (docs/TRAINING-DATA.md): its checked test lines")] = None,
     scan: Annotated[Path, typer.Option(help="The scan the set and the page texts are from")] = Path("input/public-domain/three-drops-1932.pdf"),
     page_texts: Annotated[Path, typer.Option(help="Checked whole pages, p<N>.txt, used without --set (the set's pages follow its spacing rules; these may not)")] = Path("tests/data/three-drops"),

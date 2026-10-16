@@ -236,8 +236,8 @@ def report(entries: list[dict]) -> dict[str, str]:
         out += ["## Line readers on the same checked lines", "",
                 f"Each reader reads the {ln['lines']} checked test lines of `{ln['set']}` (data `{data}`) one line "
                 "image at a time, cut by rtlbook. Letters wrong ignore spaces and half-spaces; word gaps wrong count "
-                "only those. Fewer is better. Image size: rtlbook's own image for Tesseract `fas`, the readers image "
-                "(all the other readers together) for the rest.", "",
+                "only those. Fewer is better. Image size: rtlbook's own image for Tesseract `fas` and ParisaOCR, the "
+                "readers image (all the other readers together) for the rest.", "",
                 "| Reader | Letters wrong | Lines all right | Word gaps wrong | Seconds a line | Memory, MB | Image, MB "
                 "| Run |", "|---|---|---|---|---|---|---|---|"]
         for e in rows:
@@ -263,7 +263,8 @@ def report(entries: list[dict]) -> dict[str, str]:
         e = with_pages[-1]
         out += ["## Whole pages and an exported PDF, through `convert`", "",
                 "`convert`'s own OCR, whatever the reader above: Tesseract finds the lines; a scan's are cut and read one "
-                "by one (`--reader auto`), an exported PDF's whole pages in one call (`page`).", "",
+                "by one (`--reader auto`: ParisaOCR from 2026-10-16, Tesseract before), an exported PDF's whole pages in "
+                "one Tesseract call (`page`).", "",
                 "| Case | Read with | Letters wrong | Word gaps wrong | More | Seconds a page |", "|---|---|---|---|---|---|"]
         via = lambda d: f"`{d.get('reader', 'page')}`"
         gaps = lambda d: f"{d['spacing_wrong']:.1%}" if "spacing_wrong" in d else ""

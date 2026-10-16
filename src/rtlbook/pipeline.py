@@ -73,11 +73,11 @@ def read_lines(gray, img, settings: dict) -> list[Line]:
 
 def reader_for(choice: str, document: str) -> str:
     """The reader setting for --reader `choice` ("auto", PAGE or a line reader) and the document type: auto reads a
-    scan's lines one by one with Tesseract (fewer letters wrong) and an exported PDF's whole pages (no gain from cut
-    lines there)."""
+    scan's lines one by one with ParisaOCR (on old print a tenth of Tesseract's letters wrong, five times slower) and
+    an exported PDF's whole pages with Tesseract (ParisaOCR barely better there, six times slower)."""
     if choice != "auto":
         return choice
-    return "tesseract" if document == "scan" else PAGE
+    return "parisaocr" if document == "scan" else PAGE
 
 
 def extract_pages(

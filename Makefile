@@ -18,13 +18,13 @@ core-amd64: ## The image for linux/amd64 hosts, rtlbook:core-amd64 (emulated, so
 test: ## Run the tests in rtlbook:dev (tests that need PDFs in input/ run when they are there)
 	docker run --rm -v "$$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
 
-readers: ## The scorecard's other readers (ParisaOCR, Hezar, WeightedAI): rtlbook:readers, on rtlbook:dev
+readers: ## The scorecard's other readers (Hezar, WeightedAI): rtlbook:readers, on rtlbook:dev
 	docker build -f docker/Dockerfile.readers -t rtlbook:readers .
 
-# Tesseract fas runs in rtlbook's own image; the other readers in rtlbook:readers (its size counts all of them)
+# Tesseract and ParisaOCR run in rtlbook's own image; the other readers in rtlbook:readers (its size counts all of them)
 BENCH_READER = $(or $(READER),tesseract)
-BENCH_IMAGE = $(if $(filter tesseract,$(BENCH_READER)),rtlbook:dev,rtlbook:readers)
-BENCH_SIZE = $(if $(filter tesseract,$(BENCH_READER)),rtlbook:core,rtlbook:readers)
+BENCH_IMAGE = $(if $(filter tesseract parisaocr,$(BENCH_READER)),rtlbook:dev,rtlbook:readers)
+BENCH_SIZE = $(if $(filter tesseract parisaocr,$(BENCH_READER)),rtlbook:core,rtlbook:readers)
 
 bench: ## The scorecard (ROADMAP.md), added to bench/results.jsonl and bench/README.md: make bench SET=path/to/set [READER=parisaocr]
 	docker run --rm -v "$$PWD":/app -w /app $(if $(SET),-v "$(abspath $(SET))":/sets/$(notdir $(abspath $(SET))):ro) \

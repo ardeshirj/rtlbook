@@ -1,15 +1,17 @@
 """Line readers: one printed line's image in, its text and confidence out (ROADMAP.md "Reader slot and scorecard").
 
 `convert` reads a scan's lines through this slot (`pipeline.read_lines`: Tesseract finds the lines, each is cut and
-read alone) and an exported PDF's whole pages in Tesseract's one call (`ocr.ocr_lines`); the scorecard (`rtlbook
-bench`) scores each reader on checked lines. Tesseract is in rtlbook's image; the others are open models measured for
-the scorecard, in a separate image (`docker/Dockerfile.readers`).
+read alone, by ParisaOCR unless told otherwise) and an exported PDF's whole pages in Tesseract's one call
+(`ocr.ocr_lines`); the scorecard (`rtlbook bench`) scores each reader on checked lines. Tesseract and ParisaOCR are in
+rtlbook's image; the others are open models measured for the scorecard, in a separate image
+(`docker/Dockerfile.readers`).
 """
 
 from __future__ import annotations
 
-import io
+import json
 import os
+import re
 from pathlib import Path
 from typing import Protocol
 
@@ -32,7 +34,8 @@ class Reader(Protocol):
     name: str
 
     def read(self, image: Image.Image) -> tuple[str, float | None]:
-        """The line's text, words in reading order, and a confidence (0–100, the reader's own scale) or None."""
+        """The line's text, words in reading order, and a confidence (0–100) or None. Readers convert uses give it on
+        Tesseract's scale, the one its thresholds are tuned to; the scorecard's other readers on their own."""
         ...
 
 
@@ -49,33 +52,123 @@ class Tesseract:
         return ocr.read_line(preprocess.prepare(image), self.lang)  # through the C API: no program start a line
 
 
-class Kraken:
-    """A Kraken recognition model on one line, through ParisaOCR's reader (it handles PP-OCR models and the
-    right-to-left order). Needs the readers image (`make readers`): PyTorch, Kraken and ParisaOCR aren't in rtlbook's."""
+class ParisaOCR:
+    """ParisaOCR's line reader (Apache-2.0, Ali Javadi): PaddleOCR's PP-OCRv6 recognizer design trained with Kraken on
+    Persian print, run by ONNX Runtime from the file `docker/parisaocr_onnx.py` makes in the image (no PyTorch, no
+    Kraken). Kraken's steps for a line, redone: 96 pixels high, 16 white columns at each end, inverted; then a margin
+    of white instead of the 2560 columns of padding the model was trained with (the ONNX file adds them back by
+    calculation); greedy CTC; display order to reading order (Kraken's bidi, copied in `rtlbook.bidi`); ParisaOCR's
+    own clean-up of each word. The same text as ParisaOCR's reader on the scorecard's test lines, 2.7 times faster.
+    Its confidence is put on Tesseract's scale, which convert's thresholds are tuned to (DESIGN.md §4.5)."""
 
-    def __init__(self, model: str | Path, name: str):
-        from parisaocr.kraken_reader import KrakenReader  # the readers image only
+    HEIGHT, PAD, MARGIN = 96, 16, 128
+    PLACEHOLDER = "\u00a6"  # what the model writes for ZWNJ (Kraken's bidi would drop a ZWNJ, kraken#809)
 
-        _torch()
-        self.name = name
-        self._reader = KrakenReader(model, "cpu")
+    def __init__(self, folder: Path | None = None):
+        import onnxruntime as ort
+
+        folder = folder or Path(os.environ.get("RTLBOOK_MODELS", "/opt/models")) / "parisaocr"
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = int(os.environ.get("OMP_THREAD_LIMIT", "0"))  # pages run side by side
+        options.inter_op_num_threads = 1
+        self._session = ort.InferenceSession(str(folder / "parisaocr.onnx"), options,
+                                             providers=["CPUExecutionProvider"])
+        self._chars = {int(k): v for k, v in json.loads((folder / "codec.json").read_text(encoding="utf-8")).items()}
+        self.name = "parisaocr fa-0.1 onnx"  # the model docker/Dockerfile's parisaocr stage exports
+
+    @staticmethod
+    def tesseract_scale(conf: float) -> float:
+        """ParisaOCR's confidence on Tesseract's scale. ParisaOCR's crowds near 100: on the 1932 book's checked train
+        lines its lines below 96 have 12% or more letters wrong, as Tesseract's do below 70, and from 98 up almost
+        none. A straight line through those: 95 -> 50, 97 -> 70, 99 -> 90."""
+        return round(max(0.0, 100 - 10 * (100 - conf)), 1)
 
     def read(self, image: Image.Image) -> tuple[str, float | None]:
-        from parisaocr.reader import line_text
+        import numpy as np
 
-        buf = io.BytesIO()
-        image.save(buf, "PNG")
-        words = [w for line in self._reader.read(buf, self._reader.SINGLE_LINE) for w in line]
+        g = image.convert("L").convert("RGB")
+        w = int(g.width * self.HEIGHT / g.height)
+        if w < 1:
+            return "", None
+        n = w + 2 * self.PAD
+        line = np.full((self.HEIGHT, n, 3), 255, np.uint8)
+        line[:, self.PAD:self.PAD + w] = np.asarray(g.resize((w, self.HEIGHT), Image.LANCZOS))
+        x = np.zeros((self.HEIGHT, -(-(n + self.MARGIN) // 32) * 32, 3), np.float32)  # 0: white, once inverted
+        x[:, :n] = 1 - line / 255
+        probs, olens = self._session.run(None, {"image": x.transpose(2, 0, 1)[None],
+                                                "lens": np.array([n], np.int64)})
+        p = probs[0, :, :int(olens[0])]
+        chars, confs, prev = [], [], 0
+        for label, c in zip(p.argmax(0).tolist(), p.max(0).tolist()):
+            if label and label != prev:
+                chars.append(self._chars.get(label, ""))
+                confs.append(c)
+            elif label:
+                confs[-1] = max(confs[-1], c)
+            prev = label
+        words = _reading_order_words("".join(chars), confs, self.PLACEHOLDER)
         if not words:
             return "", None
-        return line_text(words), round(sum(w.conf for w in words) / len(words), 1)
+        return (_canonical(" ".join(t for t, _ in words)),
+                self.tesseract_scale(round(sum(c for _, c in words) / len(words), 1)))
 
 
-def parisaocr() -> Kraken:
-    """ParisaOCR's model (Apache-2.0): PaddleOCR's PP-OCRv6 recognizer design, trained for Persian print."""
-    from parisaocr.cli import BUNDLED_MODEL
+def _reading_order_words(display: str, confs: list[float], placeholder: str) -> list[tuple[str, float]]:
+    """A line in display order (left to right, as a line reader sees it) -> its words in reading order, each with its
+    confidence (0-100, the mean of its letters'). A line with more Latin than Arabic-script letters reads left to
+    right, any other right to left. ZWNJ is kept: swapped for a neutral the bidi algorithm leaves in place."""
+    import unicodedata
 
-    return Kraken(BUNDLED_MODEL, f"parisaocr {BUNDLED_MODEL.stem.removeprefix('parisaocr-')}")
+    from rtlbook.bidi import get_display_map
+
+    zwnj = "\u200c"
+    display = display.replace(placeholder, zwnj)
+    if not display.strip():
+        return []
+    latin = sum(1 for c in display if c.isalpha() and unicodedata.bidirectional(c) == "L")
+    arabic = sum(1 for c in display if unicodedata.bidirectional(c) in ("R", "AL"))
+    text, order = get_display_map(display.replace(zwnj, placeholder), base_dir="L" if latin > arabic else "R")
+    words, cur = [], []
+    for ch, i in zip(text.replace(placeholder, zwnj), order):
+        if ch.isspace():
+            if cur:
+                words.append(cur)
+            cur = []
+        else:
+            cur.append((ch, i))
+    if cur:
+        words.append(cur)
+    out = []
+    for word in words:
+        if t := _canonical("".join(c for c, _ in word)):
+            out.append((t, round(100 * sum(confs[i] for _, i in word) / len(word), 1)))
+    return out
+
+
+# ParisaOCR's text clean-up (parisaocr/fa_text.py, canonical(); Apache-2.0, Ali Javadi), for the same text as its
+# reader: Arabic yeh and kaf, Arabic-Indic digits, presentation forms, bidi controls and tatweel fixed; ZWNJ, Persian
+# vs Latin digits, diacritics and Persian punctuation kept.
+_BIDI_CONTROLS = "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069\ufeff"
+_CANON = str.maketrans({"\u064a": "\u06cc", "\u0649": "\u06cc", "\u0643": "\u06a9", "\u06d5": "\u0647",
+                        "\u0640": None, "\u2026": "...",
+                        **{d: "-" for d in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212"},
+                        **{chr(0x0660 + i): chr(0x06F0 + i) for i in range(10)},
+                        **{c: None for c in _BIDI_CONTROLS}})
+_PRESENTATION_FORMS = re.compile("[\ufb50-\ufdff\ufe70-\ufeff]")
+_DASH_TATWEEL = re.compile("(?<![\u0620-\u065f\u066e-\u06d3\u06d5\u06fa-\u06ff])\u0640+")
+
+
+def _canonical(text: str) -> str:
+    import unicodedata
+
+    zwnj = "\u200c"
+    text = _PRESENTATION_FORMS.sub(lambda m: unicodedata.normalize("NFKC", m.group()), text)
+    text = _DASH_TATWEEL.sub("-", unicodedata.normalize("NFC", text)).translate(_CANON)
+    text = re.sub(f"\u0647{zwnj}?\u0654", "\u06c0", text)
+    text = re.sub(f"{zwnj}+", zwnj, text)
+    text = re.sub(f"{zwnj}(?=\\s|$)|(?<=\\s){zwnj}|^{zwnj}", "", text, flags=re.M)
+    lines = (re.sub(r"[^\S\n]+", " ", line).strip() for line in text.splitlines())
+    return "\n".join(line for line in lines if line)
 
 
 class Hezar:
@@ -139,7 +232,7 @@ class WeightedAI:
 
 READERS = {
     "tesseract": lambda: Tesseract("fas"),
-    "parisaocr": parisaocr,
+    "parisaocr": ParisaOCR,
     "hezar-crnn": Hezar,
     "weightedai": WeightedAI,
 }

@@ -1,4 +1,4 @@
-# rtlbook: Tesseract + epubcheck + Python (OCR → EPUB).
+# rtlbook: Tesseract + ParisaOCR's line reader + epubcheck + Python (OCR → EPUB).
 #   docker build -f docker/Dockerfile -t rtlbook:dev .
 # The final stage is named core, the target other projects build (--target core -t rtlbook:core; make core).
 # Build-only tools (curl, unzip, uv) stay in the build stages and don't reach the final image.
@@ -36,6 +36,19 @@ RUN mkdir -p /opt/words \
         | grep -v '^#' | cut -d, -f1 | grep -v '^$' | LC_ALL=C sort -u > /opt/words/lilak-words.txt \
     && curl -fsSL -o /opt/words/LICENSE-lilak.txt https://raw.githubusercontent.com/b00f/lilak/${LILAK_COMMIT}/LICENSE
 
+# ---- ParisaOCR's line reader as an ONNX file: PyTorch and Kraken stay in this stage ----
+FROM ${PYTHON_IMAGE} AS parisaocr
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+ENV UV_CACHE_DIR=/tmp/uv-cache
+# --torch-backend cpu: PyTorch from its CPU-only index (else a GPU build, gigabytes)
+RUN uv venv -q /opt/export && uv pip install -q --python /opt/export/bin/python --torch-backend cpu \
+        torch==2.14.0 parisaocr==0.7.2 kraken==7.1.1 onnx onnxruntime==1.31.0 && rm -rf /tmp/uv-cache
+COPY docker/parisaocr_onnx.py /tmp/
+# The model (Apache-2.0) with ParisaOCR's LICENSE and NOTICE; the export checks itself against the PyTorch model
+RUN /opt/export/bin/python /tmp/parisaocr_onnx.py /opt/models/parisaocr 2>&1 | grep -v -i warning \
+    && cp /opt/export/lib/python3.12/site-packages/parisaocr-0.7.2.dist-info/licenses/LICENSE \
+          /opt/export/lib/python3.12/site-packages/parisaocr-0.7.2.dist-info/licenses/NOTICE /opt/models/parisaocr/
+
 # ---- Python environment, built with uv ----
 FROM ${PYTHON_IMAGE} AS venv
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
@@ -56,6 +69,7 @@ ENV PYTHONUNBUFFERED=1 \
     EPUBCHECK_JAR=/opt/epubcheck/epubcheck.jar \
     RTLBOOK_FONTS=/opt/fonts \
     RTLBOOK_WORDS=/opt/words \
+    RTLBOOK_MODELS=/opt/models \
     HOME=/tmp
 # Tesseract, and Java for epubcheck
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr default-jre-headless \
@@ -64,6 +78,7 @@ COPY --from=downloads /opt/tessdata /opt/tessdata
 COPY --from=downloads /opt/epubcheck /opt/epubcheck
 COPY --from=downloads /opt/fonts /opt/fonts
 COPY --from=downloads /opt/words /opt/words
+COPY --from=parisaocr /opt/models/parisaocr /opt/models/parisaocr
 # Tesseract's own Farsi word list, unpacked from the model: the everyday list for joined words (joined.py)
 RUN cd /tmp && combine_tessdata -u /opt/tessdata/fas.traineddata fas. >/dev/null \
     && dawg2wordlist fas.lstm-unicharset fas.lstm-word-dawg words.txt >/dev/null 2>&1 \

@@ -4,3 +4,16 @@ Copyright 2026 The rtlbook authors
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 The public-domain texts in tests/data/ are not covered by this license; see the README in each folder.
+
+It includes:
+
+- src/rtlbook/bidi/: the Unicode Bidirectional Algorithm of Kraken (https://github.com/mittagessen/kraken),
+  Copyright 2026 Benjamin Kiessling, licensed under the Apache License, Version 2.0, with its tables from the Unicode
+  Character Database, Copyright Unicode, Inc., under the Unicode License v3 (src/rtlbook/bidi/LICENSE-Unicode.txt).
+
+- In src/rtlbook/readers.py, ParisaOCR's text clean-up and the steps that prepare a line for its model, from
+  ParisaOCR (https://github.com/givia/ParisaOCR), Copyright 2026 Ali Javadi, licensed under the Apache License,
+  Version 2.0.
+
+rtlbook's Docker image also contains ParisaOCR's recognition model as an ONNX file, made at build time
+(docker/parisaocr_onnx.py), with ParisaOCR's LICENSE and NOTICE beside it.
