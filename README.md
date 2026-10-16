@@ -42,9 +42,11 @@ What has been verified:
 - Apple Silicon Mac (M2) with Docker Desktop.
 
 Not yet done or known to be weak:
-- **Scanned books are measured on one book so far:** on hand-checked pages of a 1932 letterpress scan, 0.3% of
-  letters are misread (Tesseract alone: 6%). Other type (1960s print, typewriters) isn't measured yet, and a scan
-  takes about five times as long as an exported PDF (about 5–6 s a page on one core).
+- **Scanned books are measured on few books so far:** on hand-checked pages of a 1932 letterpress scan, 0.3% of
+  letters are misread (Tesseract alone: 6%); on a 1963 printing and three modern editions, where the two readers
+  disagree, ParisaOCR was judged right far more often. Typewriters aren't measured; ornamental frames and very close
+  lines can still turn into junk lines; and a scan takes about five times as long as an exported PDF (about 5–6 s a
+  page on one core).
 - **Accuracy is measured on few books so far:** one exported story against its own stored text, and two
   hand-checked pages of a scanned book (`tests/data/`).
 - **Persian only:** Arabic, Urdu and Hebrew are on the [roadmap](docs/ROADMAP.md), not built.

@@ -116,10 +116,12 @@ flowchart LR
      read alone, Tesseract behind the slot for now; whole pages 8.7% → 5.8% letters wrong, 1.0 s a page instead of 1.2.
   3. *ParisaOCR as the scan reader:* **built (2026-10-16)**, DESIGN.md §4.5: through ONNX Runtime in rtlbook's
      image (675 MB), its padding computed once (2.2 times faster), its confidence on Tesseract's scale. Still open:
-     - *Fragment lines:* layout analysis sometimes gives a half-height copy of a line, or a piece of one, as a line
-       of its own (pages 65, 124, 134 of the 1932 book); read, they are junk. ParisaOCR gives most of them 0 on
-       Tesseract's scale, real lines 80–100, but a few real ones (a verse line, a line in two pieces) fall in the
-       30s. A filter by confidence or by overlap, measured on whole pages before it's kept.
+     - *Line finding is now the weak spot:* layout analysis sometimes gives a half-height copy of a line, or a piece
+       of one, as a line of its own (pages 65, 124, 134 of the 1932 book), cuts an ornamental page frame into
+       "lines" (a 2004 Saadi), and merges two close verse lines into one (a 2002 typesetting, two book pages to a
+       PDF page): no reader can read those. ParisaOCR gives fragments and ornaments 0 on Tesseract's scale, real
+       lines 80–100, but a few real ones (a verse line, a line in two pieces) fall in the 30s. First a filter by
+       confidence or overlap, measured on whole pages; then the line-finding slot (item 4).
      - *Clean-up fixes aimed at Tesseract's habits* (`»` for the Persian comma, `!` read as `ا`): whether they still
        fire, and help, on ParisaOCR's text.
      - *Time on the target machine:* 5.6 s a page on one Apple M2 thread; not yet measured on linux/amd64 hardware
@@ -136,7 +138,9 @@ flowchart LR
   fetched from a branch that can change: 4.75% on the first 54 lines, against `fas`'s 6.38%; back if it's merged);
   Kraken's OpenITI Persian model (10.5281/zenodo.7051644), whose output under Kraken 7 is gibberish (its 1.9% in
   DESIGN.md came from an older Kraken).
-- **Open:** ParisaOCR isn't measured on 1960s type yet, where Kraken's stock Persian model misread 20–30%.
+- **Open:** ParisaOCR on 1960s type has no checked text yet: on a 1963 printing, judged against Tesseract where the
+  two disagreed, it was right or closer on all 18 lines a person could decide (Kraken's stock Persian model misread
+  20–30% of the same type).
 
 ### Letterpress type (1930s–60s) — training set in progress (ahead of phases 3–4)
 - **Problem:** Tesseract misreads 6–12% of letters on a 1963 poetry printing and 6–8% on a 1932 prose printing

@@ -140,7 +140,9 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
   weights, lines 96 pixels high). On the 1932 book's checked pages 5.8% → 0.32% letters wrong, word gaps 8.9% → 4.0%,
   no line lost (2 before); about 5.6 s a page on one thread instead of 1.0 (the whole book on 8 cores: 3.6 minutes
   instead of half a minute). Exported PDFs keep Tesseract: ParisaOCR reads them barely better (0.44% against 0.52%)
-  at six times the time.
+  at six times the time. Old and modern type alike: on two pages each of a 1963 printing and three modern editions
+  (2002, 2004 and a Masnavi), where the two readers disagreed a person judged the lines blind, and ParisaOCR was
+  right or closer on 71 of the 73 they could decide.
   - *No PyTorch:* a build stage exports the model to ONNX (`docker/parisaocr_onnx.py`); the image runs it with ONNX
     Runtime and numpy (image 550 → 675 MB, a 12 MB model). `readers.ParisaOCR` redoes Kraken's steps for a line
     (grey to colour, 96 high, 16 white columns at each end, inverted, greedy CTC decoding) and ParisaOCR's (its
