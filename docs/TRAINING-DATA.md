@@ -24,6 +24,7 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 | `<id>.png` | `rtlbook lines` | the line image, cut from the unbinarized page at the render resolution (300 dpi) |
 | `examples.json` | a person, optional | crops of this book that illustrate the rules (below) |
 | `<id>.gt.txt` | the checking tool | the checked text, only for lines marked `done` |
+| `<id>.agreed.txt` | freeze, in a version only | the text two independent readings agreed on, for a line nobody checked (status `agreed`, below) |
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
 | `.pulled` | pull, in a folder only | the fingerprint of the bucket's decisions at the last pull, so push can tell whether the folder is up to date (below) |
 | `summary.json` | the bucket tool, in a bucket, optional | what a list of sets needs, so it doesn't read every `lines.json`: `book`, `source`, `public_domain`, `lines` (how many), `test` (how many in the test split), `recheck` (the ids with a `recheck` field), and optionally `title`, `title_en`, `author`, `edition` from a record of the book kept with the set; written again with every `lines.json`. Decisions aren't counted here: they're in `review.json` |
@@ -101,10 +102,12 @@ A decision is `{"status", "text", "saved"}`, and optionally `"by"`:
 | `done` | the text is exactly what's printed on the line | written: the text and a newline |
 | `unsure` | a best guess; at least one word can't be read for certain | removed |
 | `skip` | the image can't be used (not one line of printed text) | removed |
+| `agreed` | not checked by a person: two independent readings agreed (only in a frozen version, `"by": "agreement"`) | none; the text is in `<id>.agreed.txt` |
 
 `text` has single spaces between words (half-spaces, U+200C, are kept as typed); `saved` is the time of the save
 (ISO 8601: UTC ending in `Z`, or local time in sets checked before this format); `by` names who checked the line,
-for a tool used by several people. Only `done` lines go into training or testing. Leave `by` out of a set that is
+for a tool used by several people. Only `done` lines go into training or testing, unless a training run chooses
+to add `agreed` ones (never testing: test lines are always checked by a person). Leave `by` out of a set that is
 published.
 
 | File | What it is |
@@ -126,13 +129,14 @@ text over); the history keeps the old numbers. A set's first push sends the fold
 
 ## Frozen versions
 
-A finished set (every line decided) is frozen: training and testing use a numbered version of it, never the working
+A finished set (every line decided; a training line two independent readings agreed on, as recorded in `index.json`,
+counts as decided and is frozen as `agreed`) is frozen: training and testing use a numbered version of it, never the working
 set, so a result can always be traced to exact data. In the bucket:
 
 | File | What it is |
 |---|---|
 | `versions/v<N>.tar.gz` | the whole set as frozen (lines, images, `.gt.txt`, decisions, history), in a folder `<set>-v<N>/`; the same files give the same bytes |
-| `versions/v<N>.manifest.json` | set, version, time, book, source, `public_domain`, rules versions, counts, and per line: `id`, `split`, `rules`, `status`, and sha256 of its image (`png`) and, when done, its text (`gt`) |
+| `versions/v<N>.manifest.json` | set, version, time, book, source, `public_domain`, rules versions, counts, and per line: `id`, `split`, `rules`, `status`, `by` (`"agreement"` for a line decided at freeze by agreeing readings), and sha256 of its image (`png`) and, when done, its text (`gt`), or when agreed, its `agreed` text |
 | `frozen.json` | `{"version", "sha256" (of the archive), "frozen", "counts"}`: the set is frozen at that version |
 
 While `frozen.json` is there the set is read-only: a checking tool must refuse saves, and push refuses the set.
