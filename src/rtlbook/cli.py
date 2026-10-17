@@ -130,9 +130,10 @@ def convert(
     reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract), page (Tesseract reads whole pages in one call), or a line reader: parisaocr, tesseract")] = "auto",
     scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
+    half_spaces: Annotated[bool, typer.Option(help="Make the space before an ending (the plural -ha, -tar) or after a prefix (mi-, bi-) a half-space, as Farsi is spelled today")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
-    from rtlbook import epub, frontmatter, joined, layout, readers, text
+    from rtlbook import epub, frontmatter, halfspace, joined, layout, readers, text
     from rtlbook.pipeline import OcrSettings, extract_pages, reader_for, split_sections
     from rtlbook.validate import epubcheck
 
@@ -189,6 +190,7 @@ def convert(
     scan = document_type(kinds).kind == "scan"  # an exported PDF's gaps are the ones typed
     split = joined.split_pages(page_results) if split_joined and scan and lang.startswith("fas") else None
     timings["joined"] = time.perf_counter() - t0
+    halves = halfspace.join_pages(page_results) if half_spaces and lang.startswith("fas") else None
 
     found_title, found_author = frontmatter.guess_title_author(page_results)
     title_from = "--title" if title else "title page" if found_title else "file name"
@@ -251,6 +253,7 @@ def convert(
         "mean_confidence": round(sum(confs) / len(confs), 1) if confs else None,
         "low_confidence_pages": low,
         "joined_words_split": split,
+        "half_spaces_made": halves,
         "script": {"expected": scripts.expected, "found": scripts.found, "pages": scripts.seen} if check_script else None,
         "warning": confidence_message(round(sum(confs) / len(confs), 1) if confs else None),
         "paragraphs": len(paras),

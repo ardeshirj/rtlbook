@@ -95,6 +95,7 @@ Useful `convert` options:
 | `--reader tesseract` | Read a scan's lines with Tesseract instead of ParisaOCR: five times faster, many more letters wrong (default `auto`: a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract; `page`: whole pages in one Tesseract call) |
 | `--scan-reader tesseract` | With `--reader auto`, read a scan's lines with Tesseract instead of ParisaOCR; exported PDFs keep Tesseract's whole-page call |
 | `--no-split-joined` | Keep words run together as read (scans only; see below) |
+| `--no-half-spaces` | Keep the spaces before endings and after prefixes as read (see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |
 
@@ -103,6 +104,7 @@ What `convert` does automatically:
 - **Cleans up OCR:** Persian letters and digits, commas read as `»`/`ء`, mirrored parentheses, stray marks, and **running headers/watermarks** repeated on many pages.
 - **Reads a scan's lines with ParisaOCR's model** (Tesseract finds the lines); an exported PDF's pages with Tesseract.
 - **Splits words run together** in scans of old type, where the gap after a letter that doesn't join the next is a hair wide (`ورفتم` → `و رفتم`), using word lists; `report.json` counts them (`joined_words_split`).
+- **Puts half-spaces where today's spelling has them**, before the plural `ها`, `تر`/`ترین` and a few endings, and after the prefixes `می`/`نمی` and `بی` (`می رفت` → `می‌رفت`), so the word doesn't break across lines and search finds it; `report.json` counts them (`half_spaces_made`).
 - **Records how the book was made** in the EPUB's metadata and `report.json` (`engine`): rtlbook's version, scan or exported, and which readers found and read the lines.
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.

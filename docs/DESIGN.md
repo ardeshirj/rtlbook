@@ -202,6 +202,17 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
   PDFs are left alone: there a missing space after such a letter barely shows, while a wrong split visibly breaks a
   word. On the exported story, whose typist often left those spaces out, about 27 of 37 splits were right by the
   spacing rule, and about 10 broke words the lists lack (colloquial forms, a compound, a name).
+- **Half-spaces** (Farsi, every document; `halfspace.py`, `--no-half-spaces` turns it off), after joined words are
+  split: readers mostly write a full space where today's spelling has a half-space (ZWNJ), and older type often
+  sets one there with a visible gap. In an EPUB that space lets a line break inside the word and breaks search,
+  look-up and read-aloud, so five patterns get a half-space: the plural ها and its forms, تر/ترین, the endings
+  ام/ای/اش/ایم/اید/اند after a silent ه, and the prefixes می/نمی and بی (a prefix only as a word on its own, so
+  بی‌بی خانم stays two words). An editing choice, not a reading fix: it follows today's spelling over the print,
+  so it isn't scored against checked lines, which keep the printed gaps (the scorecard leaves it out; on the 1932
+  test pages it made 15, all where the type has a gap). On a 1963 printing read by ParisaOCR, against a proofread transcription: 258 half-spaces, 238 as
+  the transcription has them; lines agreeing 55.9% → 61.7%, 2 lines made worse. Compound words are left alone
+  (about 750 more pairs there: which compounds take a half-space is word knowledge, and spellings differ; a large
+  word list joined 583 pairs, 261 of them wrongly). On the exported story, 11 in the whole book.
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
   dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.

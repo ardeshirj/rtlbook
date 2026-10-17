@@ -2,7 +2,8 @@
 per engine version so that a change shows what it gained or lost.
 
 - lines: a set's checked test lines (docs/TRAINING-DATA.md), each line image read on its own by a reader (readers.py);
-- pages: whole pages through `convert`'s own OCR (line finding, reading, reading order, joined words split in a scan)
+- pages: whole pages through `convert`'s own OCR (line finding, reading, reading order, joined words split in a scan;
+  not its half-spaces, which follow today's spelling rather than the print the checked text keeps)
   against checked text; the book's words for the splitter come from the scored pages only, not the whole book;
 - exported: an exported PDF through everything after OCR (paragraphs) against its reference text;
 - speed: seconds a line and a page, peak memory.

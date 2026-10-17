@@ -22,7 +22,8 @@ the next.
 Where the engine is weakest, in the order to work on it (2026-10-14):
 1. **The reader on scans** (next item): about ten times more letters wrong than a modern reader.
 2. **Spacing:** half-spaces and spaces between words (text clean-up, below); every book, exported PDFs too. Words
-   run together after a non-joining letter in scans are split since 2026-10-15 (DESIGN.md §4.7, "Joined words").
+   run together after a non-joining letter in scans are split since 2026-10-15 (DESIGN.md §4.7, "Joined words"), and
+   five prefixes and endings get a half-space since 2026-10-17 ("Half-spaces"); compound words are open.
 3. **Scan preprocessing:** deskew, spreads, uneven backgrounds, low resolution (below).
 4. **Layout:** two-column verse with a narrow gutter (~46% of words found), footnotes, bold titles.
 5. **Readers' marks in scans** (below).
