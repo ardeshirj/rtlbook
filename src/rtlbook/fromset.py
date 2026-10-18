@@ -9,6 +9,7 @@ it also holds what was decided at freeze, such as a line skipped by agreement. E
 
 from __future__ import annotations
 
+import fnmatch
 import json
 from collections import Counter
 from pathlib import Path
@@ -34,9 +35,15 @@ def line_text(folder: Path, line: dict, decision: dict | None) -> tuple[str | No
     return line.get("ocr", "").strip(), "ocr"
 
 
-def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300) -> tuple[list[Page], Counter]:
+def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300,
+          edition: dict | None = None) -> tuple[list[Page], Counter]:
     """The PDF's pages `numbers` with the set's lines, and how many lines took each source. The set's boxes are in
-    pixels of the page rendered at `dpi` (rtlbook lines' default, 300)."""
+    pixels of the page rendered at `dpi` (rtlbook lines' default, 300). An edition (convert --edition) names the lines
+    that start chapters (`chapters`: [{"line": id}]) and the lines to leave out (`drop`: ids, or patterns like
+    "p152-*"), by the set's line ids."""
+    edition = edition or {}
+    starts = {c["line"] for c in edition.get("chapters", [])}
+    drop = edition.get("drop", [])
     index = json.loads((folder / "lines.json").read_text(encoding="utf-8"))
     review_file, manifest_file = folder / "review.json", folder / "manifest.json"
     review = json.loads(review_file.read_text(encoding="utf-8")) if review_file.exists() else {}
@@ -49,10 +56,13 @@ def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300) -> t
     for ln in sorted(index["lines"], key=lambda ln: ln["id"]):
         if ln["page"] not in by_page:
             continue
+        if any(fnmatch.fnmatchcase(ln["id"], d) for d in drop):
+            sources["dropped"] += 1
+            continue
         text, source = line_text(folder, ln, review.get(ln["id"]))
         sources[source] += 1
         if text:
-            by_page[ln["page"]].append(Line(text, tuple(ln["box"]), CHECKED_CONF))
+            by_page[ln["page"]].append(Line(text, tuple(ln["box"]), CHECKED_CONF, ln["id"] in starts))
     out = []
     for n in numbers:
         w, h = doc[n - 1].get_size()

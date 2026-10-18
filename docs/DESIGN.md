@@ -264,6 +264,14 @@ records, still tells which engine and readers made it. Reading apps don't show t
   runs as for OCR (reading order, page numbers and running titles, paragraphs, chapters, half-spaces), except the
   joined-word split: checked text keeps the book's gaps. `report.json` counts the lines by source
   (`lines_from_set`), and the engine block names the set. A 153-page book (1932 letterpress) builds in about 4 s.
+- **An edition** (`--edition FILE`, JSON, with `--lines`) says what the lines can't: which lines start chapters
+  (`chapters`: line ids; a title set in body type isn't found by layout, and a contents page's numbers are cut off as
+  page numbers before it's read), which lines to leave out (`drop`: ids or patterns, such as the printed title and
+  contents pages), and the title and author. A line marked as a chapter start becomes a heading as it is.
+- **Covers:** a cover is the page's largest image, or, when that covers less than most of the area all its images
+  cover (a scan stored in strips), that whole area cut from the page rendered in colour; the cover page holds it in
+  an SVG box the page's height, so it's scaled to fit whatever space a reading system gives it (an `<img>` alone
+  showed at full width, cut off below). `--no-cover` leaves cover and cover page out.
 
 ## 5. CLI
 

@@ -10,6 +10,7 @@ class Line:
     text: str
     bbox: tuple[int, int, int, int]  # (x0, y0, x1, y1) in pixels of the rendered page, origin top-left
     conf: float | None = None
+    heading: bool = False  # a chapter heading, said so by an edition (convert --edition); else found by layout
 
 
 @dataclass
@@ -32,7 +33,7 @@ class Page:
 
     @classmethod
     def from_dict(cls, d: dict) -> Page:
-        lines = [Line(ln["text"], tuple(ln["bbox"]), ln["conf"]) for ln in d["lines"]]
+        lines = [Line(ln["text"], tuple(ln["bbox"]), ln["conf"], ln.get("heading", False)) for ln in d["lines"]]
         return cls(**{**d, "lines": lines})
 
 

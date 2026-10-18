@@ -49,3 +49,20 @@ def test_a_frozen_manifest_has_the_last_word(tmp_path):
     got, sources = pages(folder, pdf_path, [1])
     assert [ln.text for ln in got[0].lines] == ["او بخانه رفت", "کتاب را دید", "نامه را نوشت؟"]
     assert sources["skip"] == 2 and sources["checked"] == 1
+
+
+def test_an_edition_marks_chapter_starts_and_drops_lines(tmp_path):
+    pdf_path, folder = make_set(tmp_path)
+    got, sources = pages(folder, pdf_path, [1, 2], edition={"chapters": [{"line": "p002-01"}], "drop": ["p001-0[45]"]})
+    assert [ln.text for ln in got[0].lines] == ["او بخانه رفت", "کتاب را دید"]
+    assert [ln.heading for ln in got[1].lines] == [True] and not got[0].lines[0].heading
+    assert sources["dropped"] == 2
+
+
+def test_a_heading_line_starts_a_chapter():
+    from rtlbook.model import Line, Page
+    from rtlbook.text import build_paragraphs
+    page = Page(1, "ocr", 1500, 2250, [Line("در باز شد", (100, 100, 1400, 180), 100.0, True),
+                                       Line("او به خانه رفت و کتاب را دید.", (100, 300, 1400, 380), 100.0)])
+    paras = build_paragraphs([page])
+    assert [p.heading for p in paras] == [True, False]

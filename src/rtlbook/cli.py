@@ -119,6 +119,7 @@ def convert(
     crop: Annotated[float, typer.Option(help="Fraction to cut off each page edge (e.g. 0.075 for framed pages)")] = 0.0,
     jobs: Annotated[int, typer.Option("-j", "--jobs", help="Parallel pages")] = os.cpu_count() or 4,
     cover: Annotated[Optional[Path], typer.Option(help="Cover image (default: largest image on page 1)")] = None,
+    no_cover: Annotated[bool, typer.Option("--no-cover", help="No cover page or cover image")] = False,
     work: Annotated[Optional[Path], typer.Option(help="Work/cache dir (default: <output>.rtlbook)")] = None,
     drop_lines: Annotated[Optional[str], typer.Option(help="Regex: drop matching lines (watermarks, site banners)")] = None,
     digits: Annotated[str, typer.Option(help="Digits in the text: auto (Persian ۰-۹ for fas), fa, or keep")] = "auto",
@@ -131,6 +132,7 @@ def convert(
     scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
     lines: Annotated[Optional[Path], typer.Option("--lines", help="Build from a checked set of lines (rtlbook lines' format, docs/TRAINING-DATA.md) instead of OCR: its text, each line in its place on the page")] = None,
+    edition: Annotated[Optional[Path], typer.Option(help="With --lines: a JSON file naming the lines that start chapters (chapters: [{line: id}]) and lines to leave out (drop: ids or patterns), and the book's title and author")] = None,
     half_spaces: Annotated[bool, typer.Option(help="Make the space before an ending (the plural -ha, -tar) or after a prefix (mi-, bi-) a half-space, as Farsi is spelled today")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
@@ -175,7 +177,9 @@ def convert(
             emit(event="page", page=page.number, done=finished, total=len(numbers), cached=from_cache)
 
         if lines:
-            page_results, from_set = fromset.pages(lines, pdf_path, numbers, dpi)
+            ed = json.loads(edition.read_text(encoding="utf-8")) if edition else {}
+            title, author = title or ed.get("title"), author or ed.get("author")
+            page_results, from_set = fromset.pages(lines, pdf_path, numbers, dpi, ed)
             for p in page_results:
                 done(p, False)
             console.print("Lines from the set " + lines.name + ": " +
@@ -220,7 +224,7 @@ def convert(
     cover_img = None
     if cover:
         cover_img = (cover.read_bytes(), "image/png" if cover.suffix.lower() == ".png" else "image/jpeg")
-    else:
+    elif not no_cover:
         cover_img = pdf.largest_image(pdf.open_book(pdf_path), 0)
 
     found = {"lines_found_by": f"set {lines.name}", "read_by": f"set {lines.name}"} if lines else readers.describe(read_with, lang)

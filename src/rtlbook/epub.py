@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import io
 import uuid
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
+
+from PIL import Image
 
 from rtlbook.model import Paragraph, Section
 
@@ -40,8 +43,8 @@ h1, h2 {{ text-align: center; font-weight: bold; margin: 1.5em 0 1em 0; }}
 h1 {{ font-size: 1.5em; }}
 h2 {{ font-size: 1.25em; }}
 .title-page {{ text-align: center; margin-top: 30%; }}
-.cover {{ text-align: center; margin: 0; padding: 0; }}
-.cover img {{ max-width: 100%; max-height: 100%; }}
+.cover {{ margin: 0; padding: 0; height: 100vh; }}
+.cover svg {{ display: block; width: 100%; height: 100%; }}
 """
 
 
@@ -101,11 +104,18 @@ def write_epub(path: Path, meta: BookMeta, sections: list[Section]) -> None:
         ext = "jpg" if media == "image/jpeg" else "png"
         files[f"OEBPS/images/cover.{ext}"] = data
         manifest.append(f'<item id="cover-image" href="images/cover.{ext}" media-type="{media}" properties="cover-image"/>')
+        # The image in an SVG box the page's height: scaled to fit whatever space the reading system gives the page
+        # (an <img> alone shows at full width and is cut off below on a short page or in a two-page spread).
+        w, h = Image.open(io.BytesIO(data)).size
         files["OEBPS/cover.xhtml"] = _xhtml(
-            meta.title, f'<div class="cover"><img src="images/cover.{ext}" alt="{escape(meta.title)}"/></div>', lang, "css/book.css"
+            meta.title,
+            f'<div class="cover"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
+            f' version="1.1" viewBox="0 0 {w} {h}" preserveAspectRatio="xMidYMid meet" role="img"'
+            f' aria-label="{escape(meta.title)}"><image width="{w}" height="{h}" xlink:href="images/cover.{ext}"/></svg></div>',
+            lang, "css/book.css",
         )
-        manifest.append('<item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>')
-        spine.append('<itemref idref="cover" linear="yes"/>')
+        manifest.append('<item id="cover" href="cover.xhtml" media-type="application/xhtml+xml" properties="svg"/>')
+        spine.append('<itemref idref="cover" linear="yes" properties="rendition:page-spread-center"/>')
 
     # Title page
     files["OEBPS/title.xhtml"] = _xhtml(

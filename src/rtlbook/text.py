@@ -277,7 +277,7 @@ def build_paragraphs(
                 continue
             gap = ln.bbox[1] - prev_bottom if prev_bottom is not None else None
             after_break = cur is None or cur.heading or prev_sparse and first_on_page or prev_text.endswith(TERMINAL)
-            heading = match_heading(text) or (
+            heading = (text if ln.heading else None) or match_heading(text) or (
                 None if page_sparse else _layout_heading(ln, text, gap, line_h, page, margins, after_break))
             is_heading = heading is not None
             if heading:

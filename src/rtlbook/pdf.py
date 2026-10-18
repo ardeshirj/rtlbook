@@ -55,18 +55,32 @@ def render(doc: Book, index: int, dpi: int) -> Image.Image:
     return doc[index].render(scale=dpi / 72, grayscale=True).to_pil()
 
 
+COVER_DPI = 150  # a page rendered as the cover: about 1,200 px wide for a book page
+
+
 def largest_image(doc: Book, index: int) -> tuple[bytes, str] | None:
-    """Return the biggest embedded image on a page as (bytes, media type), e.g. for a cover."""
-    best, best_area = None, 0.0
+    """Return the biggest embedded image on a page as (bytes, media type), e.g. for a cover. When it covers less than
+    most of the area all the page's images cover together (a scan stored in strips), that whole area instead, cut from
+    the page rendered in colour: the scan, without the page's empty margins around it."""
+    best, best_area, union = None, 0.0, None
     for obj in doc[index].get_objects():
         if obj.type != pdfium.raw.FPDF_PAGEOBJ_IMAGE:
             continue
         left, bottom, right, top = obj.get_bounds()
+        union = (left, bottom, right, top) if union is None else \
+            (min(union[0], left), min(union[1], bottom), max(union[2], right), max(union[3], top))
         if (area := (right - left) * (top - bottom)) > best_area:
             best, best_area = obj, area
     if best is None:
         return None
-    img = best.get_bitmap(render=False).to_pil().convert("RGB")
+    left, bottom, right, top = union
+    if best_area < 0.9 * (right - left) * (top - bottom):
+        scale = COVER_DPI / 72
+        page_h = doc[index].get_size()[1]
+        img = doc[index].render(scale=scale).to_pil().convert("RGB")
+        img = img.crop((round(left * scale), round((page_h - top) * scale), round(right * scale), round((page_h - bottom) * scale)))
+    else:
+        img = best.get_bitmap(render=False).to_pil().convert("RGB")
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=90)
     return buf.getvalue(), "image/jpeg"
