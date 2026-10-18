@@ -95,6 +95,7 @@ Useful `convert` options:
 | `--reader tesseract` | Read a scan's lines with Tesseract instead of ParisaOCR: five times faster, many more letters wrong (default `auto`: a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract; `page`: whole pages in one Tesseract call) |
 | `--scan-reader tesseract` | With `--reader auto`, read a scan's lines with Tesseract instead of ParisaOCR; exported PDFs keep Tesseract's whole-page call |
 | `--no-split-joined` | Keep words run together as read (scans only; see below) |
+| `--lines SET` | Build from a checked set of lines (`rtlbook lines`' format, docs/TRAINING-DATA.md) instead of OCR |
 | `--no-half-spaces` | Keep the spaces before endings and after prefixes as read (see below) |
 | `-o PATH` | Output EPUB (default `output/<pdf name>.epub`) |
 | `--work DIR` | Work/cache folder (default `output/<name>.rtlbook/`). Re-runs reuse per-page OCR results |

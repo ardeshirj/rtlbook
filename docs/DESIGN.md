@@ -255,6 +255,16 @@ records, still tells which engine and readers made it. Reading apps don't show t
 
 ---
 
+### 4.11 Building from a checked set — built
+- **`convert --lines SET`** (`fromset.py`) builds a book from a checked set of lines (docs/TRAINING-DATA.md) instead
+  of OCR: each line keeps its box on the page and takes the set's text: a checked line's `.gt.txt`, else the text two
+  independent readings agreed on (`.agreed.txt`), else an unsure line's best guess; skipped lines are left out, and a
+  line nobody decided keeps its OCR. A frozen version's manifest, beside `lines.json` as `manifest.json`, has the last
+  word on each status (it holds what freezing decided, such as a line skipped by agreement). Everything after reading
+  runs as for OCR (reading order, page numbers and running titles, paragraphs, chapters, half-spaces), except the
+  joined-word split: checked text keeps the book's gaps. `report.json` counts the lines by source
+  (`lines_from_set`), and the engine block names the set. A 153-page book (1932 letterpress) builds in about 4 s.
+
 ## 5. CLI
 
 Runs in Docker through the `./rtlbook` wrapper, which only shares the repository folder with the container.

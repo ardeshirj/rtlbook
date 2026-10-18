@@ -130,10 +130,11 @@ def convert(
     reader: Annotated[str, typer.Option(help="How lines are read: auto (a scan's lines cut and read one by one by ParisaOCR, an exported PDF's whole pages by Tesseract), page (Tesseract reads whole pages in one call), or a line reader: parisaocr, tesseract")] = "auto",
     scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
+    lines: Annotated[Optional[Path], typer.Option("--lines", help="Build from a checked set of lines (rtlbook lines' format, docs/TRAINING-DATA.md) instead of OCR: its text, each line in its place on the page")] = None,
     half_spaces: Annotated[bool, typer.Option(help="Make the space before an ending (the plural -ha, -tar) or after a prefix (mi-, bi-) a half-space, as Farsi is spelled today")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
-    from rtlbook import epub, frontmatter, halfspace, joined, layout, readers, text
+    from rtlbook import epub, fromset, frontmatter, halfspace, joined, layout, readers, text
     from rtlbook.pipeline import OcrSettings, extract_pages, reader_for, split_sections
     from rtlbook.validate import epubcheck
 
@@ -149,6 +150,7 @@ def convert(
     numbers = parse_pages(pages, len(pdf.open_book(pdf_path)))
     kinds = page_kinds(pdf_path, numbers)
     print_doctype(kinds)
+    check_script = check_script and not lines  # a set's text has been read already
     t0 = time.perf_counter()
     scripts = check_script_of(pdf_path, numbers, lang) if check_script else script.ScriptCheck(None)
     timings["script"] = time.perf_counter() - t0
@@ -172,9 +174,16 @@ def convert(
             prog.advance(task)
             emit(event="page", page=page.number, done=finished, total=len(numbers), cached=from_cache)
 
-        page_results = extract_pages(
-            pdf_path, numbers, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop, read_with), max(1, jobs), done
-        )
+        if lines:
+            page_results, from_set = fromset.pages(lines, pdf_path, numbers, dpi)
+            for p in page_results:
+                done(p, False)
+            console.print("Lines from the set " + lines.name + ": " +
+                          ", ".join(f"{n} {k}" for k, n in from_set.most_common()) + " (no OCR)")
+        else:
+            page_results = extract_pages(
+                pdf_path, numbers, work / "pages", OcrSettings(dpi, lang, psm, binarize, crop, read_with), max(1, jobs),
+                done)
     timings["extract"] = time.perf_counter() - t0
     for p in page_results:  # side-by-side lines (two-column verse) read row by row, right to left
         p.lines = layout.reading_order(p.lines)
@@ -188,7 +197,7 @@ def convert(
 
     t0 = time.perf_counter()
     scan = document_type(kinds).kind == "scan"  # an exported PDF's gaps are the ones typed
-    split = joined.split_pages(page_results) if split_joined and scan and lang.startswith("fas") else None
+    split = joined.split_pages(page_results) if split_joined and scan and not lines and lang.startswith("fas") else None
     timings["joined"] = time.perf_counter() - t0
     halves = halfspace.join_pages(page_results) if half_spaces and lang.startswith("fas") else None
 
@@ -214,7 +223,8 @@ def convert(
     else:
         cover_img = pdf.largest_image(pdf.open_book(pdf_path), 0)
 
-    engine = {"rtlbook": __version__, "document": document_type(kinds).kind, **readers.describe(read_with, lang)}
+    found = {"lines_found_by": f"set {lines.name}", "read_by": f"set {lines.name}"} if lines else readers.describe(read_with, lang)
+    engine = {"rtlbook": __version__, "document": document_type(kinds).kind, **found}
     digest = pdf.digest(pdf_path)
     fonts_dir = Path(os.environ.get("RTLBOOK_FONTS", "/opt/fonts"))
     meta = epub.BookMeta(
@@ -254,6 +264,7 @@ def convert(
         "low_confidence_pages": low,
         "joined_words_split": split,
         "half_spaces_made": halves,
+        "lines_from_set": dict(from_set) if lines else None,
         "script": {"expected": scripts.expected, "found": scripts.found, "pages": scripts.seen} if check_script else None,
         "warning": confidence_message(round(sum(confs) / len(confs), 1) if confs else None),
         "paragraphs": len(paras),
