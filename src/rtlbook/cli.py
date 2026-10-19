@@ -132,7 +132,7 @@ def convert(
     scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
     lines: Annotated[Optional[Path], typer.Option("--lines", help="Build from a checked set of lines (rtlbook lines' format, docs/TRAINING-DATA.md) instead of OCR: its text, each line in its place on the page")] = None,
-    edition: Annotated[Optional[Path], typer.Option(help="With --lines: a JSON file naming the lines that start chapters (chapters: [{line: id}]) and lines to leave out (drop: ids or patterns), and the book's title and author")] = None,
+    edition: Annotated[Optional[Path], typer.Option(help="With --lines: a JSON file naming the lines that start chapters (chapters: [{line: id}]) and lines to leave out (drop: ids or patterns), editorial changes to the text (replace: [{pattern: regex, with: text}]), and the book's title and author")] = None,
     half_spaces: Annotated[bool, typer.Option(help="Make the space before an ending (the plural -ha, -tar) or after a prefix (mi-, bi-) a half-space, as Farsi is spelled today")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""

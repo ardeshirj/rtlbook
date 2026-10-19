@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -40,10 +41,13 @@ def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300,
     """The PDF's pages `numbers` with the set's lines, and how many lines took each source. The set's boxes are in
     pixels of the page rendered at `dpi` (rtlbook lines' default, 300). An edition (convert --edition) names the lines
     that start chapters (`chapters`: [{"line": id}]) and the lines to leave out (`drop`: ids, or patterns like
-    "p152-*"), by the set's line ids."""
+    "p152-*"), by the set's line ids, and editorial changes to the text (`replace`: [{"pattern": regex, "with": text}],
+    applied to each line in turn, such as an old typesetting of dialogue the book shows another way); the set keeps
+    the text as printed."""
     edition = edition or {}
     starts = {c["line"] for c in edition.get("chapters", [])}
     drop = edition.get("drop", [])
+    replace = [(re.compile(r["pattern"]), r["with"]) for r in edition.get("replace", [])]
     index = json.loads((folder / "lines.json").read_text(encoding="utf-8"))
     review_file, manifest_file = folder / "review.json", folder / "manifest.json"
     review = json.loads(review_file.read_text(encoding="utf-8")) if review_file.exists() else {}
@@ -61,6 +65,9 @@ def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300,
             continue
         text, source = line_text(folder, ln, review.get(ln["id"]))
         sources[source] += 1
+        for pattern, new in replace if text else ():
+            text, n = pattern.subn(new, text)
+            sources["replaced"] += n
         if text:
             by_page[ln["page"]].append(Line(text, tuple(ln["box"]), CHECKED_CONF, ln["id"] in starts))
     out = []

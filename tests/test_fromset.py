@@ -59,6 +59,14 @@ def test_an_edition_marks_chapter_starts_and_drops_lines(tmp_path):
     assert sources["dropped"] == 2
 
 
+def test_an_edition_changes_the_text_not_the_set(tmp_path):
+    pdf_path, folder = make_set(tmp_path)
+    ed = {"replace": [{"pattern": r"^او\s*", "with": "«او "}, {"pattern": "رفت$", "with": "رفت»"}]}
+    got, sources = pages(folder, pdf_path, [1], edition=ed)
+    assert got[0].lines[0].text == "«او بخانه رفت»" and sources["replaced"] == 2
+    assert (folder / "p001-01.gt.txt").read_text(encoding="utf-8") == "او بخانه رفت\n"  # the set as it was
+
+
 def test_a_heading_line_starts_a_chapter():
     from rtlbook.model import Line, Page
     from rtlbook.text import build_paragraphs

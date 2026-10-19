@@ -130,7 +130,7 @@ def fix_unopened_guillemets(p: Paragraph) -> None:
                     ch = "،"
             out.append(ch)
         seg = re.sub(r"[ \t]+،", "،", "".join(out))  # no space before a comma...
-        p.segments[i] = re.sub(r"،[ \t\u200c]*(?=\S)", "، ", seg)  # ...one after
+        p.segments[i] = re.sub(r"،[ \t\u200c]*(?=[^\s.؛:؟!»?;])", "، ", seg)  # ...one after, unless a closing mark follows
 
 
 def fix_mirrored_parens(p: Paragraph) -> None:

@@ -39,6 +39,13 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.9.0 (2026-10-19)
+- **An edition can change the book's text** (`replace` in `--edition`: regex patterns and what each becomes, applied
+  to each line), for editorial choices such as an old typesetting of dialogue; the set keeps the print.
+  `report.json` counts the changes (`lines_from_set`: `replaced`).
+- **No space between a comma and a closing mark:** 0.8.0's comma fix added one back where a paragraph has quotes
+  (`،»` became `، »`).
+
 ### 0.8.0 (2026-10-19)
 - **`convert --lines SET` builds a book from a checked set of lines** instead of OCR: each line keeps its box and
   takes the set's text (checked, else agreed, else an unsure best guess; skipped lines left out), and everything

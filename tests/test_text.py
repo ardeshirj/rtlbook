@@ -74,6 +74,10 @@ def test_no_gap_between_a_mark_and_its_word():
     # across a line break: a line that starts with a mark, one that ends with «
     pages = [page(1, line("او گفت", 100), line(". بعد گفت «", 100), line("فردا می آیم» و رفت.", 700))]
     assert build_paragraphs(pages)[0].text == "او گفت. بعد گفت «فردا می آیم» و رفت."
+    # a comma before a closing mark: the paragraph's comma fix adds no space back where a line had none
+    p = Paragraph(["«بیا اینجا،» و رفت،!"])
+    fix_unopened_guillemets(p)
+    assert p.text == "«بیا اینجا،» و رفت،!"
 
 
 def test_hamza_edge_cases_and_parens():

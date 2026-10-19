@@ -271,7 +271,10 @@ records, still tells which engine and readers made it. Reading apps don't show t
 - **An edition** (`--edition FILE`, JSON, with `--lines`) says what the lines can't: which lines start chapters
   (`chapters`: line ids; a title set in body type isn't found by layout, and a contents page's numbers are cut off as
   page numbers before it's read), which lines to leave out (`drop`: ids or patterns, such as the printed title and
-  contents pages), and the title and author. A line marked as a chapter start becomes a heading as it is.
+  contents pages), the title and author, and editorial changes to the text (`replace`: regex patterns and what each
+  becomes, applied to each line, such as an old typesetting of dialogue shown the way books set it today; 2026-10-19).
+  A line marked as a chapter start becomes a heading as it is. The set keeps the text as printed: an edition only
+  changes the book.
 - **Covers:** a cover is the page's largest image, or, when that covers less than most of the area all its images
   cover (a scan stored in strips), that whole area cut from the page rendered in colour; the cover page holds it in
   an SVG box the page's height, so it's scaled to fit whatever space a reading system gives it (an `<img>` alone
