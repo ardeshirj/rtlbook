@@ -39,6 +39,20 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.8.0 (2026-10-19)
+- **`convert --lines SET` builds a book from a checked set of lines** instead of OCR: each line keeps its box and
+  takes the set's text (checked, else agreed, else an unsure best guess; skipped lines left out), and everything
+  after reading runs as for OCR. `--edition` names the lines that start chapters and the lines to leave out;
+  `--no-cover` leaves the cover out, and a cover from a scan stored in strips now fits the screen.
+- **Half-spaces as Farsi is spelled today** before five endings and after mi-/nemi-/bi- (`--no-half-spaces` turns
+  it off; `report.json`: `half_spaces_made`).
+- **Marks against their words:** no space before `. ؛ : ؟ ! »`, none after `«`, also across a line break. Old type
+  often sets a gap there; in the EPUB it was a stray space where a line could break.
+- **Training data:** the transcription rules' version 3 (marks against their words, whatever gap the type leaves),
+  which `rtlbook lines` stamps on new lines; a line can be `agreed` (two independent readings, in a frozen version);
+  `summary.json` lists its lines' rules versions; `examples.json` (per-book crops for the rules) is no longer part of
+  the format.
+
 ### 0.7.0 (2026-10-16)
 - **Scans are read by ParisaOCR's model** (Apache-2.0), run by ONNX Runtime inside the image (675 MB, from 550; no
   PyTorch). On the 1932 test pages 0.3% of letters are wrong, against 8.7% in 0.6.0; on a 1963 printing and three
