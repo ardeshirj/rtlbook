@@ -86,6 +86,31 @@ def fix_misread_commas(s: str, fix: CommaFix) -> str:
     return re.sub(r" {2,}", " ", s).strip()
 
 
+# A gap between a mark and its word is the typesetter's, not the text's (old type often sets one before ". ؟ ! :"):
+# none before a closing mark, none after «. Commas are fix_misread_commas's. The training rules type it the same way
+# (docs/TRAINING-DATA.md, rule 3).
+_GAP_BEFORE_MARK = re.compile(r"[ \t\u200c]+(?=[.؛:؟!»?;])")
+_GAP_AFTER_QUOTE = re.compile(r"«[ \t\u200c]+")
+_CLOSING = tuple(".؛:؟!»?;،")
+
+
+def close_marks(s: str) -> str:
+    """No space before a closing mark, none after «."""
+    return _GAP_AFTER_QUOTE.sub("«", _GAP_BEFORE_MARK.sub("", s))
+
+
+def close_marks_across_lines(p: Paragraph) -> None:
+    """The same where a line break falls in the gap: a line that starts with a closing mark, or a line that ends with
+    «, loses the space that joins it to its neighbour (page markers between them stay)."""
+    for i, seg in enumerate(p.segments):
+        if seg != " ":
+            continue
+        before = next((x for x in reversed(p.segments[:i]) if isinstance(x, str) and x != " "), "")
+        after = next((x for x in p.segments[i + 1:] if isinstance(x, str) and x != " "), "")
+        if after.startswith(_CLOSING) or before.endswith("«"):
+            p.segments[i] = ""
+
+
 def fix_unopened_guillemets(p: Paragraph) -> None:
     """Tesseract often reads the Persian comma "،" as "»". A "»" with no open "«" before it in the
     paragraph can't be a closing quotation mark, so it's a comma. Works per paragraph, because a
@@ -268,7 +293,7 @@ def build_paragraphs(
         page_sparse = page.number in sparse
         first_on_page = True
         for ln in page.lines:
-            text = fix_misread_commas(normalize_text(ln.text), comma_fix)
+            text = close_marks(fix_misread_commas(normalize_text(ln.text), comma_fix))
             if is_debris(ln, text) or (drop and drop.search(text)) or (ln.conf is not None and ln.conf < min_conf):
                 continue
             if _in_margin(ln, page) and (
@@ -320,6 +345,7 @@ def build_paragraphs(
     for p in paras:
         fix_mirrored_parens(p)
         fix_unopened_guillemets(p)
+        close_marks_across_lines(p)
     apply_contents(paras)
     return paras
 

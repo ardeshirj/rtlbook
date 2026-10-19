@@ -18,7 +18,7 @@ from rtlbook import __version__, ocr, pdf, preprocess
 from rtlbook.suggest import Lexicon, normalize
 from rtlbook.text import normalize_text, persian_digits
 
-RULES = 2  # version of the transcription rules (docs/TRAINING-DATA.md); stored with every line
+RULES = 3  # version of the transcription rules (docs/TRAINING-DATA.md); stored with every line
 FLAG_CONF = 60  # words OCR'd below this confidence are flagged even when they are real words
 GAP_SPLIT = 2.5  # a gap wider than this many word heights splits a line (page number and running title)
 MIN_LINE_H = 12  # px at 300 dpi: shorter "lines" are specks

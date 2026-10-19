@@ -64,6 +64,18 @@ def test_comma_fix_only_when_book_lacks_real_commas():
     assert detect_comma_misreads(correct) == CommaFix()
 
 
+def test_no_gap_between_a_mark_and_its_word():
+    from rtlbook.text import close_marks
+
+    assert close_marks("گفت : « بیا اینجا » و رفت .") == "گفت: «بیا اینجا» و رفت."
+    assert close_marks("چه شده ؟ هیچ !") == "چه شده؟ هیچ!"
+    assert close_marks("و رفت ...") == "و رفت..."
+    assert close_marks("سال ۱۳۱۱ - تهران") == "سال ۱۳۱۱ - تهران"  # a dash between words keeps its spaces
+    # across a line break: a line that starts with a mark, one that ends with «
+    pages = [page(1, line("او گفت", 100), line(". بعد گفت «", 100), line("فردا می آیم» و رفت.", 700))]
+    assert build_paragraphs(pages)[0].text == "او گفت. بعد گفت «فردا می آیم» و رفت."
+
+
 def test_hamza_edge_cases_and_parens():
     fix = CommaFix(hamza=True)
     assert fix_misread_commas("نه جانمء‌چه شده", fix) == "نه جانم، چه شده"
@@ -113,7 +125,7 @@ def test_screenplay_dialogue_splits():
                   line("علی : من هم می آیم", 500),
                   *[line(f"سطر پر شماره {i} ادامه دارد", 100) for i in range(20)])]
     texts = [p.text for p in build_paragraphs(pages)]
-    assert texts[0].startswith("سارا :") and texts[1].startswith("علی :")
+    assert texts[0].startswith("سارا:") and texts[1].startswith("علی:")  # split, and no gap before the colon
 
 
 def test_unopened_closing_guillemet_is_a_comma():

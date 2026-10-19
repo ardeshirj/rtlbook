@@ -190,6 +190,10 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
 - Arabic `ي`/`ك` → Persian `ی`/`ک`; tatweel removed; Persian digits by default (`--digits`); the Persian
   comma misread as `»` (a `»` with no open `«` in its paragraph) or as a word-final `ء`; mirrored parentheses;
   OCR debris lines; dropping lines by regex (`--drop-lines`) or below a confidence (`--min-line-conf`).
+- **Marks against their words** (2026-10-19, `text.close_marks`): no space before `. ؛ : ؟ ! »`, none after `«`,
+  within a line and across a line break. Old type often sets a gap before a mark, and OCR (and readers) copy it; in an
+  EPUB it reads as a stray space, and a reading system can break the line there, leaving the mark alone at the start
+  of the next. The training rules type it the same way (TRAINING-DATA.md, rule 3, version 3).
 - **Joined words** (Farsi scans, `joined.py`; `--no-split-joined` turns it off): in old type the gap after a letter
   that never joins the next (ا د ذ ر ز ژ و) can be a hair wide, and Tesseract reads two words as one. A word no word
   list knows is split, only after such a letter, into the fewest known pieces: three letters or more from the

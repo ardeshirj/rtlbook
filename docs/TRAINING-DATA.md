@@ -22,12 +22,11 @@ digits and `-`. The book's pages themselves are never part of a set, only the li
 |---|---|---|
 | `lines.json` | `rtlbook lines` | the lines: where each was cut, what OCR read, the uncertain words |
 | `<id>.png` | `rtlbook lines` | the line image, cut from the unbinarized page at the render resolution (300 dpi) |
-| `examples.json` | a person, optional | crops of this book that illustrate the rules (below) |
 | `<id>.gt.txt` | the checking tool | the checked text, only for lines marked `done` |
 | `<id>.agreed.txt` | freeze, in a version only | the text two independent readings agreed on, for a line nobody checked (status `agreed`, below) |
 | decisions | the checking tool | the latest decision per line and every save ever made (below) |
 | `.pulled` | pull, in a folder only | the fingerprint of the bucket's decisions at the last pull, so push can tell whether the folder is up to date (below) |
-| `summary.json` | the bucket tool, in a bucket, optional | what a list of sets needs, so it doesn't read every `lines.json`: `book`, `source`, `public_domain`, `lines` (how many), `test` (how many in the test split), `recheck` (the ids with a `recheck` field), and optionally `title`, `title_en`, `author`, `edition` from a record of the book kept with the set; written again with every `lines.json`. Decisions aren't counted here: they're in `review.json` |
+| `summary.json` | the bucket tool, in a bucket, optional | what a list of sets needs, so it doesn't read every `lines.json`: `book`, `source`, `public_domain`, `lines` (how many), `test` (how many in the test split), `recheck` (the ids with a `recheck` field), `rules` (the rules' versions its lines are stamped with, oldest first), and optionally `title`, `title_en`, `author`, `edition` from a record of the book kept with the set; written again with every `lines.json`. Decisions aren't counted here: they're in `review.json` |
 | `index.json`, `pages/p<NNN>.json` | the bucket tool, in a bucket, optional | for a checking tool that loads a set a page at a time: `index.json` has every line in brief (`id`, `page`, `split`, `recheck`, and how readers of the line compared, if any), `pages/` each page's lines in full as in `lines.json`, with any readings of them; built from `lines.json` and written again with it. Training and testing never read them |
 | `frozen.json`, `versions/` | freeze, in a bucket | a finished set's numbered versions, and while `frozen.json` is there, read-only ("Frozen versions", below) |
 
@@ -76,22 +75,6 @@ order. Cutting a page again renumbers its lines; `rtlbook lines` carries over th
 | `words[].x0` … `y1` | the word's box in the line image's pixels |
 | `words[].flag` | uncertain: low confidence, or not in the word lists |
 | `words[].sugg` | for flagged words: real words that look like it (mostly the same letters with other dots), best first |
-
-## examples.json
-
-Optional: real crops that show each rule in this book's type, keyed by the rule's example name.
-
-```json
-{"joined-prefix": {"line": "p107-08", "x0": 392, "x1": 563, "type": "…", "dont": "…"}}
-```
-
-`line` is the line whose image holds the example, `x0`/`x1` the part to show, `type` and `dont` the right and
-wrong way to type it. The names: for rule 2 (spaces), by what to type: a half-space `sp-hs-suffix`, `sp-hs-prefix`;
-a space `sp-gap`, `sp-touching`, `sp-ra`, `sp-word-gap`; nothing `sp-jn-prefix`, `sp-jn-suffix`, `sp-jn-words`,
-`sp-jn-after`. For rules 1 and 3: `old-spelling`, `comma`, `question`, `quotes`, `dash`, `dots`, `hamza`,
-`arabic-letters`, `page-number`. For rule 4, whole lines (`x0` 0, `x1` the line's width): `skip-two`, `skip-cut`,
-`skip-speck`, `skip-hand`, `skip-mark`. (Version 1's `joined-prefix`, `joined-preposition`, `gap`, `joined` and `half-space` aren't shown any
-more.)
 
 ## Decisions
 
@@ -143,7 +126,7 @@ While `frozen.json` is there the set is read-only: a checking tool must refuse s
 A version never changes: reopening a set removes `frozen.json` so it can be checked again, toward `v<N+1>`, while
 `v<N>` stays as it was. Freezing and reopening are the bucket tool's to do.
 
-## Transcription rules, version 2
+## Transcription rules, version 3
 
 The aim is to teach OCR to read what's on the page: type what the ink shows, letter by letter, not what the sentence
 should say, what's correct today, or what you expect to read. When the print and the "right" word disagree, the
@@ -163,6 +146,8 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
 3. **Every printed mark, and only those**, in Persian forms: dashes as `-`, three dots as `...`, Persian comma ،,
    question mark ؟ and quotes « », a footnote asterisk where it's printed, a small hamza over ه only where printed
    (خانهٔ), no tanvin unless printed. Persian ی and ک for Arabic-style ي and ك; Persian digits (۱۲, not 12 or ١٢).
+   A mark sits against its word, whatever gap the type leaves: no space before `.` `،` `؛` `:` `؟` `!` `»` or a dash
+   that breaks a word at the line's end (می-), none after `«`. A gap there is typesetting, not spelling.
 4. **Can't use (`skip`)** when the image holds anything other than printed text of this one line: an ornament line,
    a speck read as a letter or digit, a stamp, a reader's notes or underlining, a crop that cuts the line, two
    lines in one image.
@@ -170,6 +155,9 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
 
 A change to these rules that changes what a checked line would contain raises the version; `rtlbook lines` stamps it
 on new lines (`RULES` in `src/rtlbook/lines.py`), so lines checked under different rules can be told apart.
+
+Version 3 (2026-10-19) placed the marks: old type often leaves a gap before a mark, and lines had been typed both
+ways. Lines already checked were brought to it by removing that space, which changes no letter.
 
 Version 2 (2026-10-12) made rule 2 precise: version 1's "two parts close together but not connected get a
 half-space" read as a half-space between two words printed with no gap; they now get a space, and a suffix after a
