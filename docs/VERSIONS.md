@@ -39,6 +39,11 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.11.0 (2026-10-20)
+- **A verb broken at a line's end is whole again in the EPUB:** a line ending in `می-` or `نمی-` (the print breaking
+  a verb after its prefix) joins the next line without the dash, with a half-space, instead of keeping the dash and
+  a space.
+
 ### 0.10.0 (2026-10-19)
 - **Books from checked lines trust their text:** no OCR clean-ups (a real closing » was turned into a comma when its
   « was in an earlier paragraph), and a dialogue line opened mid-sentence at a line break no longer starts a
