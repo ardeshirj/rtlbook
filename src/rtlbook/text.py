@@ -111,6 +111,29 @@ def close_marks_across_lines(p: Paragraph) -> None:
             p.segments[i] = ""
 
 
+def pair_quotes(p: Paragraph) -> None:
+    """Quotes only where they pair: a « kept with the » that closes it in the same paragraph (nested ones too), any
+    other « or » left out. An edition's choice (convert --edition, "quotes": "paired"), for old typesetting that
+    repeats « at the start of every line of a long quotation and often never closes it."""
+    marks = [(si, ci, ch) for si, seg in enumerate(p.segments) if isinstance(seg, str)
+             for ci, ch in enumerate(seg) if ch in "«»"]
+    opened, keep = [], set()
+    for si, ci, ch in marks:
+        if ch == "«":
+            opened.append((si, ci))
+        elif opened:
+            keep.update({opened.pop(), (si, ci)})
+    gone = {(si, ci) for si, ci, _ in marks} - keep
+    if not gone:
+        return
+    first = next((i for i, s in enumerate(p.segments) if isinstance(s, str) and s.strip()), None)
+    for si, seg in enumerate(p.segments):
+        if not isinstance(seg, str) or not any(g[0] == si for g in gone):
+            continue
+        seg = re.sub(r" {2,}", " ", "".join(ch for ci, ch in enumerate(seg) if (si, ci) not in gone))
+        p.segments[si] = seg.lstrip() if si == first else seg
+
+
 def fix_unopened_guillemets(p: Paragraph) -> None:
     """Tesseract often reads the Persian comma "،" as "»". A "»" with no open "«" before it in the
     paragraph can't be a closing quotation mark, so it's a comma. Works per paragraph, because a
@@ -261,7 +284,7 @@ def _line_pitch(pages: list[Page]) -> float | None:
 
 
 def build_paragraphs(
-    pages: list[Page], drop: re.Pattern | None = None, min_conf: float = 0.0
+    pages: list[Page], drop: re.Pattern | None = None, min_conf: float = 0.0, ocr_fixes: bool = True
 ) -> list[Paragraph]:
     """Join visual lines into paragraphs, across page breaks.
 
@@ -272,11 +295,15 @@ def build_paragraphs(
 
     Headings: "فصل" + ordinal, a short line in large type, or a short numbered title ("۲ـ غلام")
     with space above it. A large-type title that wraps stays one heading.
+
+    ocr_fixes: the fixes for what OCR misreads (a comma read as » or ء, mirrored parentheses); off for checked text
+    (convert --lines), where a » with no « before it is a real one. Its marks can be trusted too, so there a dialogue
+    line starts a paragraph only after a sentence's end or a colon (a turn opened mid-sentence, at a line break, stays).
     """
     margins = _margins(pages)
     sparse = sparse_pages(pages)
     prev_sparse = False
-    comma_fix = detect_comma_misreads(pages)
+    comma_fix = detect_comma_misreads(pages) if ocr_fixes else CommaFix()
     pitch = _line_pitch(pages)
     headers = running_headers(pages)
     heights = [ln.bbox[3] - ln.bbox[1] for p in pages for ln in p.lines]
@@ -316,7 +343,7 @@ def build_paragraphs(
                 or (first_on_page and prev_sparse)
                 or cur.heading
                 or is_heading
-                or DIALOGUE.match(text)
+                or (DIALOGUE.match(text) and (ocr_fixes or prev_text.endswith(TERMINAL)))
                 or (not prev_full and prev_text.endswith(TERMINAL))
                 or (pitch and prev_top is not None and ln.bbox[1] - prev_top > 2.2 * pitch)
             )
@@ -343,8 +370,9 @@ def build_paragraphs(
     if pending_pages and paras:
         paras[-1].segments.extend(pending_pages)
     for p in paras:
-        fix_mirrored_parens(p)
-        fix_unopened_guillemets(p)
+        if ocr_fixes:
+            fix_mirrored_parens(p)
+            fix_unopened_guillemets(p)
         close_marks_across_lines(p)
     apply_contents(paras)
     return paras

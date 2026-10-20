@@ -148,13 +148,18 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
    (خانهٔ), no tanvin unless printed. Persian ی and ک for Arabic-style ي and ك; Persian digits (۱۲, not 12 or ١٢).
    A mark sits against its word, whatever gap the type leaves: no space before `.` `،` `؛` `:` `؟` `!` `»` or a dash
    that breaks a word at the line's end (می-), none after `«`. A gap there is typesetting, not spelling.
-4. **Can't use (`skip`)** when the image holds anything other than printed text of this one line: an ornament line,
-   a speck read as a letter or digit, a stamp, a reader's notes or underlining, a crop that cuts the line, two
-   lines in one image.
-5. **Unsure (`unsure`)** when a word can't be read for certain: type the best guess.
+4. **Can't use (`skip`)** when the image holds no print worth keeping: an ornament line, a speck read as a letter or
+   digit, a stamp, a reader's notes or underlining. Nothing is typed, and the line is used nowhere.
+5. **Unsure (`unsure`)** when there is print worth keeping but not one line read for certain: a word that can't be
+   read for certain (type the best guess), or a crop that holds two lines or cuts a line (type the print it shows, in
+   reading order). An unsure line stays out of training and testing; a book built from the set keeps its text.
 
 A change to these rules that changes what a checked line would contain raises the version; `rtlbook lines` stamps it
 on new lines (`RULES` in `src/rtlbook/lines.py`), so lines checked under different rules can be told apart.
+
+Since 2026-10-19, a crop with two lines or a cut line that holds print is unsure, with its print typed, not can't use
+(rules 4 and 5): neither is trained on, and a book built from the set keeps the print. No line's training text
+changes, so the version stays.
 
 Version 3 (2026-10-19) placed the marks: old type often leaves a gap before a mark, and lines had been typed both
 ways. Lines already checked were brought to it by removing that space, which changes no letter.

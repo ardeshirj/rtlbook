@@ -132,7 +132,7 @@ def convert(
     scan_reader: Annotated[str, typer.Option(help="With --reader auto, the line reader for a scan's lines: parisaocr (fewer letters wrong) or tesseract (five times faster)")] = "parisaocr",
     split_joined: Annotated[bool, typer.Option(help="Split words run together after a letter that never joins the next (Farsi scans; the image's word lists)")] = True,
     lines: Annotated[Optional[Path], typer.Option("--lines", help="Build from a checked set of lines (rtlbook lines' format, docs/TRAINING-DATA.md) instead of OCR: its text, each line in its place on the page")] = None,
-    edition: Annotated[Optional[Path], typer.Option(help="With --lines: a JSON file naming the lines that start chapters (chapters: [{line: id}]) and lines to leave out (drop: ids or patterns), editorial changes to the text (replace: [{pattern: regex, with: text}]), and the book's title and author")] = None,
+    edition: Annotated[Optional[Path], typer.Option(help="With --lines: a JSON file naming the lines that start chapters (chapters: [{line: id}], or [{line: id, title: text}] for a heading before the line) and lines to leave out (drop: ids or patterns), editorial changes to the text (replace: [{pattern: regex, with: text}]; quotes: paired keeps only quotes that open and close in one paragraph), and the book's title and author")] = None,
     half_spaces: Annotated[bool, typer.Option(help="Make the space before an ending (the plural -ha, -tar) or after a prefix (mi-, bi-) a half-space, as Farsi is spelled today")] = True,
 ) -> None:
     """Convert a PDF into an RTL EPUB 3."""
@@ -169,6 +169,8 @@ def convert(
                   disable=progress == "json") as prog:
         task = prog.add_task("pages", total=len(numbers))
 
+        ed: dict = {}  # the edition (with --lines)
+
         def done(page, from_cache: bool) -> None:
             nonlocal cached, finished
             cached += from_cache
@@ -177,7 +179,7 @@ def convert(
             emit(event="page", page=page.number, done=finished, total=len(numbers), cached=from_cache)
 
         if lines:
-            ed = json.loads(edition.read_text(encoding="utf-8")) if edition else {}
+            ed.update(json.loads(edition.read_text(encoding="utf-8")) if edition else {})
             title, author = title or ed.get("title"), author or ed.get("author")
             page_results, from_set = fromset.pages(lines, pdf_path, numbers, dpi, ed)
             for p in page_results:
@@ -214,7 +216,11 @@ def convert(
                   + ("" if title_from == "--title" and author_from == "--author" else " [dim]Use --title/--author to change.[/]"))
 
     t0 = time.perf_counter()
-    paras = text.build_paragraphs(page_results, re.compile(drop_lines) if drop_lines else None, min_line_conf)
+    paras = text.build_paragraphs(page_results, re.compile(drop_lines) if drop_lines else None, min_line_conf,
+                                  ocr_fixes=not lines)  # checked text has no OCR misreads to fix
+    if ed.get("quotes") == "paired":
+        for p in paras:
+            text.pair_quotes(p)
     text.apply_digits(paras, ("fa" if lang.startswith("fas") else "keep") if digits == "auto" else digits)
     sections = split_sections(paras, chunk_pages)
     with open(work / "paragraphs.txt", "w", encoding="utf-8") as f:

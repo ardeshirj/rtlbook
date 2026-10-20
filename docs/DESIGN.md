@@ -273,8 +273,14 @@ records, still tells which engine and readers made it. Reading apps don't show t
   page numbers before it's read), which lines to leave out (`drop`: ids or patterns, such as the printed title and
   contents pages), the title and author, and editorial changes to the text (`replace`: regex patterns and what each
   becomes, applied to each line, such as an old typesetting of dialogue shown the way books set it today; 2026-10-19).
-  A line marked as a chapter start becomes a heading as it is. The set keeps the text as printed: an edition only
-  changes the book.
+  A line marked as a chapter start becomes a heading as it is; a chapter can also bring its title (`title`), a heading
+  just before its line, where the printed title isn't a usable line (cut in two, or never cut). `"quotes": "paired"`
+  keeps only quotes that open and close in one paragraph, for old typesetting that repeats « at the start of every
+  line of a long quotation. The set keeps the text as printed: an edition only changes the book.
+- **Checked text is trusted** (2026-10-19): with `--lines`, the fixes for what OCR misreads are off (a » with no «
+  before it in its paragraph is a real one, not a comma read wrong; no mirrored parentheses to turn), and a dialogue
+  line starts a paragraph only after a sentence's end or a colon, so a turn opened mid-sentence at a line break stays
+  in it. Unsure lines' text goes into the book (their print, where a crop held two lines or cut one).
 - **Covers:** a cover is the page's largest image, or, when that covers less than most of the area all its images
   cover (a scan stored in strips), that whole area cut from the page rendered in colour; the cover page holds it in
   an SVG box the page's height, so it's scaled to fit whatever space a reading system gives it (an `<img>` alone

@@ -59,6 +59,13 @@ def test_an_edition_marks_chapter_starts_and_drops_lines(tmp_path):
     assert sources["dropped"] == 2
 
 
+def test_a_chapter_can_bring_its_title(tmp_path):
+    pdf_path, folder = make_set(tmp_path)
+    got, sources = pages(folder, pdf_path, [2], edition={"chapters": [{"line": "p002-01", "title": "فصل تازه"}]})
+    assert [(ln.text, ln.heading) for ln in got[0].lines] == [("فصل تازه", True), ("در باز شد", False)]
+    assert got[0].lines[0].bbox[3] < got[0].lines[1].bbox[1] and sources["titles"] == 1
+
+
 def test_an_edition_changes_the_text_not_the_set(tmp_path):
     pdf_path, folder = make_set(tmp_path)
     ed = {"replace": [{"pattern": r"^او\s*", "with": "«او "}, {"pattern": "رفت$", "with": "رفت»"}]}

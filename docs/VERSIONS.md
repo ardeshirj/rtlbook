@@ -39,6 +39,15 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.10.0 (2026-10-19)
+- **Books from checked lines trust their text:** no OCR clean-ups (a real closing » was turned into a comma when its
+  « was in an earlier paragraph), and a dialogue line opened mid-sentence at a line break no longer starts a
+  paragraph.
+- **Editions:** `"quotes": "paired"` keeps only quotes that open and close in one paragraph; a chapter can bring its
+  `title` where the printed one isn't a usable line.
+- **Training data:** rules 4 and 5 reworded (no new version): a crop with two lines or a cut line that holds print
+  is unsure, with the print typed, so a book keeps it; can't use is for no print worth keeping.
+
 ### 0.9.0 (2026-10-19)
 - **An edition can change the book's text** (`replace` in `--edition`: regex patterns and what each becomes, applied
   to each line), for editorial choices such as an old typesetting of dialogue; the set keeps the print.

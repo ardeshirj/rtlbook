@@ -80,6 +80,35 @@ def test_no_gap_between_a_mark_and_its_word():
     assert p.text == "«بیا اینجا،» و رفت،!"
 
 
+def test_quotes_only_where_they_pair():
+    from rtlbook.text import pair_quotes
+
+    # an old style: « again at the start of each line of a long quotation, which closes or never does
+    p = Paragraph(["«گفت که فردا", " ", 3, "«می آید و «کتاب» را", " ", "«می آورد"])
+    pair_quotes(p)
+    assert p.text == "گفت که فردا می آید و «کتاب» را می آورد" and 3 in p.segments
+    p = Paragraph(["او گفت: «بیا» و رفت» و نشست."])
+    pair_quotes(p)
+    assert p.text == "او گفت: «بیا» و رفت و نشست."
+
+
+def test_checked_text_starts_a_dialogue_turn_only_after_a_sentence():
+    body = [line(f"سطر پر شماره {i} ادامه دارد", 100) for i in range(20)]
+    pages = [page(1, *body, line("او با لکنت زبانش میگفت", 100), line("- بیا اینجا. علی گفت:", 100), line("- نه.", 700))]
+    texts = [p.text for p in build_paragraphs(pages, ocr_fixes=False)]
+    assert texts[-2].endswith("میگفت - بیا اینجا. علی گفت:") and texts[-1] == "- نه."
+    assert [p.text for p in build_paragraphs(pages)][-2] == "- بیا اینجا. علی گفت:"  # OCR'd: as before
+
+
+def test_checked_text_keeps_a_real_closing_quote():
+    lines = [line("او گفت که «بیا", 100), line("اینجا» و رفت.", 700)]
+    body = [line(f"سطر پر شماره {i} ادامه دارد", 100) for i in range(20)]
+    # a » alone in its paragraph: OCR's misread comma, but in checked text a real one
+    pages = [page(1, *body, line("بیا اینجا» و رفت.", 700))]
+    assert build_paragraphs(pages)[-1].text.endswith("بیا اینجا، و رفت.")
+    assert build_paragraphs(pages, ocr_fixes=False)[-1].text.endswith("بیا اینجا» و رفت.")
+
+
 def test_hamza_edge_cases_and_parens():
     fix = CommaFix(hamza=True)
     assert fix_misread_commas("نه جانمء‌چه شده", fix) == "نه جانم، چه شده"
