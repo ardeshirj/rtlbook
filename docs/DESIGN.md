@@ -218,7 +218,9 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
   (about 750 more pairs there: which compounds take a half-space is word knowledge, and spellings differ; a large
   word list joined 583 pairs, 261 of them wrongly). On the exported story, 11 in the whole book.
 - **Paragraphs:** rebuilt from line position (does the line reach the left margin?), sentence-final punctuation,
-  dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks.
+  dialogue markers (`Name- …`) and vertical gaps, and joined across page breaks. Lines join with a space, except a
+  verb broken after its prefix (a line ending in `می-` or `نمی-`): the dash goes and a half-space joins the two, as
+  the prefix is written inside a line.
 - Text is stored in logical order; the reader's bidi algorithm handles display. No RLM/LRM sprinkling.
 
 ### 4.8 Structure — built

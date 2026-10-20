@@ -48,6 +48,15 @@ def test_paragraph_continues_across_page_break():
     assert 2 in last.segments
 
 
+def test_verb_prefix_broken_at_line_end_joins_with_half_space():
+    body = [line(f"سطر پر شماره {i} ادامه دارد", 100) for i in range(20)]
+    pages = [page(1, *body, line("و هر روز به آنجا می-", 100), line("رفتم و او نمی-", 100)),
+             page(2, line("دانست که او آمده است.", 700))]
+    last = build_paragraphs(pages)[-1]
+    assert last.text.endswith("و هر روز به آنجا می\u200cرفتم و او نمی\u200cدانست که او آمده است.")
+    assert 2 in last.segments  # the page break inside the word keeps its marker
+
+
 def test_debris_lines_dropped():
     pages = [page(1, line("|", 100, 30.0), line("ی", 100, 26.8), line("متن اصلی.", 500))]
     assert [p.text for p in build_paragraphs(pages)] == ["متن اصلی."]

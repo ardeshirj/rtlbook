@@ -27,6 +27,8 @@ HAMZA_WORDS = frozenset(
     " انبیاء اشیاء احیاء امضاء استثناء اقتضاء اطباء ادباء حکماء خلفاء رؤساء وزراء اغنیاء"
     " فقراء سماء هواء دعاء بناء".split()
 )
+# A verb's prefix می / نمی with a dash at the line's end: the word goes on on the next line (a break, never punctuation)
+BROKEN_PREFIX = re.compile(r"(?<![\u0600-\u06FF\u200c])(ن?می)\s*[-–—ـ]$")
 FINAL_HAMZA = re.compile(r"([\u0600-\u06FF]*)ء(?=\s|[\u0600-\u06FF\u200c]|$)")
 
 
@@ -299,6 +301,9 @@ def build_paragraphs(
     ocr_fixes: the fixes for what OCR misreads (a comma read as » or ء, mirrored parentheses); off for checked text
     (convert --lines), where a » with no « before it is a real one. Its marks can be trusted too, so there a dialogue
     line starts a paragraph only after a sentence's end or a colon (a turn opened mid-sentence, at a line break, stays).
+
+    A line ending in می- or نمی- (the print breaking a verb after its prefix) joins the next without the dash, with a
+    half-space: the word made whole, as the prefix is written inside a line.
     """
     margins = _margins(pages)
     sparse = sparse_pages(pages)
@@ -351,7 +356,11 @@ def build_paragraphs(
                 cur = Paragraph(heading=is_heading, sparse=page_sparse)
                 paras.append(cur)
             elif cur.segments:
-                cur.segments.append(" ")
+                last = max(i for i, s in enumerate(cur.segments) if isinstance(s, str))  # the previous line's text
+                if m := BROKEN_PREFIX.search(cur.segments[last]):
+                    cur.segments[last] = cur.segments[last][:m.end(1)] + "\u200c"
+                else:
+                    cur.segments.append(" ")
             cur.segments.extend(pending_pages)
             pending_pages = []
             cur.segments.append(text)
