@@ -147,7 +147,9 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
    question mark ؟ and quotes « », a footnote asterisk where it's printed, a small hamza over ه only where printed
    (خانهٔ), no tanvin unless printed. Persian ی and ک for Arabic-style ي and ك; Persian digits (۱۲, not 12 or ١٢).
    A mark sits against its word, whatever gap the type leaves: no space before `.` `،` `؛` `:` `؟` `!` `»` or a dash
-   that breaks a word at the line's end (می-), none after `«`. A gap there is typesetting, not spelling.
+   that breaks a word at the line's end (می-), none after `«`, and a speech dash against the `:` or `«` before it
+   (`گفت:- نه`, `«- نه`). A gap there is typesetting, not spelling. A dash between words inside a line keeps the
+   print's spacing (`منیژه - اینهم`).
 4. **Can't use (`skip`)** when the image holds no print worth keeping: an ornament line, a speck read as a letter or
    digit, a stamp, a reader's notes or underlining. Nothing is typed, and the line is used nowhere.
 5. **Unsure (`unsure`)** when there is print worth keeping but not one line read for certain: a word that can't be
