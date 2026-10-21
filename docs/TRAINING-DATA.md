@@ -153,8 +153,10 @@ print wins: that's the very case OCR has to learn. Type exactly what is printed 
 4. **Can't use (`skip`)** when the image holds no print worth keeping: an ornament line, a speck read as a letter or
    digit, a stamp, a reader's notes or underlining. Nothing is typed, and the line is used nowhere.
 5. **Unsure (`unsure`)** when there is print worth keeping but not one line read for certain: a word that can't be
-   read for certain (type the best guess), or a crop that holds two lines or cuts a line (type the print it shows, in
-   reading order). An unsure line stays out of training and testing; a book built from the set keeps its text.
+   read for certain (type the best guess), including a letter whose dots or a stroke the print or the scan lost (type
+   the word as it was meant; a word printed clearly but wrongly is a misprint, kept as printed under rule 1), or a crop
+   that holds two lines or cuts a line (type the print it shows, in reading order). An unsure line stays out of
+   training and testing; a book built from the set keeps its text.
 
 A change to these rules that changes what a checked line would contain raises the version; `rtlbook lines` stamps it
 on new lines (`RULES` in `src/rtlbook/lines.py`), so lines checked under different rules can be told apart.
