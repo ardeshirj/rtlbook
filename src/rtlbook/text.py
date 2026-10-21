@@ -324,7 +324,7 @@ def build_paragraphs(
         prev_top = prev_bottom = None
         page_sparse = page.number in sparse
         first_on_page = True
-        for ln in page.lines:
+        for number, ln in enumerate(page.lines, 1):
             text = close_marks(fix_misread_commas(normalize_text(ln.text), comma_fix))
             if is_debris(ln, text) or (drop and drop.search(text)) or (ln.conf is not None and ln.conf < min_conf):
                 continue
@@ -353,7 +353,7 @@ def build_paragraphs(
                 or (pitch and prev_top is not None and ln.bbox[1] - prev_top > 2.2 * pitch)
             )
             if starts_new:
-                cur = Paragraph(heading=is_heading, sparse=page_sparse)
+                cur = Paragraph(heading=is_heading, sparse=page_sparse, id=ln.id or f"p{page.number:03d}-{number:02d}")
                 paras.append(cur)
             elif cur.segments:
                 last = max(i for i, s in enumerate(cur.segments) if isinstance(s, str))  # the previous line's text

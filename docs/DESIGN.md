@@ -249,6 +249,10 @@ The package says how the book was made (2026-10-16), the same facts as `report.j
 `rtlbook:` prefix: `rtlbook:version`, `rtlbook:document` (scan or exported), `rtlbook:lines-found-by` and
 `rtlbook:read-by`, readers' names with their versions. A copy that comes back to its maker, separated from its
 records, still tells which engine and readers made it. Reading apps don't show these; epubcheck accepts them.
+Every paragraph and heading has an id (2026-10-21), its first line's: for a book from checked lines (`--lines`) the
+set's line id (`p057-17`; a title an edition supplies, `p057-17-title`), else its page and its line on that page
+(`p057-03`). The same lines give the same ids on every rebuild, so a link, a reported mistake or a narration's
+timings can point at a paragraph and still find it after the text is corrected.
 
 ### 4.10 Validation — built
 - **epubcheck** on every build; any error fails `convert`.

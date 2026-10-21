@@ -73,10 +73,11 @@ def pages(folder: Path, pdf_path: Path, numbers: list[int], dpi: int = 300,
             sources["replaced"] += n
         if ln["id"] in titled:  # a chapter whose title isn't a usable line: the title, a heading just above the line
             x0, y0, x1, _ = ln["box"]
-            by_page[ln["page"]].append(Line(titled[ln["id"]], (x0, y0 - 2, x1, y0 - 1), CHECKED_CONF, True))
+            by_page[ln["page"]].append(Line(titled[ln["id"]], (x0, y0 - 2, x1, y0 - 1), CHECKED_CONF, True,
+                                            ln["id"] + "-title"))
             sources["titles"] += 1
         if text:
-            by_page[ln["page"]].append(Line(text, tuple(ln["box"]), CHECKED_CONF, ln["id"] in starts))
+            by_page[ln["page"]].append(Line(text, tuple(ln["box"]), CHECKED_CONF, ln["id"] in starts, ln["id"]))
     out = []
     for n in numbers:
         w, h = doc[n - 1].get_size()

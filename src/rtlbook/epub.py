@@ -72,7 +72,8 @@ def _para_html(p: Paragraph) -> str:
         else:
             out.append(escape(seg, quote=False))
     tag = "h2" if p.heading else "p"
-    return f"<{tag}>{''.join(out)}</{tag}>"
+    ident = f' id="{p.id}"' if p.id else ""  # what a link, a correction or a narration's timings point at
+    return f"<{tag}{ident}>{''.join(out)}</{tag}>"
 
 
 def write_epub(path: Path, meta: BookMeta, sections: list[Section]) -> None:

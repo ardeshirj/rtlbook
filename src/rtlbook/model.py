@@ -11,6 +11,7 @@ class Line:
     bbox: tuple[int, int, int, int]  # (x0, y0, x1, y1) in pixels of the rendered page, origin top-left
     conf: float | None = None
     heading: bool = False  # a chapter heading, said so by an edition (convert --edition); else found by layout
+    id: str | None = None  # the line's id in a training set (p057-17), for a book from checked lines
 
 
 @dataclass
@@ -44,6 +45,7 @@ class Paragraph:
     heading: bool = False
     confs: list[float] = field(default_factory=list)  # OCR confidence of its lines
     sparse: bool = False  # from a title/credits/contents page
+    id: str = ""  # its first line's: a set's line id, else page and line on it (p057-03); the EPUB's id for it
 
     @property
     def conf(self) -> float | None:

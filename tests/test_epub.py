@@ -22,3 +22,12 @@ def test_the_package_says_how_the_book_was_made(tmp_path):
 
     write_epub(tmp_path / "b.epub", BookMeta("کتاب", "نویسنده"), sections)
     assert "rtlbook:" not in opf(tmp_path / "b.epub")  # nothing said, no prefix declared
+
+
+def test_paragraphs_carry_their_ids(tmp_path):
+    sections = [Section("فصل یک", [Paragraph(["فصل یک"], heading=True, id="p009-01"), Paragraph(["من به خانه رفتم."], id="p009-02"),
+                                   Paragraph(["بدون نام."])])]
+    write_epub(tmp_path / "a.epub", BookMeta("کتاب", "نویسنده"), sections)
+    with zipfile.ZipFile(tmp_path / "a.epub") as z:
+        text = next(z.read(n).decode() for n in z.namelist() if "p009-02" in z.read(n).decode())
+    assert '<h2 id="p009-01">' in text and '<p id="p009-02">' in text and "<p>بدون نام.</p>" in text

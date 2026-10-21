@@ -38,6 +38,14 @@ def test_wrapped_lines_join_and_dialogue_splits():
     assert texts[2] == "علی- رسیدیم؟"
     assert texts[3] == "سارا با لبخند- نگران شدی؟"
     assert paras[0].segments[0] == 1  # page marker before first text
+    # each paragraph is named by its first line: page 1, lines 1, 3, 5 and 6
+    assert [p.id for p in paras[:4]] == ["p001-01", "p001-03", "p001-05", "p001-06"]
+
+
+def test_a_paragraph_from_checked_lines_is_named_by_its_set_line():
+    first, second = line("امروز صبح زود از خانه بیرون رفتم.", 600), line("هوا سرد بود.", 600)
+    first.id, second.id = "p057-16", "p057-17"
+    assert [p.id for p in build_paragraphs([page(57, first, second)], ocr_fixes=False)] == ["p057-16", "p057-17"]
 
 
 def test_paragraph_continues_across_page_break():
