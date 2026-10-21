@@ -39,6 +39,10 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.12.0 (2026-10-21)
+- **Every paragraph and heading in the EPUB has an id,** its first line's: a set's line id for a book from checked
+  lines (`p057-17`), else its page and line (`p057-03`). Stable across rebuilds, for links, corrections and timings.
+
 ### 0.11.1 (2026-10-21)
 - **A fine-tuned ParisaOCR model reads under its own name:** the export (`docker/parisaocr_onnx.py OUT_DIR MODEL
   NAME`) writes the name into the model file's metadata, and results (`report.json`, `rtlbook:read-by`, a
