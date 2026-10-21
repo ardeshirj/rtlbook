@@ -39,6 +39,11 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.12.1 (2026-10-21)
+- **A story's own running header is removed:** in a collection, the story's title printed over every other page of
+  that story was left in the text (too few of the book's pages to count as a header). A heading is never removed, and
+  a line that only mentions a header's words is kept.
+
 ### 0.12.0 (2026-10-21)
 - **Every paragraph and heading in the EPUB has an id,** its first line's: a set's line id for a book from checked
   lines (`p057-17`), else its page and line (`p057-03`). Stable across rebuilds, for links, corrections and timings.
