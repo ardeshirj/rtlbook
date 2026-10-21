@@ -61,21 +61,34 @@ class ParisaOCR:
     own clean-up of each word. The same text as ParisaOCR's reader on the scorecard's test lines, 2.7 times faster.
     Its confidence is put on Tesseract's scale, which convert's thresholds are tuned to (DESIGN.md §4.5)."""
 
-    NAME = "parisaocr fa-0.1 onnx"  # the model docker/Dockerfile's parisaocr stage exports
+    NAME = "parisaocr fa-0.1 onnx"  # the stock model, as docker/Dockerfile's parisaocr stage exports it
     HEIGHT, PAD, MARGIN = 96, 16, 128
     PLACEHOLDER = "\u00a6"  # what the model writes for ZWNJ (Kraken's bidi would drop a ZWNJ, kraken#809)
 
     def __init__(self, folder: Path | None = None):
         import onnxruntime as ort
 
-        folder = folder or Path(os.environ.get("RTLBOOK_MODELS", "/opt/models")) / "parisaocr"
+        folder = folder or self.folder()
         options = ort.SessionOptions()
         options.intra_op_num_threads = int(os.environ.get("OMP_THREAD_LIMIT", "0"))  # pages run side by side
         options.inter_op_num_threads = 1
         self._session = ort.InferenceSession(str(folder / "parisaocr.onnx"), options,
                                              providers=["CPUExecutionProvider"])
         self._chars = {int(k): v for k, v in json.loads((folder / "codec.json").read_text(encoding="utf-8")).items()}
-        self.name = self.NAME
+        self.name = self.model_name(folder)
+
+    @staticmethod
+    def folder() -> Path:
+        return Path(os.environ.get("RTLBOOK_MODELS", "/opt/models")) / "parisaocr"
+
+    @classmethod
+    def model_name(cls, folder: Path | None = None) -> str:
+        """The name of the model in the folder, from the model.json the export writes beside it; the stock model's
+        for a folder without one. Results carry it, so a fine-tuned model reads as another reader."""
+        try:
+            return json.loads(((folder or cls.folder()) / "model.json").read_text(encoding="utf-8"))["name"]
+        except (OSError, ValueError, KeyError):
+            return cls.NAME
 
     @staticmethod
     def tesseract_scale(conf: float) -> float:
@@ -243,7 +256,7 @@ def describe(setting: str, lang: str) -> dict[str, str]:
     """What found and read the lines for a reader setting (pipeline.reader_for), for report.json, without loading a
     model: names carry versions, so a changed model or Tesseract reads as another reader."""
     tesseract = f"{ocr.tesseract_version()} {lang}"
-    read = {"page": f"{tesseract}, whole pages", "tesseract": tesseract, "parisaocr": ParisaOCR.NAME}
+    read = {"page": f"{tesseract}, whole pages", "tesseract": tesseract, "parisaocr": ParisaOCR.model_name()}
     return {"lines_found_by": tesseract, "read_by": read.get(setting) or get(setting).name}
 
 

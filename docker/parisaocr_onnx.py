@@ -1,5 +1,7 @@
 """ParisaOCR's line recognizer (a Kraken model, PyTorch) as an ONNX file, for rtlbook's image (readers.ParisaOCR).
-Run by docker/Dockerfile's parisaocr stage: python parisaocr_onnx.py OUT_DIR; writes parisaocr.onnx and codec.json.
+Run by docker/Dockerfile's parisaocr stage: python parisaocr_onnx.py OUT_DIR [MODEL NAME]; writes parisaocr.onnx,
+codec.json and model.json (the name results will carry). MODEL is a fine-tuned Kraken model of ParisaOCR's design
+(the bundled one by default), NAME what to call it (e.g. "parisaocr fa-0.1+mine.1 onnx").
 
 The model was trained with every line padded on the right to 2560 columns (kraken#810), and its squeeze-and-
 excitation blocks average each channel over that whole width, so it reads well only when padded so. Computing those
@@ -18,13 +20,14 @@ import torch
 import torch.nn.functional as F
 
 FULL, SCALE, MARGIN = 2560, 4, 128  # padded width; SE blocks run at 1/4 of the input width; the margin rtlbook adds
+STOCK = "parisaocr fa-0.1 onnx"  # the bundled model's name: readers.ParisaOCR.NAME
 
 
-def load():
+def load(model: Path | None = None):
     from kraken.tasks import RecognitionTaskModel
     from parisaocr.cli import BUNDLED_MODEL
 
-    return RecognitionTaskModel.load_model(str(BUNDLED_MODEL)).net
+    return RecognitionTaskModel.load_model(str(model or BUNDLED_MODEL)).net
 
 
 def patched(nn_):
@@ -72,12 +75,12 @@ def patched(nn_):
     return Wrapped().eval()
 
 
-def main(out: Path):
+def main(out: Path, model: Path | None = None, name: str = STOCK):
     import numpy as np
     import onnxruntime as ort
 
     out.mkdir(parents=True, exist_ok=True)
-    net = load()
+    net = load(model)
     torch.manual_seed(0)
     x = torch.zeros(1, 3, 96, 1024)
     x[..., 40:880] = (torch.rand(1, 1, 96, 840) > 0.8).float()  # specks for a line: the check needs no book
@@ -87,8 +90,9 @@ def main(out: Path):
                                     "olens": {0: "n"}})
     codec = {int(v[0]): k for k, v in net.codec.c2l.items()}
     (out / "codec.json").write_text(json.dumps(codec, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    (out / "model.json").write_text(json.dumps({"name": name}) + "\n", encoding="utf-8")
 
-    ref = load().nn.eval()  # unchanged, padded to 2560 as trained
+    ref = load(model).nn.eval()  # unchanged, padded to 2560 as trained
     s = ort.InferenceSession(str(out / "parisaocr.onnx"), providers=["CPUExecutionProvider"])
     for n in (500, 1200, 2300):
         w = min(FULL, -(-(n + MARGIN) // 32) * 32)
@@ -104,4 +108,6 @@ def main(out: Path):
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]))
+    if len(sys.argv) not in (2, 4):
+        sys.exit("usage: parisaocr_onnx.py OUT_DIR [MODEL NAME]")
+    main(Path(sys.argv[1]), *((Path(sys.argv[2]), sys.argv[3]) if len(sys.argv) == 4 else ()))
