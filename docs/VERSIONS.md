@@ -39,6 +39,11 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.11.1 (2026-10-21)
+- **A fine-tuned ParisaOCR model reads under its own name:** the export (`docker/parisaocr_onnx.py OUT_DIR MODEL
+  NAME`) writes the name in a `model.json` beside the model, and results (`report.json`, `rtlbook:read-by`, a
+  scorecard) carry it; before, any model in `RTLBOOK_MODELS` was named as the stock one.
+
 ### 0.11.0 (2026-10-20)
 - **A verb broken at a line's end is whole again in the EPUB:** a line ending in `می-` or `نمی-` (the print breaking
   a verb after its prefix) joins the next line without the dash, with a half-space, instead of keeping the dash and
