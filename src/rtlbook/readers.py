@@ -75,20 +75,27 @@ class ParisaOCR:
         self._session = ort.InferenceSession(str(folder / "parisaocr.onnx"), options,
                                              providers=["CPUExecutionProvider"])
         self._chars = {int(k): v for k, v in json.loads((folder / "codec.json").read_text(encoding="utf-8")).items()}
-        self.name = self.model_name(folder)
+        self.name = self._named(self._session)
 
     @staticmethod
     def folder() -> Path:
         return Path(os.environ.get("RTLBOOK_MODELS", "/opt/models")) / "parisaocr"
 
     @classmethod
+    def _named(cls, session) -> str:
+        """The name the model file carries (the export writes it in the ONNX file's metadata); the stock model's for
+        a file without one. Results carry it, so a fine-tuned model reads as another reader."""
+        return session.get_modelmeta().custom_metadata_map.get("name") or cls.NAME
+
+    @classmethod
     def model_name(cls, folder: Path | None = None) -> str:
-        """The name of the model in the folder, from the model.json the export writes beside it; the stock model's
-        for a folder without one. Results carry it, so a fine-tuned model reads as another reader."""
-        try:
-            return json.loads(((folder or cls.folder()) / "model.json").read_text(encoding="utf-8"))["name"]
-        except (OSError, ValueError, KeyError):
+        """The name of the model in the folder, asked of the file without reading anything (0.1 s)."""
+        import onnxruntime as ort
+
+        model = (folder or cls.folder()) / "parisaocr.onnx"
+        if not model.exists():
             return cls.NAME
+        return cls._named(ort.InferenceSession(str(model), providers=["CPUExecutionProvider"]))
 
     @staticmethod
     def tesseract_scale(conf: float) -> float:

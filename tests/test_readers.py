@@ -67,7 +67,10 @@ def test_describe_names_what_found_and_read_the_lines():
     assert describe("tesseract", "fas")["read_by"] == d["lines_found_by"]
 
 
-def test_a_model_folder_names_its_model(tmp_path):
-    assert ParisaOCR.model_name(tmp_path) == ParisaOCR.NAME  # no model.json: the stock model
-    (tmp_path / "model.json").write_text('{"name": "parisaocr fa-0.1+test.1 onnx"}', encoding="utf-8")
-    assert ParisaOCR.model_name(tmp_path) == "parisaocr fa-0.1+test.1 onnx"
+def test_a_model_is_named_by_its_file(tmp_path):
+    assert ParisaOCR.model_name(tmp_path) == ParisaOCR.NAME  # no model there: the stock model's name
+
+
+@pytest.mark.skipif(not MODEL.exists(), reason="ParisaOCR's model is in rtlbook's image")
+def test_the_reader_carries_its_models_name():
+    assert ParisaOCR().name == ParisaOCR.model_name()

@@ -150,9 +150,10 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
     placeholder for ZWNJ, display order to reading order with Kraken's bidi algorithm, copied as `rtlbook.bidi`, a
     line with more Latin than Arabic-script letters left to right, its clean-up of each word). The same text as
     ParisaOCR's own reader on all 118 test lines, and the same confidences.
-  - *Its name* (2026-10-21) comes from a `model.json` the export writes beside the model, so a fine-tuned model
+  - *Its name* (2026-10-21) is in the ONNX file's metadata, written by the export, so a fine-tuned model
     exported the same way (`parisaocr_onnx.py OUT_DIR MODEL NAME`, read from `RTLBOOK_MODELS`) is named as itself in
-    every result, `rtlbook:read-by` included; a folder without one is the stock model, `parisaocr fa-0.1 onnx`.
+    every result, `rtlbook:read-by` included, and keeps it wherever the file goes; a file without one is the stock
+    model, `parisaocr fa-0.1 onnx`.
   - *The padding, computed once:* the model was trained on lines padded on the right to 2560 columns, and its five
     squeeze-and-excitation blocks average each channel over that whole width; with less padding it reads badly
     (2048 columns: 0.68% → 18% letters wrong on 531 checked training lines). Lines are 1000–1500 columns wide at 96

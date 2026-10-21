@@ -1,7 +1,7 @@
 """ParisaOCR's line recognizer (a Kraken model, PyTorch) as an ONNX file, for rtlbook's image (readers.ParisaOCR).
 Run by docker/Dockerfile's parisaocr stage: python parisaocr_onnx.py OUT_DIR [MODEL NAME]; writes parisaocr.onnx,
-codec.json and model.json (the name results will carry). MODEL is a fine-tuned Kraken model of ParisaOCR's design
-(the bundled one by default), NAME what to call it (e.g. "parisaocr fa-0.1+mine.1 onnx").
+with NAME in its metadata (the name results will carry), and codec.json. MODEL is a fine-tuned Kraken model of
+ParisaOCR's design (the bundled one by default), NAME what to call it (e.g. "parisaocr fa-0.1+mine.1 onnx").
 
 The model was trained with every line padded on the right to 2560 columns (kraken#810), and its squeeze-and-
 excitation blocks average each channel over that whole width, so it reads well only when padded so. Computing those
@@ -90,7 +90,11 @@ def main(out: Path, model: Path | None = None, name: str = STOCK):
                                     "olens": {0: "n"}})
     codec = {int(v[0]): k for k, v in net.codec.c2l.items()}
     (out / "codec.json").write_text(json.dumps(codec, ensure_ascii=False, sort_keys=True), encoding="utf-8")
-    (out / "model.json").write_text(json.dumps({"name": name}) + "\n", encoding="utf-8")
+    import onnx
+
+    m = onnx.load(out / "parisaocr.onnx")
+    onnx.helper.set_model_props(m, {"name": name})
+    onnx.save(m, out / "parisaocr.onnx")
 
     ref = load(model).nn.eval()  # unchanged, padded to 2560 as trained
     s = ort.InferenceSession(str(out / "parisaocr.onnx"), providers=["CPUExecutionProvider"])
