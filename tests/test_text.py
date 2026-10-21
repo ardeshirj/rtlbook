@@ -333,6 +333,46 @@ def test_running_header_variants_are_removed():
     assert "کتابخانه" not in " ".join(p.text for p in build_paragraphs(pages))
 
 
+def test_a_storys_own_running_header_is_removed_but_not_its_title():
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    pages = []
+    for n in range(1, 31):  # a story's title over every other page of its 8 (3 of the book's 30 pages: 10%)
+        top = [Line("داستان دوم", (400, 40, 600, 80), 90.0, heading=True)] if n == 10 else \
+              [Line("داستان دوم", (400, 40, 600, 80), 90.0)] if n in (12, 14, 16) else \
+              [Line("سطر بالای صفحه", (300, 40, 700, 80), 90.0)] if n in (3, 15, 28) else []  # repeated, not regularly
+        pages.append(Page(n, "ocr", width=1000, height=1400,
+                          lines=top + [Line(body, (100, 300 + 60 * i, 900, 340 + 60 * i), 90.0) for i in range(10)]))
+    paras = build_paragraphs(pages)
+    text = " ".join(p.text for p in paras)
+    assert [p.text for p in paras if p.heading] == ["داستان دوم"]  # the title stays, its header goes
+    assert text.count("داستان دوم") == 1
+    assert text.count("سطر بالای صفحه") == 3  # three pages far apart: text, not a header
+
+
+def test_a_short_storys_title_over_two_pages_is_removed():
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    pages = []
+    for n in range(1, 31):
+        top = [Line("داستان کوتاه", (400, 40, 600, 80), 90.0, heading=n == 10)] if n in (10, 12, 14) else []
+        pages.append(Page(n, "ocr", width=1000, height=1400,
+                          lines=top + [Line(body, (100, 300 + 60 * i, 900, 340 + 60 * i), 90.0) for i in range(10)]))
+    text = " ".join(p.text for p in build_paragraphs(pages))
+    assert text.count("داستان کوتاه") == 1  # the title on page 10; its header on 12 and 14 gone
+
+
+def test_a_line_that_mentions_a_header_is_kept():
+    body = "این سطری است که تا انتهای خط ادامه دارد و جمله هنوز تمام نشده"
+    pages = []
+    for n in range(1, 11):
+        lines = [Line("داستان دوم", (400, 40, 600, 80), 90.0)]
+        if n == 5:  # a line of the story at the top of the page, naming the story's title among its words
+            lines.append(Line("او گفت که داستان دوم را دیروز تا نیمه خوانده بود و باز هم", (100, 120, 900, 160), 90.0))
+        lines += [Line(body, (100, 300 + 60 * i, 900, 340 + 60 * i), 90.0) for i in range(10)]
+        pages.append(Page(n, "ocr", width=1000, height=1400, lines=lines))
+    text = " ".join(p.text for p in build_paragraphs(pages))
+    assert "دیروز تا نیمه خوانده" in text and text.count("داستان دوم") == 1
+
+
 def test_title_page_labels_and_pen_names():
     from rtlbook.frontmatter import guess_title_author
 

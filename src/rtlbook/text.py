@@ -225,25 +225,35 @@ def _in_margin(ln: Line, page: Page) -> bool:
 
 def _is_running_header(key: str, headers: set[str]) -> bool:
     """A margin line that is a running header, allowing for OCR variants: the same text read slightly
-    differently ("رکسائنا"), or only part of it ("رکسانا- کتابخانه مجازی" of "تک سایت رکسانا- …")."""
+    differently ("رکسائنا"), or only part of it ("رکسانا- کتابخانه مجازی" of "تک سایت رکسانا- …"). A line that only
+    mentions a header among words of its own (a story's title in its text) isn't one: the shorter must be at least half
+    the longer."""
     if not headers or len(key) < 3:
         return False
     if key in headers:
         return True
+    close = lambda a, b: a in b and len(a) * 2 >= len(b)
     return len(key) >= 6 and any(
-        key in h or h in key or difflib.SequenceMatcher(None, key, h, autojunk=False).ratio() >= 0.8 for h in headers
+        close(key, h) or close(h, key) or difflib.SequenceMatcher(None, key, h, autojunk=False).ratio() >= 0.8
+        for h in headers
     )
 
 
 def running_headers(pages: list[Page], min_share: float = 0.2) -> set[str]:
-    """Keys of lines repeated in the top/bottom zone of many pages (site banners, book titles)."""
+    """Keys of lines repeated in the top/bottom zone of many pages (site banners, book titles), or regularly on a
+    stretch of them: a story's title over every other page of that story, in a collection of stories, is on far fewer
+    than min_share of the book's pages; on two pages, for a short story, when it is a chapter's title. A heading (a
+    chapter's title, said so by an edition) isn't counted itself."""
     seen: dict[str, set[int]] = {}
+    titles = {_margin_key(ln.text) for p in pages for ln in p.lines if ln.heading}
     for p in pages:
         for ln in p.lines:
-            if _in_margin(ln, p) and len(k := _margin_key(ln.text)) >= 3:
+            if not ln.heading and _in_margin(ln, p) and len(k := _margin_key(ln.text)) >= 3:
                 seen.setdefault(k, set()).add(p.number)
     need = max(3, min_share * len(pages))
-    return {k for k, nums in seen.items() if len(nums) >= need}
+    # at least every few pages, on 3 pages or more, or 2 for a chapter's own title
+    regular = lambda k, nums: len(nums) >= (2 if k in titles else 3) and max(nums) - min(nums) <= 2.5 * (len(nums) - 1)
+    return {k for k, nums in seen.items() if len(nums) >= need or regular(k, nums)}
 
 
 def _layout_heading(ln: Line, text: str, gap: float | None, line_h: float, page: Page,
@@ -328,7 +338,7 @@ def build_paragraphs(
             text = close_marks(fix_misread_commas(normalize_text(ln.text), comma_fix))
             if is_debris(ln, text) or (drop and drop.search(text)) or (ln.conf is not None and ln.conf < min_conf):
                 continue
-            if _in_margin(ln, page) and (
+            if not ln.heading and _in_margin(ln, page) and (
                 _is_running_header(_margin_key(ln.text), headers) or (ln.conf is not None and ln.conf < MARGIN_MIN_CONF)
             ):
                 continue

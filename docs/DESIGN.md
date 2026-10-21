@@ -119,7 +119,11 @@ Grayscale and **Otsu binarization** (essential for tinted page backgrounds), opt
 - Lines that sit **side by side are read as one row**, rows top to bottom, each row right to left, so a couplet's
   two half-lines stay together.
 - **Running headers, footers and watermarks** repeated in the top/bottom 15% of many pages are removed, including
-  OCR variants of them (a misread letter, or only part of the header).
+  OCR variants of them (a misread letter, or only part of the header). Also a header that recurs regularly on a
+  stretch of pages (2026-10-21): in a collection, each story's title over every other page of that story, on 3 pages or
+  more, or 2 when it is the chapter's own title; a heading is never removed, and a line that only mentions a header
+  among words of its own (a story's title in its text) is kept. In one collection of stories, 32 such headers had been
+  left in the text, in the middle of paragraphs.
 
 ### 4.5 OCR engines and accuracy
 - **Built:** Tesseract 5 with `tessdata_best` (`fas`). About 1–2 s per page per core for an exported PDF.
