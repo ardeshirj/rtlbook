@@ -188,9 +188,9 @@ release, and what changed in each version: [docs/VERSIONS.md](docs/VERSIONS.md).
 
 ## License
 
-The code is under the [Apache License 2.0](LICENSE); credits for what it builds on are in [NOTICE](NOTICE). The name
-RTLBook and its logo are not part of the license: all rights reserved. Please don't use them for your own product or fork.
-[BRAND.md](BRAND.md) says how they may be used.
+The code is under the [Apache License 2.0](LICENSE); credits for what it builds on are in [NOTICE](NOTICE). The names
+RTLBook and FarsiEPUB and their logos are not part of the license: all rights reserved. RTLBook is by FarsiEPUB. Please
+don't use the names or logos for your own product or fork. [BRAND.md](BRAND.md) says how they may be used.
 
 The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
 license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, ParisaOCR's model,
