@@ -17,5 +17,7 @@ It includes:
   ParisaOCR (https://github.com/givia/ParisaOCR), Copyright 2026 Ali Javadi, licensed under the Apache License,
   Version 2.0.
 
+The Parastoo font (copyright 2015 Saber Rastikerdar, SIL Open Font License 1.1) is embedded in every EPUB it makes.
+
 rtlbook's Docker image also contains ParisaOCR's recognition model as an ONNX file, made at build time
 (docker/parisaocr_onnx.py), with ParisaOCR's LICENSE and NOTICE beside it.
