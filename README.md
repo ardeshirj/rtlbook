@@ -188,7 +188,8 @@ release, and what changed in each version: [docs/VERSIONS.md](docs/VERSIONS.md).
 
 ## License
 
-[Apache-2.0](LICENSE). The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
+[Apache-2.0](LICENSE) (credits for the code it builds on: [NOTICE](NOTICE)). The name RTLBook and its logo are not part of
+the license: all rights reserved. Please don't use them for your own product or fork. The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
 license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, ParisaOCR's model,
 ONNX Runtime, epubcheck), the Parastoo font and Lilak's word list keep their own licenses; none of them is stored in
 this repository. `src/rtlbook/bidi/` is Kraken's code with tables from Unicode's data, and `readers.py` follows
