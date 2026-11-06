@@ -5,7 +5,8 @@
 
 <p align="center">
   The open engine that makes right-to-left PDFs into books.<br>
-  Reflowable EPUB 3 for reading apps built on <a href="https://readium.org/">Readium</a>, Farsi first.
+  Reflowable EPUB 3, Farsi first. Made for and tested in readers built on <a href="https://readium.org/">Readium</a>,
+  such as <a href="https://thorium.edrlab.org/">Thorium</a>.
 </p>
 
 <p align="center">
