@@ -7,7 +7,9 @@ section 6). This file says what those are and how they may be used.
 - **The names** RTLBook, written as one word with that capitalisation ("RTL" then "Book"), and FarsiEPUB, whose product RTLBook is ("RTLBook, by FarsiEPUB").
 - **The logo:** an eight-pointed star of two squares, one turned 45°, with a smaller star inside and one saffron dot at its
   centre, in oxblood, and the name beside it ("RTL" in regular, "Book" in bold, in ink).
-
+- **The logo, credited:** the logo with "by FarsiEPUB" in words under the name, in one fixed file
+  (`docs/brand/rtlbook-logo-by.svg`, and `rtlbook-logo-by-dark.svg` for a dark page), shown at the top of the README. It
+  is a copy of FarsiEPUB's brand file, never redrawn, and FarsiEPUB's own logo is not shown beside it.
 - **FarsiEPUB's logo:** its star, with one saffron dot, and the wordmark "FarsiEPUB".
 
 ## Using them

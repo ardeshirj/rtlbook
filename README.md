@@ -1,17 +1,40 @@
-# rtlbook
+<p align="center">
+  <img src="docs/brand/rtlbook-logo-by.svg#gh-light-mode-only" alt="RTLBook, by FarsiEPUB" height="72">
+  <img src="docs/brand/rtlbook-logo-by-dark.svg#gh-dark-mode-only" alt="RTLBook, by FarsiEPUB" height="72">
+</p>
 
-[![CI](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml)
+<p align="center">
+  The open engine that makes right-to-left PDFs into books.<br>
+  Reflowable EPUB 3 for reading apps built on <a href="https://readium.org/">Readium</a>, Farsi first.
+</p>
 
-Convert PDF books in right-to-left languages (Persian first) into reflowable EPUB 3 for reading apps built on
-[Readium](https://readium.org/), such as [Thorium Reader](https://thorium.edrlab.org/). It supports PDFs exported
-from a word processor. Scanned books are read with ParisaOCR's model and work well on the one scan measured so far;
-more kinds of print are on the [roadmap](docs/ROADMAP.md).
-How it works: [docs/DESIGN.md](docs/DESIGN.md).
+<p align="center">
+  <a href="https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml"><img src="https://github.com/ardeshirj/rtlbook/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+</p>
+
+## Why it exists
+
+Most Farsi books on a screen are PDFs: pages fixed at the printed size, too small to read on a phone or an e-reader, and
+their stored text is rarely usable (wrong character codes, words in reversed order, missing spaces), so they can't be
+searched or reflowed either.
+
+RTLBook reads every page of a PDF and builds the book again as text: words that join, lines that run right to left,
+chapters you can jump to. It handles PDFs exported from a word processor and scanned books; scans are read with
+ParisaOCR's model and work well on the few measured so far. More kinds of print, and Arabic, Urdu and Hebrew, are on the
+[roadmap](docs/ROADMAP.md). How it works: [docs/DESIGN.md](docs/DESIGN.md).
+
+It is part of [FarsiEPUB](https://farsiepub.org/), which converts Farsi PDFs to EPUB online, free, and keeps a library
+of public-domain Farsi classics; RTLBook makes every one of those books. This repository is for developers and publishers
+who want to run the conversion themselves.
 
 > **Note:** This project was designed and written by **Claude Opus 5.5** (Anthropic) in
 > [Claude Code](https://claude.com/claude-code). See [Credits](#credits).
 
 ## Quick start (Docker)
+
+You need [Docker](https://docs.docker.com/get-docker/) and a Farsi PDF. Build the image once, put the PDF in `input/`,
+convert it, and open `output/<name>.epub` in [Thorium Reader](https://thorium.edrlab.org/) (Windows, macOS, Linux). To try
+it without installing anything, convert the PDF on [FarsiEPUB](https://farsiepub.org/) instead.
 
 ```bash
 # Build the Docker image (make build; `make` lists the other commands)
@@ -54,7 +77,7 @@ Not yet done or known to be weak:
   words. Front pages (catalogue records, site banners) can come out as junk text.
 - **Titles and authors** are read from the title page when it has them in text; check what `convert`
   reports and pass `--title`/`--author` when it's wrong or missing.
-- **No web app yet.** The CLI is the only interface.
+- **No interface but the CLI here.** FarsiEPUB runs the same engine as a free converter online.
 
 See [DESIGN.md](docs/DESIGN.md) §11–13 for the dated decisions and measurements, and
 [ROADMAP.md](docs/ROADMAP.md) for what's next.
@@ -107,7 +130,7 @@ What `convert` does automatically:
 - **Reads a scan's lines with ParisaOCR's model** (Tesseract finds the lines); an exported PDF's pages with Tesseract.
 - **Splits words run together** in scans of old type, where the gap after a letter that doesn't join the next is a hair wide (`ورفتم` → `و رفتم`), using word lists; `report.json` counts them (`joined_words_split`).
 - **Puts half-spaces where today's spelling has them**, before the plural `ها`, `تر`/`ترین` and a few endings, and after the prefixes `می`/`نمی` and `بی` (`می رفت` → `می‌رفت`), so the word doesn't break across lines and search finds it; `report.json` counts them (`half_spaces_made`).
-- **Records how the book was made** in the EPUB's metadata and `report.json` (`engine`): rtlbook's version, scan or exported, and which readers found and read the lines.
+- **Records how the book was made** in the EPUB's metadata and `report.json` (`engine`): RTLBook's version, scan or exported, and which readers found and read the lines.
 - **Rebuilds paragraphs**, including dialogue lines (`سارا- …`, `علی : …`), and joins them across page breaks.
 - **Detects chapters** even when OCR misreads the heading (`نصل دو از دهم` → `فصل دوازدهم`). Books without chapters get ~20-page sections.
 - **Builds a valid EPUB 3** (epubcheck) with RTL page direction, the Parastoo font, cover, and print page list.
@@ -193,7 +216,7 @@ RTLBook and FarsiEPUB and their logos are not part of the license: all rights re
 don't use the names or logos for your own product or fork. [BRAND.md](BRAND.md) says how they may be used.
 
 The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
-license (see the README in each folder). The tools rtlbook runs (Tesseract and its models, ParisaOCR's model,
+license (see the README in each folder). The tools RTLBook runs (Tesseract and its models, ParisaOCR's model,
 ONNX Runtime, epubcheck), the Parastoo font and Lilak's word list keep their own licenses; none of them is stored in
 this repository. `src/rtlbook/bidi/` is Kraken's code with tables from Unicode's data, and `readers.py` follows
 ParisaOCR's code for its model: see [NOTICE](NOTICE).

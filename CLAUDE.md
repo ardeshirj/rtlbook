@@ -23,7 +23,7 @@ and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versio
   `DESIGN.md` (engine decisions) or `LESSONS.md` (practical lessons), with the numbers, and never cite those folders
   in the docs: a reader can't open them.
 - `DESIGN.md` is about the engine only, and only what is built (or dropped). Plans go in `ROADMAP.md`; when an item
-  ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no private service or library plans, no admin or visitor details; naming FarsiEPUB is fine (RTLBook is its product, 2026-11-04).
+  ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no private service or library plans, no admin or visitor details; naming and linking FarsiEPUB is fine (RTLBook is its product, 2026-11-04; links since 2026-11-06).
 - Prefer simple, general rules over per-PDF special cases; every page is OCR'd (the PDF's own text layer isn't used).
 - Small commits with a clear message explaining why.
 - **Versions:** see `docs/VERSIONS.md` (when to bump, the three files, `make bump` / `make tag`). Add each version
