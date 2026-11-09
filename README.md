@@ -36,8 +36,13 @@ who want to run the conversion themselves.
 You need [Docker](https://docs.docker.com/get-docker/) and a Farsi PDF. Build the image once, put the PDF in `input/`,
 convert it, and open `output/<name>.epub` in [Thorium Reader](https://thorium.edrlab.org/) (Windows, macOS, Linux). To try
 it without installing anything, convert the PDF on [FarsiEPUB](https://farsiepub.org/) instead.
+No Farsi PDF at hand? Save any Farsi document as a PDF from a word processor: that is the kind RTLBook reads best.
 
 ```bash
+# Get the code; every command below runs from this folder
+git clone https://github.com/ardeshirj/rtlbook.git
+cd rtlbook
+
 # Build the Docker image (make build; `make` lists the other commands)
 docker build -f docker/Dockerfile -t rtlbook:dev .
 
