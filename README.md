@@ -4,8 +4,7 @@
 </p>
 
 <p align="center">
-  The open engine that makes right-to-left PDFs into books.<br>
-  Reflowable EPUB 3, Farsi first.
+  The engine that turns RTL PDFs into EPUB books, Farsi first.
 </p>
 
 <p align="center">
