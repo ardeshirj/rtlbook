@@ -1,0 +1,40 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": true,
+    "excludedCommands": [
+      "git push",
+      "git push *",
+      "git fetch *",
+      "git pull *",
+      "gh *"
+    ],
+    "network": {
+      "allowUnixSockets": [
+        "~/.docker/run/docker.sock",
+        "/var/run/docker.sock"
+      ],
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "*.githubusercontent.com",
+        "codeload.github.com",
+        "localhost"
+      ]
+    },
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.aws",
+        "~/.gnupg",
+        "~/.config/gh"
+      ]
+    }
+  },
+  "permissions": {
+    "ask": [
+      "Bash(git push*)"
+    ]
+  }
+}

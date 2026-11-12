@@ -10,6 +10,8 @@ and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versio
   lists the rest: `core`, `core-amd64`, `test`); use the `./rtlbook`
   wrapper (it only shares this repository folder with the container, so inputs go in `input/`: `input/public-domain/`
   for scans of public-domain editions, `input/test/` for the rest; records in `input/BOOKS.md`).
+- **Claude's sandbox** (2026-11-11): on, from the committed `.claude/settings.json` (Docker's socket, the hosts allowed, key folders denied, `git push` asks). A repository's file cannot open paths in the home folder, so on a new Mac add once to `~/.claude/settings.json` (merged with what is there; the repositories side by side in `~/Github/`):
+  `{"sandbox": {"filesystem": {"allowRead": ["~/.docker", "~/Github/rtlbook"], "allowWrite": ["~/.docker/buildx", "~/.docker/contexts", "~/Github/rtlbook"]}}}`
 - Tests: `docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests`
   (with the whole repo mounted, tests that need PDFs in `input/` also run; otherwise they're skipped).
 
