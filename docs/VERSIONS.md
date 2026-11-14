@@ -36,8 +36,8 @@ git push origin main v0.6.0        # CI's Release job makes the GitHub Release, 
 ```
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
-A pushed `vX.Y.Z` tag starts the Release workflow (`.github/workflows/release.yml`, since 2026-11-14): it checks
-the tag is `pyproject.toml`'s version and makes the GitHub Release with `tools/release github`, which refuses a
+A pushed `vX.Y.Z` tag starts CI's Release job (`.github/workflows/ci.yml`, since 2026-11-14): after the tests, it
+checks the tag is `pyproject.toml`'s version and makes the GitHub Release with `tools/release github`, which refuses a
 version with no entry below. If it fails, fix the entry, then `make github-release` (needs gh) does the same by hand.
 
 ## History
