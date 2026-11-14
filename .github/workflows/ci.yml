@@ -1,6 +1,6 @@
 # On every push and pull request: no book files in git, then build the image and run the tests in it. On a pushed
 # version tag (vX.Y.Z), once both pass, the release job: the image published as ghcr.io/<owner>/rtlbook:vX.Y.Z, then
-# the GitHub Release, its notes the version's entry in docs/VERSIONS.md and the image's digest.
+# the GitHub Release, its notes the version's entry in CHANGELOG.md and the image's digest.
 # The tests use only what's in the repository (tests/data: public-domain pages and their OCR results); tests that
 # need real books in input/ skip themselves here.
 name: CI
@@ -64,7 +64,7 @@ jobs:
   release:
     # On a version tag only, after the checks and tests: the engine as an image for anyone to pull instead of building
     # it (the core target, linux/amd64, tagged as the git tag, never replaced), then the GitHub Release, its notes the
-    # version's entry in docs/VERSIONS.md (tools/release github, as make github-release by hand) and the image's digest.
+    # version's entry in CHANGELOG.md (tools/release github, as make github-release by hand) and the image's digest.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [no-book-files, test]
     runs-on: ubuntu-24.04

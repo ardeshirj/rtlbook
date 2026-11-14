@@ -1,52 +1,10 @@
-# Versions
+# Changelog
 
-rtlbook has one version number, which `rtlbook version` prints. Each release is a git tag named `vX.Y.Z`.
+rtlbook's versions, newest first. A version is a git tag `vX.Y.Z`, the number `rtlbook version` prints; pushing one
+publishes the engine's image and puts the release on GitHub's Releases page. A version's section here is its release's
+notes. How versions are numbered and released is at the end, under "Versions and releases".
 
-## When the version changes
-
-- **A new middle number** (0.5.0 → 0.6.0) for a change in what rtlbook produces or how it's used: a new kind of
-  book supported, a change to the EPUB, a command or option added, removed or renamed.
-- **A new last number** (0.5.0 → 0.5.1) for a fix that doesn't change any of that.
-- **No change** for docs and experiments.
-
-While the version is below 1.0, any release may break how rtlbook is used; the history below says how.
-
-## Where the number is
-
-Three files carry it, and they must agree:
-
-| File | What it's for |
-|---|---|
-| `pyproject.toml` | The package version, and the one the tag is named from |
-| `src/rtlbook/__init__.py` | `__version__`, what `rtlbook version` prints |
-| `uv.lock` | The lock file's entry for rtlbook itself; uv rewrites it on the next lock if it disagrees |
-
-`make bump` sets all three, and `make tag` refuses to tag when they differ. Reading the version from the installed
-package instead would leave one place to edit, but uv runs only inside the Docker build, so three copies set by one
-command are simpler.
-
-## How to release
-
-```bash
-make bump V=0.6.0                  # set the version in the three files
-# add the version to the history below
-git commit -am "…"                 # commit both
-make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
-git push origin main v0.6.0        # CI publishes the image, then makes the GitHub Release
-```
-
-`make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
-A pushed `vX.Y.Z` tag runs CI (`.github/workflows/ci.yml`, since 2026-11-14) and, once the checks and tests pass: the
-`release` job checks the tag is `pyproject.toml`'s version and publishes the image as `ghcr.io/ardeshirj/rtlbook:vX.Y.Z`
-(the `core` target, linux/amd64; it stops if that tag is on the registry already, since a version's image never
-changes); then it makes the GitHub Release with `tools/release github`, its notes this file's entry and
-the image's `name:tag@digest`. It refuses a version with no entry below: fix the entry, then `make github-release`
-(needs gh) does the same by hand, without the image line. The first push of the image makes a private package: set it
-to public once, in the package's settings on GitHub.
-
-## History
-
-### 0.12.2 (2026-11-14)
+## 0.12.2 (2026-11-14)
 - **A Persian comma read as a Latin `,` is a Persian comma again:** in some typed books OCR reads `،` as `,`; a `,`
   with Persian before it and Persian or the line's end after it becomes `،` (numbers such as `۱,۰۰۰` and Latin text
   keep theirs; off for checked lines). On an exported story, 51 of 85 commas were Latin; 2 are left, after a full stop.
@@ -54,26 +12,26 @@ to public once, in the package's settings on GitHub.
   with the release, to pull instead of building; it carries the Tesseract models' license too (README, "The
   published image"). 0.12.2 was released again for it, the same day, from the later commit.
 
-### 0.12.1 (2026-10-21)
+## 0.12.1 (2026-10-21)
 - **A story's own running header is removed:** in a collection, the story's title printed over every other page of
   that story was left in the text (too few of the book's pages to count as a header). A heading is never removed, and
   a line that only mentions a header's words is kept.
 
-### 0.12.0 (2026-10-21)
+## 0.12.0 (2026-10-21)
 - **Every paragraph and heading in the EPUB has an id,** its first line's: a set's line id for a book from checked
   lines (`p057-17`), else its page and line (`p057-03`). Stable across rebuilds, for links, corrections and timings.
 
-### 0.11.1 (2026-10-21)
+## 0.11.1 (2026-10-21)
 - **A fine-tuned ParisaOCR model reads under its own name:** the export (`docker/parisaocr_onnx.py OUT_DIR MODEL
   NAME`) writes the name into the model file's metadata, and results (`report.json`, `rtlbook:read-by`, a
   scorecard) carry it; before, any model in `RTLBOOK_MODELS` was named as the stock one.
 
-### 0.11.0 (2026-10-20)
+## 0.11.0 (2026-10-20)
 - **A verb broken at a line's end is whole again in the EPUB:** a line ending in `می-` or `نمی-` (the print breaking
   a verb after its prefix) joins the next line without the dash, with a half-space, instead of keeping the dash and
   a space.
 
-### 0.10.0 (2026-10-19)
+## 0.10.0 (2026-10-19)
 - **Books from checked lines trust their text:** no OCR clean-ups (a real closing » was turned into a comma when its
   « was in an earlier paragraph), and a dialogue line opened mid-sentence at a line break no longer starts a
   paragraph.
@@ -82,14 +40,14 @@ to public once, in the package's settings on GitHub.
 - **Training data:** rules 4 and 5 reworded (no new version): a crop with two lines or a cut line that holds print
   is unsure, with the print typed, so a book keeps it; can't use is for no print worth keeping.
 
-### 0.9.0 (2026-10-19)
+## 0.9.0 (2026-10-19)
 - **An edition can change the book's text** (`replace` in `--edition`: regex patterns and what each becomes, applied
   to each line), for editorial choices such as an old typesetting of dialogue; the set keeps the print.
   `report.json` counts the changes (`lines_from_set`: `replaced`).
 - **No space between a comma and a closing mark:** 0.8.0's comma fix added one back where a paragraph has quotes
   (`،»` became `، »`).
 
-### 0.8.0 (2026-10-19)
+## 0.8.0 (2026-10-19)
 - **`convert --lines SET` builds a book from a checked set of lines** instead of OCR: each line keeps its box and
   takes the set's text (checked, else agreed, else an unsure best guess; skipped lines left out), and everything
   after reading runs as for OCR. `--edition` names the lines that start chapters and the lines to leave out;
@@ -103,7 +61,7 @@ to public once, in the package's settings on GitHub.
   `summary.json` lists its lines' rules versions; `examples.json` (per-book crops for the rules) is no longer part of
   the format.
 
-### 0.7.0 (2026-10-16)
+## 0.7.0 (2026-10-16)
 - **Scans are read by ParisaOCR's model** (Apache-2.0), run by ONNX Runtime inside the image (675 MB, from 550; no
   PyTorch). On the 1932 test pages 0.3% of letters are wrong, against 8.7% in 0.6.0; on a 1963 printing and three
   modern editions it was judged right far more often than Tesseract. About five times slower than Tesseract on a
@@ -121,7 +79,7 @@ to public once, in the package's settings on GitHub.
 - **`rtlbook bench`**, the scorecard: line readers on a set's checked lines, whole pages and an exported PDF, saved
   per run to `bench/` (`make bench`; the other readers in `make readers`).
 
-### 0.6.0 (2026-10-12)
+## 0.6.0 (2026-10-12)
 - **`rtlbook lines`** cuts a book's pages into training lines for checking (`docs/TRAINING-DATA.md`): what
   `tools/transcribe/prepare.py` did, now a command released with rtlbook's versions, so a set can be cut by a known
   version. `lines.json` records it (`engine`). `tools/transcribe/prepare.py` is gone.
@@ -130,9 +88,58 @@ to public once, in the package's settings on GitHub.
 - **Transcription rules version 2:** two words printed with no gap get a space (version 1 read as a half-space); the
   aim comes first: type what the ink shows. New lines are stamped `rules: 2`.
 
-### 0.5.0 (2026-10-08)
+## 0.5.0 (2026-10-08)
 The first tagged version.
 - **EPUB 3 is the only output**, made for reading systems built on Readium, such as Thorium Reader. The `kfx`
   command and calibre are gone: converting for a device (Kindle, Kobo) is out of scope.
 - **Exported Persian PDFs** convert end to end; scans convert with more errors and aren't supported yet.
 - The status is early, no longer a proof of concept.
+
+## Versions and releases
+
+The same pattern as FarsiEPUB's (2026-11-14: this file was docs/VERSIONS.md), except that the number also lives in
+three files, since the Python package needs it.
+
+### When the version changes
+
+- **A new middle number** (0.5.0 → 0.6.0) for a change in what rtlbook produces or how it's used: a new kind of
+  book supported, a change to the EPUB, a command or option added, removed or renamed.
+- **A new last number** (0.5.0 → 0.5.1) for a fix that doesn't change any of that.
+- **No change** for docs and experiments.
+
+While the version is below 1.0, any release may break how rtlbook is used; its section above says how.
+
+### Where the number is
+
+Three files carry it, and they must agree:
+
+| File | What it's for |
+|---|---|
+| `pyproject.toml` | The package version, and the one the tag is named from |
+| `src/rtlbook/__init__.py` | `__version__`, what `rtlbook version` prints |
+| `uv.lock` | The lock file's entry for rtlbook itself; uv rewrites it on the next lock if it disagrees |
+
+`make bump` sets all three, and `make tag` refuses to tag when they differ. Reading the version from the installed
+package instead would leave one place to edit, but uv runs only inside the Docker build, so three copies set by one
+command are simpler.
+
+### How to release
+
+```bash
+make bump V=0.6.0                  # set the version in the three files
+# add the version at the top of this file (its section is the release's notes)
+git commit -am "…"                 # commit both
+git push origin main               # then wait for CI to pass on it
+make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
+git show v0.6.0                    # check it
+git push origin v0.6.0             # CI runs the checks again, publishes the image, then makes the GitHub Release
+```
+
+`make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
+A pushed `vX.Y.Z` tag runs CI (`.github/workflows/ci.yml`, since 2026-11-14) and, once the checks and tests pass: the
+`release` job checks the tag is `pyproject.toml`'s version and publishes the image as
+`ghcr.io/ardeshirj/rtlbook:vX.Y.Z` (the `core` target, linux/amd64; it stops if that tag is on the registry already,
+since a version's image never changes); then it makes the GitHub Release with `tools/release github`, its notes the
+version's section and the image's `name:tag@digest`. It refuses a version with no section in this file: fix the
+section, then `make github-release` (needs gh) does the same by hand, without the image line. The first push of the
+image makes a private package: set it to public once, in the package's settings on GitHub.

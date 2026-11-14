@@ -3,12 +3,12 @@
 #   tools/release bump 0.6.0         (make bump V=0.6.0)  then commit
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
 #   tools/release github [X.Y.Z]     (make github-release) a GitHub Release for a pushed tag, its notes the version's
-#                                    entry in docs/VERSIONS.md (default: the committed version). CI's release job
+#                                    entry in CHANGELOG.md (default: the committed version). CI's release job
 #                                    (.github/workflows/ci.yml) runs it on each pushed vX.Y.Z tag, with
 #                                    RTLBOOK_IMAGE_REF set to the published image (name:tag@digest) for the notes.
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
-# and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
-# When to bump, and the version history: docs/VERSIONS.md.
+# and the commits since the last tag. It doesn't push: push main first and let CI pass, then git push origin vX.Y.Z.
+# When to bump, and the version history: CHANGELOG.md.
 set -e
 cd "$(dirname "$0")/.."
 usage() { echo "usage: tools/release bump X.Y.Z | tag [note] | github [X.Y.Z]" >&2; exit 2; }
@@ -53,15 +53,15 @@ tag)
     if [ -n "$2" ]; then echo "$2"; echo; fi
     if [ -n "$last" ]; then echo "Since $last:"; git log --format='- %s' "$last..HEAD"; fi
   } | git tag -a "$t" -F -
-  echo "Tagged $t on $(git rev-parse --short HEAD). Check it with git show $t, then push: git push origin main $t"
+  echo "Tagged $t on $(git rev-parse --short HEAD). Check it with git show $t; once main is pushed and CI passed: git push origin $t"
   echo "CI then publishes the image and makes the GitHub Release (by hand, if that fails: make github-release)"
   ;;
 github)
   [ $# -le 2 ] || usage
   v=${2:-$(current)}
-  # The version's entry: the lines after its "### X.Y.Z (date)" heading, up to the next heading
-  notes=$(awk -v h="### $v (" 'index($0, h) == 1 {on = 1; next} on && /^##/ {exit} on' docs/VERSIONS.md)
-  [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "No entry for $v in docs/VERSIONS.md." >&2; exit 1; }
+  # The version's section: the lines after its "## X.Y.Z (date)" heading, up to the next heading
+  notes=$(awk -v h="## $v (" 'index($0, h) == 1 {on = 1; next} on && /^## / {exit} on' CHANGELOG.md)
+  [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "No entry for $v in CHANGELOG.md." >&2; exit 1; }
   if [ -n "${RTLBOOK_IMAGE_REF:-}" ]; then
     notes=$(printf '%s\n\n**Image:** `docker pull %s`\n' "$notes" "$RTLBOOK_IMAGE_REF")
   fi

@@ -3,7 +3,7 @@
 rtlbook converts PDF books in right-to-left languages (Persian first) into EPUB 3, its only output, made for
 reading systems built on Readium (such as Thorium Reader); device formats (Kindle, Kobo) are out of scope. See
 `README.md` for usage; in `docs/`: `DESIGN.md` for the engine's design and dated decisions, `ROADMAP.md` for phases
-and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versions and releases.
+and planned work, `LESSONS.md` for troubleshooting; at the root, `CHANGELOG.md` for versions and releases.
 
 ## Running things
 - Everything runs in Docker: build with `make build` (`docker build -f docker/Dockerfile -t rtlbook:dev .`; `make`
@@ -28,5 +28,5 @@ and planned work, `LESSONS.md` for troubleshooting, and `VERSIONS.md` for versio
   ships, its design moves to `DESIGN.md` and the item leaves the roadmap. Both are public: no private service or library plans, no admin or visitor details; naming and linking FarsiEPUB is fine (RTLBook is its product, 2026-11-04; links since 2026-11-06).
 - Prefer simple, general rules over per-PDF special cases; every page is OCR'd (the PDF's own text layer isn't used).
 - Small commits with a clear message explaining why.
-- **Versions:** see `docs/VERSIONS.md` (when to bump, the three files, `make bump` / `make tag`). Add each version
+- **Versions:** see `CHANGELOG.md` (when to bump, the three files, `make bump` / `make tag`). Add each version
   to its history; docs, experiments and the training tools need no new version.

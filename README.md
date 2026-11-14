@@ -222,7 +222,7 @@ linux/amd64, and fails if a PDF, EPUB, scan or anything in `input/`/`output/` ha
 ## Versions
 
 `rtlbook version` prints the version; releases are git tags named `vX.Y.Z`. When the version changes, how to
-release, and what changed in each version: [docs/VERSIONS.md](docs/VERSIONS.md).
+release, and what changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
 ## Credits
 
