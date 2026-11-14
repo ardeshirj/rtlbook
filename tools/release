@@ -63,7 +63,8 @@ github)
   notes=$(awk -v h="## $v (" 'index($0, h) == 1 {on = 1; next} on && /^## / {exit} on' CHANGELOG.md)
   [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "No entry for $v in CHANGELOG.md." >&2; exit 1; }
   if [ -n "${RTLBOOK_IMAGE_REF:-}" ]; then
-    notes=$(printf '%s\n\n**Image:** `docker pull %s`\n' "$notes" "$RTLBOOK_IMAGE_REF")
+    # a code block, not inline code: GitHub gives it a copy button
+    notes=$(printf '%s\n\n**Image:**\n\n```sh\ndocker pull %s\n```\n' "$notes" "$RTLBOOK_IMAGE_REF")
   fi
   printf '%s\n' "$notes" | gh release create "v$v" --verify-tag --title "RTLBook $v" --notes-file -
   ;;
