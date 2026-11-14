@@ -50,6 +50,9 @@ to public once, in the package's settings on GitHub.
 - **A Persian comma read as a Latin `,` is a Persian comma again:** in some typed books OCR reads `،` as `,`; a `,`
   with Persian before it and Persian or the line's end after it becomes `،` (numbers such as `۱,۰۰۰` and Latin text
   keep theirs; off for checked lines). On an exported story, 51 of 85 commas were Latin; 2 are left, after a full stop.
+- **A ready-built image:** `ghcr.io/ardeshirj/rtlbook:v0.12.2` (the `core` image, linux/amd64), published by CI
+  with the release, to pull instead of building; it carries the Tesseract models' license too (README, "The
+  published image"). 0.12.2 was released again for it, the same day, from the later commit.
 
 ### 0.12.1 (2026-10-21)
 - **A story's own running header is removed:** in a collection, the story's title printed over every other page of
