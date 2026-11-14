@@ -2,12 +2,14 @@
 # Versions and tags. The version lives in pyproject.toml, src/rtlbook/__init__.py and uv.lock; bump sets all three.
 #   tools/release bump 0.6.0         (make bump V=0.6.0)  then commit
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
+#   tools/release github [X.Y.Z]     (make github-release) after the push: a GitHub Release for the tag, its notes the
+#                                    version's entry in docs/VERSIONS.md (default: the committed version)
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
 # and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
 # When to bump, and the version history: docs/VERSIONS.md.
 set -e
 cd "$(dirname "$0")/.."
-usage() { echo "usage: tools/release bump X.Y.Z | tag [note]" >&2; exit 2; }
+usage() { echo "usage: tools/release bump X.Y.Z | tag [note] | github [X.Y.Z]" >&2; exit 2; }
 
 current() { sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml; }
 in_init() { sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/rtlbook/__init__.py; }
@@ -50,6 +52,15 @@ tag)
     if [ -n "$last" ]; then echo "Since $last:"; git log --format='- %s' "$last..HEAD"; fi
   } | git tag -a "$t" -F -
   echo "Tagged $t on $(git rev-parse --short HEAD). Check it with git show $t, then push: git push origin main $t"
+  echo "Then the GitHub Release: make github-release"
+  ;;
+github)
+  [ $# -le 2 ] || usage
+  v=${2:-$(current)}
+  # The version's entry: the lines after its "### X.Y.Z (date)" heading, up to the next heading
+  notes=$(awk -v h="### $v (" 'index($0, h) == 1 {on = 1; next} on && /^##/ {exit} on' docs/VERSIONS.md)
+  [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "No entry for $v in docs/VERSIONS.md." >&2; exit 1; }
+  printf '%s\n' "$notes" | gh release create "v$v" --verify-tag --title "RTLBook $v" --notes-file -
   ;;
 *) usage ;;
 esac

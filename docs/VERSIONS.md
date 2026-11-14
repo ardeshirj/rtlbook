@@ -33,9 +33,11 @@ make bump V=0.6.0                  # set the version in the three files
 git commit -am "…"                 # commit both
 make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
 git push origin main v0.6.0
+make github-release                # the GitHub Release for v0.6.0, its notes this file's entry (needs gh)
 ```
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
+`make github-release` refuses a tag that isn't on GitHub yet, or a version with no entry below (since 0.12.2).
 
 ## History
 
