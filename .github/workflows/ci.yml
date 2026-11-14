@@ -14,9 +14,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch cancels the older run; a tag's run, which publishes the image and the release, is
+# never cancelled (one cut off between the two would leave an image without its release).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   no-book-files:
