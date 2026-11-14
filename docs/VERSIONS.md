@@ -39,6 +39,11 @@ git push origin main v0.6.0
 
 ## History
 
+### 0.12.2 (2026-11-14)
+- **A Persian comma read as a Latin `,` is a Persian comma again:** in some typed books OCR reads `،` as `,`; a `,`
+  with Persian before it and Persian or the line's end after it becomes `،` (numbers such as `۱,۰۰۰` and Latin text
+  keep theirs; off for checked lines). On an exported story, 51 of 85 commas were Latin; 2 are left, after a full stop.
+
 ### 0.12.1 (2026-10-21)
 - **A story's own running header is removed:** in a collection, the story's title printed over every other page of
   that story was left in the text (too few of the book's pages to count as a header). A heading is never removed, and

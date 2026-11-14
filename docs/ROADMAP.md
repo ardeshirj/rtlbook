@@ -212,8 +212,9 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
   punctuation, a dialogue marker, a vertical gap or an indent on the next line, never by its length alone.
 - **Measure:** paragraphs ending without sentence punctuation, on this story and on the justified books in the
   scorecard (which must not change).
-- **Also seen there (to check):** 51 Latin commas against 34 Persian ones; whether the PDF itself has them or OCR
-  reads `،` as `,`.
+- **Also seen there: missing commas.** The PDF's own text has 182 Persian commas; the EPUB has 85. Whether OCR
+  misses them or a later step drops them is to find out. (Its Latin commas, OCR reading `،` as `,`, are fixed:
+  DESIGN.md.)
 
 ### Planned, by stage
 - **Input:** a folder of page images instead of a PDF, for scans: old books are often only available as page

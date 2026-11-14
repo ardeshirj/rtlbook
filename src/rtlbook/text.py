@@ -5,7 +5,7 @@ from __future__ import annotations
 import difflib
 import re
 import statistics
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rtlbook.headings import match_heading, numbered_title
 from rtlbook.model import Line, Page, Paragraph
@@ -66,6 +66,7 @@ def normalize_text(s: str) -> str:
 @dataclass(frozen=True)
 class CommaFix:
     hamza: bool = False  # word-final "ء" -> "،" ("»" is handled per paragraph: fix_unopened_guillemets)
+    latin: bool = False  # "," between Persian words -> "،" (any OCR'd book: Persian text has no Latin commas)
 
 
 def detect_comma_misreads(pages: list[Page]) -> CommaFix:
@@ -80,7 +81,22 @@ def detect_comma_misreads(pages: list[Page]) -> CommaFix:
     return CommaFix(hamza=hamzas >= 3)
 
 
+# A Latin comma with Persian on both sides, or Persian before it at a line's end (marks and spaces between allowed). OCR reads "،" as "," in some typed
+# books; Persian text never uses ",", so it's always a misread there. Digits on both sides ("۱,۰۰۰") are left alone.
+_LATIN_COMMA = re.compile(r"(?<=[\u0600-\u06FF\u200c»)\]])(\s*),(?=\s*[\u0600-\u06FF«(\[]|\s*$)")
+_DIGIT = "0123456789۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩"
+
+
+def _latin_to_persian_commas(s: str) -> str:
+    def swap(m: re.Match) -> str:
+        before, after = s[m.start() - 1], s[m.end():].lstrip()[:1]
+        return m.group(0) if before in _DIGIT and after in _DIGIT else "،"
+    return _LATIN_COMMA.sub(swap, s)
+
+
 def fix_misread_commas(s: str, fix: CommaFix) -> str:
+    if fix.latin:
+        s = _latin_to_persian_commas(s)
     if fix.hamza:
         s = FINAL_HAMZA.sub(lambda m: m.group(0) if m.group(1) + "ء" in HAMZA_WORDS else m.group(1) + "، ", s)
     s = re.sub(r"\s*،[\s\u200c]*", "، ", s)  # no space before a comma, one after
@@ -318,7 +334,7 @@ def build_paragraphs(
     margins = _margins(pages)
     sparse = sparse_pages(pages)
     prev_sparse = False
-    comma_fix = detect_comma_misreads(pages) if ocr_fixes else CommaFix()
+    comma_fix = replace(detect_comma_misreads(pages), latin=True) if ocr_fixes else CommaFix()
     pitch = _line_pitch(pages)
     headers = running_headers(pages)
     heights = [ln.bbox[3] - ln.bbox[1] for p in pages for ln in p.lines]

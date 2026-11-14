@@ -196,7 +196,9 @@ Section:   title, paragraphs[]  → one XHTML file in the EPUB
 - A warning when a book's mean OCR confidence is below 70 (exported PDFs score 80–87; a decorative
   font scored ~55), in `report.json` and the `done` event.
 - Arabic `ي`/`ك` → Persian `ی`/`ک`; tatweel removed; Persian digits by default (`--digits`); the Persian
-  comma misread as `»` (a `»` with no open `«` in its paragraph) or as a word-final `ء`; mirrored parentheses;
+  comma misread as `»` (a `»` with no open `«` in its paragraph), as a word-final `ء`, or as a Latin `,` (2026-11-14:
+  any `,` with Persian before it and Persian or the line's end after; digits on both sides keep theirs; on an exported
+  story, 51 of 85 commas were Latin, 2 after, both after a full stop); mirrored parentheses;
   OCR debris lines; dropping lines by regex (`--drop-lines`) or below a confidence (`--min-line-conf`).
 - **Marks against their words** (2026-10-19, `text.close_marks`): no space before `. ؛ : ؟ ! »`, none after `«`,
   within a line and across a line break. Old type often sets a gap before a mark, and OCR (and readers) copy it; in an

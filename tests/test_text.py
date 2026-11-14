@@ -81,6 +81,16 @@ def test_comma_fix_only_when_book_lacks_real_commas():
     assert detect_comma_misreads(correct) == CommaFix()
 
 
+def test_latin_comma_between_persian_words_is_a_persian_comma():
+    fix = CommaFix(latin=True)
+    assert fix_misread_commas("تو کوچه, چه سوز بدی", fix) == "تو کوچه، چه سوز بدی"
+    assert fix_misread_commas("گفت,«بیا»", fix) == "گفت، «بیا»"
+    assert fix_misread_commas("انگار تو کوچه,", fix) == "انگار تو کوچه،"  # at a line's end, the sentence goes on
+    assert fix_misread_commas("هزار و ۱,۰۰۰ تومان", fix) == "هزار و ۱,۰۰۰ تومان"  # a number's comma stays
+    assert fix_misread_commas("Hello, world و سلام", fix) == "Hello, world و سلام"  # Latin text keeps its own
+    assert fix_misread_commas("تو کوچه, چه", CommaFix()) == "تو کوچه, چه"  # off for checked text (--lines)
+
+
 def test_no_gap_between_a_mark_and_its_word():
     from rtlbook.text import close_marks
 
