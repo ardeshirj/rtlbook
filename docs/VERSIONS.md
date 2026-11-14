@@ -32,13 +32,17 @@ make bump V=0.6.0                  # set the version in the three files
 # add the version to the history below
 git commit -am "…"                 # commit both
 make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
-git push origin main v0.6.0        # CI's Release job makes the GitHub Release, its notes this file's entry
+git push origin main v0.6.0        # CI publishes the image, then makes the GitHub Release
 ```
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
-A pushed `vX.Y.Z` tag starts CI's Release job (`.github/workflows/ci.yml`, since 2026-11-14): after the tests, it
-checks the tag is `pyproject.toml`'s version and makes the GitHub Release with `tools/release github`, which refuses a
-version with no entry below. If it fails, fix the entry, then `make github-release` (needs gh) does the same by hand.
+A pushed `vX.Y.Z` tag runs CI (`.github/workflows/ci.yml`, since 2026-11-14) and, once the checks and tests pass: the
+`image` job checks the tag is `pyproject.toml`'s version and publishes the image as `ghcr.io/ardeshirj/rtlbook:vX.Y.Z`
+(the `core` target, linux/amd64; it stops if that tag is on the registry already, since a version's image never
+changes); then `github-release` makes the GitHub Release with `tools/release github`, its notes this file's entry and
+the image's `name:tag@digest`. It refuses a version with no entry below: fix the entry, then `make github-release`
+(needs gh) does the same by hand, without the image line. The first push of the image makes a private package: set it
+to public once, in the package's settings on GitHub.
 
 ## History
 

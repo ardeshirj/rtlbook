@@ -20,4 +20,5 @@ It includes:
 The Parastoo font (copyright 2015 Saber Rastikerdar, SIL Open Font License 1.1) is embedded in every EPUB it makes.
 
 rtlbook's Docker image also contains ParisaOCR's recognition model as an ONNX file, made at build time
-(docker/parisaocr_onnx.py), with ParisaOCR's LICENSE and NOTICE beside it.
+(docker/parisaocr_onnx.py), with ParisaOCR's LICENSE and NOTICE beside it. Each of the image's other parts keeps its
+own license beside it: README.md, "The published image".

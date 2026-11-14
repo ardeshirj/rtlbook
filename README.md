@@ -62,6 +62,31 @@ the same inside and outside the container, relative or absolute, including when 
 subfolder. Running it from outside the repo stops with an error. Your local `src/` is mounted too, so
 code changes apply without a rebuild.
 
+## The published image
+
+From the release after 0.12.2, each release `vX.Y.Z` is also a ready-built image (Linux, amd64), so you can pull it
+instead of building: `ghcr.io/ardeshirj/rtlbook:vX.Y.Z`, the `core` image above. A version's image never changes;
+its digest, for pinning, is in the release's notes on GitHub, or ask the registry for it.
+
+```bash
+docker pull ghcr.io/ardeshirj/rtlbook:vX.Y.Z
+docker buildx imagetools inspect ghcr.io/ardeshirj/rtlbook:vX.Y.Z   # its digest (sha256:…)
+
+# Convert book.pdf in this folder → output/book.epub
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/work ghcr.io/ardeshirj/rtlbook:vX.Y.Z \
+  convert book.pdf --title "…" --author "…"
+
+# Or with ./rtlbook in a clone checked out at that tag
+RTLBOOK_IMAGE=ghcr.io/ardeshirj/rtlbook:vX.Y.Z ./rtlbook convert input/book.pdf
+```
+
+What the image carries, each with its license beside it: rtlbook (Apache-2.0, `/app`), Tesseract's `tessdata_best`
+models (Apache-2.0, `/opt/tessdata`), ParisaOCR's model (Apache-2.0, `/opt/models/parisaocr`), Lilak's word list
+(Apache-2.0, `/opt/words`), the Parastoo font (SIL OFL 1.1, `/opt/fonts`), epubcheck and its libraries (BSD-3-Clause,
+MIT, MPL-2.0, W3C; `/opt/epubcheck/licenses`), Python packages (MIT, BSD, Apache-2.0, ISC), and Debian 12 packages
+(Tesseract, Leptonica, OpenJDK and the base system: Apache-2.0, BSD, GPL-2.0 with the Classpath exception, GPL and
+others; `/usr/share/doc/*/copyright`, their sources in Debian's archive).
+
 ## Limitations
 
 What has been verified:
@@ -223,5 +248,5 @@ don't use the names or logos for your own product or fork. [BRAND.md](BRAND.md) 
 The public-domain ground-truth texts in `tests/data/` are not ours and not covered by the
 license (see the README in each folder). The tools RTLBook runs (Tesseract and its models, ParisaOCR's model,
 ONNX Runtime, epubcheck), the Parastoo font and Lilak's word list keep their own licenses; none of them is stored in
-this repository. `src/rtlbook/bidi/` is Kraken's code with tables from Unicode's data, and `readers.py` follows
+this repository, and the published image carries each one's license (see "The published image"). `src/rtlbook/bidi/` is Kraken's code with tables from Unicode's data, and `readers.py` follows
 ParisaOCR's code for its model: see [NOTICE](NOTICE).

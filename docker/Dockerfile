@@ -20,7 +20,8 @@ RUN mkdir -p /opt/tessdata \
     && for l in $TESSDATA_LANGS; do \
          curl -fsSL -o /opt/tessdata/$l.traineddata \
            https://github.com/tesseract-ocr/tessdata_best/raw/main/$l.traineddata; \
-       done
+       done \
+    && curl -fsSL -o /opt/tessdata/LICENSE https://github.com/tesseract-ocr/tessdata_best/raw/main/LICENSE
 RUN curl -fsSL -o /tmp/epubcheck.zip \
         https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip \
     && unzip -q /tmp/epubcheck.zip -d /opt \

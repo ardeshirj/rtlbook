@@ -4,7 +4,8 @@
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
 #   tools/release github [X.Y.Z]     (make github-release) a GitHub Release for a pushed tag, its notes the version's
 #                                    entry in docs/VERSIONS.md (default: the committed version). CI's Release job
-#                                    (.github/workflows/ci.yml) runs it on each pushed vX.Y.Z tag.
+#                                    (.github/workflows/ci.yml) runs it on each pushed vX.Y.Z tag, with
+#                                    RTLBOOK_IMAGE_REF set to the published image (name:tag@digest) for the notes.
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
 # and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
 # When to bump, and the version history: docs/VERSIONS.md.
@@ -61,6 +62,9 @@ github)
   # The version's entry: the lines after its "### X.Y.Z (date)" heading, up to the next heading
   notes=$(awk -v h="### $v (" 'index($0, h) == 1 {on = 1; next} on && /^##/ {exit} on' docs/VERSIONS.md)
   [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "No entry for $v in docs/VERSIONS.md." >&2; exit 1; }
+  if [ -n "${RTLBOOK_IMAGE_REF:-}" ]; then
+    notes=$(printf '%s\n\n**Image:** `docker pull %s`\n' "$notes" "$RTLBOOK_IMAGE_REF")
+  fi
   printf '%s\n' "$notes" | gh release create "v$v" --verify-tag --title "RTLBook $v" --notes-file -
   ;;
 *) usage ;;

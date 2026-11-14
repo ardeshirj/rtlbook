@@ -237,13 +237,6 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
 - **Readers:** check the EPUBs in Thorium Reader (Readium) and fix what renders wrong there: page direction, the
   embedded font, the page list, the TOC.
 
-### A published image (open, 2026-11-14)
-- `ghcr.io/ardeshirj/rtlbook:X.Y.Z` for each release: `docker pull` instead of a long build, and FarsiEPUB's deploy
-  could pull it rather than rebuild the engine each time (about 10 minutes). Needs a CI job on tags (amd64, and arm64
-  for Macs) and a check of the licenses of everything the image carries (Tesseract and its models, the OCR readers,
-  fonts), since publishing it redistributes them. Worth it when slow deploys or outside users ask for it. (Each tag
-  already gets a GitHub Release: docs/VERSIONS.md.)
-
 ## 3. Later
 - Typewritten books (none found yet).
 - Arabic, Urdu and Hebrew, as configuration where possible.
