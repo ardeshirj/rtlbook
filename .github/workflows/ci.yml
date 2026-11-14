@@ -15,13 +15,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Time limits well past a normal run (GitHub's default is 6 hours), so a stuck step fails instead of using up
-# Actions minutes: the file check takes seconds, the image build and tests a few minutes (longer with a cold cache).
+# Time limits about 3x the slowest run (GitHub's default is 6 hours), so a stuck step fails instead of using up
+# Actions minutes: the file check takes under 10 s; the image build and tests about a minute, up to 5 when a
+# Dockerfile change misses the build cache (34 runs, 2026-10-09 to 2026-11-14).
 jobs:
   no-book-files:
     # .gitignore keeps books out, but not a forced add or a renamed folder: this repository is public.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
       - name: No PDFs, EPUBs, scans or input/output files are committed
@@ -36,7 +37,7 @@ jobs:
   test:
     # linux/amd64, native here: the same image other projects deploy (--target core).
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v4
