@@ -202,6 +202,19 @@ book (a handwriting-style font, confidence 55): no Tesseract setting helped (res
 **every letter right** but stray spaces inside about 1 word in 5. Options: an opt-in text-layer fallback (perfect
 letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple.
 
+### Ragged lines end paragraphs (open, 2026-11-14)
+- **Problem:** paragraphs are rebuilt partly from whether a line reaches the left margin. In a typed PDF whose
+  lines are not justified (ragged), many lines stop short mid-sentence, and each one ends a paragraph. Seen on a
+  short exported story (11 pages, typed from a weblog edition): 10 of its 25 paragraphs end mid-sentence, all in
+  the middle of a page, none at a page break. A reader sees a sentence cut in two by a paragraph gap.
+- **Approach (to investigate):** decide per book whether the text is justified (the share of full-width lines
+  among lines that don't end a sentence). In a ragged book, a short line ends a paragraph only with sentence-final
+  punctuation, a dialogue marker, a vertical gap or an indent on the next line, never by its length alone.
+- **Measure:** paragraphs ending without sentence punctuation, on this story and on the justified books in the
+  scorecard (which must not change).
+- **Also seen there (to check):** 51 Latin commas against 34 Persian ones; whether the PDF itself has them or OCR
+  reads `،` as `,`.
+
 ### Planned, by stage
 - **Input:** a folder of page images instead of a PDF, for scans: old books are often only available as page
   images (dropped 2026-10-06, DESIGN.md §4.2).
