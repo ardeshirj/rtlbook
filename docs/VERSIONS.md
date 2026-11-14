@@ -32,12 +32,13 @@ make bump V=0.6.0                  # set the version in the three files
 # add the version to the history below
 git commit -am "…"                 # commit both
 make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
-git push origin main v0.6.0
-make github-release                # the GitHub Release for v0.6.0, its notes this file's entry (needs gh)
+git push origin main v0.6.0         # CI's Release job makes the GitHub Release, its notes this file's entry
 ```
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
-`make github-release` refuses a tag that isn't on GitHub yet, or a version with no entry below (since 0.12.2).
+A pushed `vX.Y.Z` tag starts the Release workflow (`.github/workflows/release.yml`, since 2026-11-14): it checks
+the tag is `pyproject.toml`'s version and makes the GitHub Release with `tools/release github`, which refuses a
+version with no entry below. If it fails, fix the entry, then `make github-release` (needs gh) does the same by hand.
 
 ## History
 

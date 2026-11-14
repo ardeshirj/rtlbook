@@ -2,8 +2,9 @@
 # Versions and tags. The version lives in pyproject.toml, src/rtlbook/__init__.py and uv.lock; bump sets all three.
 #   tools/release bump 0.6.0         (make bump V=0.6.0)  then commit
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
-#   tools/release github [X.Y.Z]     (make github-release) after the push: a GitHub Release for the tag, its notes the
-#                                    version's entry in docs/VERSIONS.md (default: the committed version)
+#   tools/release github [X.Y.Z]     (make github-release) a GitHub Release for a pushed tag, its notes the version's
+#                                    entry in docs/VERSIONS.md (default: the committed version). CI's Release job
+#                                    (.github/workflows/release.yml) runs it on each pushed vX.Y.Z tag.
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note
 # and the commits since the last tag. It doesn't push: git push origin main vX.Y.Z.
 # When to bump, and the version history: docs/VERSIONS.md.

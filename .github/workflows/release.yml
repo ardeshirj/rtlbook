@@ -1,0 +1,27 @@
+# On a pushed version tag (vX.Y.Z): its GitHub Release, the notes the version's entry in docs/VERSIONS.md, as
+# make github-release does by hand. The tagged commit was tested when main was pushed (docs/VERSIONS.md, "How to
+# release"), so this only checks the tag matches the committed version.
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: The tag is pyproject.toml's version
+        run: |
+          want=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
+          echo "tag $GITHUB_REF_NAME, pyproject.toml $want"
+          [ "$GITHUB_REF_NAME" = "v$want" ]
+      - name: The GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/release github "${GITHUB_REF_NAME#v}"
