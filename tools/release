@@ -54,7 +54,7 @@ tag)
     if [ -n "$last" ]; then echo "Since $last:"; git log --format='- %s' "$last..HEAD"; fi
   } | git tag -a "$t" -F -
   echo "Tagged $t on $(git rev-parse --short HEAD). Check it with git show $t, then push: git push origin main $t"
-  echo "Then the GitHub Release: make github-release"
+  echo "CI then publishes the image and makes the GitHub Release (by hand, if that fails: make github-release)"
   ;;
 github)
   [ $# -le 2 ] || usage
