@@ -3,7 +3,7 @@
 #   tools/release bump 0.6.0         (make bump V=0.6.0)  then commit
 #   tools/release tag ["note"]       (make tag NOTE="…")  tags the committed version on this commit as vX.Y.Z
 #   tools/release github [X.Y.Z]     (make github-release) a GitHub Release for a pushed tag, its notes the version's
-#                                    entry in docs/VERSIONS.md (default: the committed version). CI's Release job
+#                                    entry in docs/VERSIONS.md (default: the committed version). CI's release job
 #                                    (.github/workflows/ci.yml) runs it on each pushed vX.Y.Z tag, with
 #                                    RTLBOOK_IMAGE_REF set to the published image (name:tag@digest) for the notes.
 # tag checks first: on main, nothing uncommitted, the three versions agree, no such tag yet. Its message is the note

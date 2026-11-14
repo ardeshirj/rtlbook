@@ -39,5 +39,5 @@ bump: ## Set the version in pyproject.toml, __init__.py and uv.lock: make bump V
 tag: ## Tag the committed version on this commit as vX.Y.Z (optional NOTE="…"); push it yourself
 	tools/release tag "$(NOTE)"
 
-github-release: ## By hand, if CI's Release job failed: a tag's GitHub Release, notes from docs/VERSIONS.md (V=0.12.2)
+github-release: ## By hand, if CI's release job failed: a tag's GitHub Release, notes from docs/VERSIONS.md (V=0.12.2)
 	tools/release github $(V)

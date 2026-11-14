@@ -37,9 +37,9 @@ git push origin main v0.6.0        # CI publishes the image, then makes the GitH
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
 A pushed `vX.Y.Z` tag runs CI (`.github/workflows/ci.yml`, since 2026-11-14) and, once the checks and tests pass: the
-`image` job checks the tag is `pyproject.toml`'s version and publishes the image as `ghcr.io/ardeshirj/rtlbook:vX.Y.Z`
+`release` job checks the tag is `pyproject.toml`'s version and publishes the image as `ghcr.io/ardeshirj/rtlbook:vX.Y.Z`
 (the `core` target, linux/amd64; it stops if that tag is on the registry already, since a version's image never
-changes); then `github-release` makes the GitHub Release with `tools/release github`, its notes this file's entry and
+changes); then it makes the GitHub Release with `tools/release github`, its notes this file's entry and
 the image's `name:tag@digest`. It refuses a version with no entry below: fix the entry, then `make github-release`
 (needs gh) does the same by hand, without the image line. The first push of the image makes a private package: set it
 to public once, in the package's settings on GitHub.

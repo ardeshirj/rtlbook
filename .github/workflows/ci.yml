@@ -1,6 +1,6 @@
 # On every push and pull request: no book files in git, then build the image and run the tests in it. On a pushed
-# version tag (vX.Y.Z), once both pass: the image published as ghcr.io/<owner>/rtlbook:vX.Y.Z, then the GitHub
-# Release, its notes the version's entry in docs/VERSIONS.md and the image's digest.
+# version tag (vX.Y.Z), once both pass, the release job: the image published as ghcr.io/<owner>/rtlbook:vX.Y.Z, then
+# the GitHub Release, its notes the version's entry in docs/VERSIONS.md and the image's digest.
 # The tests use only what's in the repository (tests/data: public-domain pages and their OCR results); tests that
 # need real books in input/ skip themselves here.
 name: CI
@@ -61,19 +61,18 @@ jobs:
       - name: Tests
         run: docker run --rm -v "$PWD":/app -w /app --entrypoint python rtlbook:dev -m pytest -q -p no:cacheprovider tests
 
-  image:
-    # The engine for anyone to pull instead of building it: the core target, linux/amd64, tagged as the git tag.
-    # A version's image never changes: the job stops if the tag is on the registry already.
+  release:
+    # On a version tag only, after the checks and tests: the engine as an image for anyone to pull instead of building
+    # it (the core target, linux/amd64, tagged as the git tag, never replaced), then the GitHub Release, its notes the
+    # version's entry in docs/VERSIONS.md (tools/release github, as make github-release by hand) and the image's digest.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [no-book-files, test]
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
       packages: write
     env:
       IMAGE: ghcr.io/${{ github.repository }}
-    outputs:
-      ref: ${{ steps.ref.outputs.ref }}
     steps:
       - uses: actions/checkout@v5
       - name: The tag is pyproject.toml's version
@@ -87,7 +86,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: No image with this tag yet
+      - name: No image with this tag yet (a version's image never changes)
         run: |
           if docker buildx imagetools inspect "$IMAGE:$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "$IMAGE:$GITHUB_REF_NAME exists already: a version's image is never replaced. Bump the version."
@@ -110,25 +109,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=rtlbook
-      - id: ref
-        name: The image's name with its digest, to pin
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          echo "ref=$IMAGE:$GITHUB_REF_NAME@$DIGEST" >> "$GITHUB_OUTPUT"
-          echo "$IMAGE:$GITHUB_REF_NAME@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
-
-  github-release:
-    # What make github-release does by hand (tools/release github), with the published image's digest in the notes.
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [image]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-      - name: The GitHub Release
+      - name: The GitHub Release, with the image's name and digest to pin
         env:
           GH_TOKEN: ${{ github.token }}
-          RTLBOOK_IMAGE_REF: ${{ needs.image.outputs.ref }}
-        run: tools/release github "${GITHUB_REF_NAME#v}"
+          RTLBOOK_IMAGE_REF: ${{ env.IMAGE }}:${{ github.ref_name }}@${{ steps.build.outputs.digest }}
+        run: |
+          echo "$RTLBOOK_IMAGE_REF" >> "$GITHUB_STEP_SUMMARY"
+          tools/release github "${GITHUB_REF_NAME#v}"
