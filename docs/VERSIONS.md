@@ -32,7 +32,7 @@ make bump V=0.6.0                  # set the version in the three files
 # add the version to the history below
 git commit -am "…"                 # commit both
 make tag NOTE="What changed"       # tag v0.6.0: the note, then the commits since the last tag
-git push origin main v0.6.0         # CI's Release job makes the GitHub Release, its notes this file's entry
+git push origin main v0.6.0        # CI's Release job makes the GitHub Release, its notes this file's entry
 ```
 
 `make tag` (`tools/release`) only tags a clean `main` with no tag for that version yet, and never pushes.
