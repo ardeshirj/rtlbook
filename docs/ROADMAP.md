@@ -1,10 +1,27 @@
 # rtlbook roadmap
 
 What's next for the engine. [DESIGN.md](DESIGN.md) describes what is built and why; this file holds what isn't
-built yet. When an item ships, its design goes into DESIGN.md and the item is removed from here, so the two
-never overlap. Like DESIGN.md, this is about the engine only.
+built yet. When an item ships, its design goes into DESIGN.md, its line into [CHANGELOG.md](../CHANGELOG.md), and the
+item is removed from here, so the two never overlap. Like DESIGN.md, this is about the engine only.
 
-## 1. Phases
+The sections follow the pattern FarsiEPUB's projects share: Vision · Where it stands · Now · Next · Later · Open
+decisions. The order of work across FarsiEPUB's projects is set by [FarsiEPUB](https://farsiepub.org), which builds
+its library and its converter on this engine; this file follows it. The roadmap as it was before this layout
+(2026-11-19): `git show 53c4483:docs/ROADMAP.md`.
+
+## 1. Vision
+
+Persian books printed as PDFs, born digital or scanned, become EPUB 3 you would read without noticing the
+conversion: the right letters, half-spaces and punctuation, the book's own structure, verse as verse. Support grows
+one document type at a time, each finished and measured before the next; every change to reading is measured on the
+scorecard before it ships.
+
+## 2. Where it stands
+
+Version 0.12.2 (2026-11-14): exported PDFs (phase 1) convert well; scans convert, read by ParisaOCR or Tesseract
+(the reader slot), with a warning; books can also be built from checked lines (`convert --lines`).
+
+### Phases
 
 Support grows one document type at a time (DESIGN.md §1); each phase is finished, with measured accuracy, before
 the next.
@@ -17,7 +34,7 @@ the next.
 | **4: Old letterpress** | A modern reader for scans in the reader slot (see the first work item); a second reading (opt-in AI vision), a review step for disagreements | A 1930s book converts with errors only a review can catch |
 | Later | Typewriter, other languages | — |
 
-## 2. Work items
+## 3. Now
 
 Where the engine is weakest, in the order to work on it (2026-10-14):
 1. **The reader on scans** (next item): about ten times more letters wrong than a modern reader.
@@ -143,6 +160,8 @@ flowchart LR
   two disagreed, it was right or closer on all 18 lines a person could decide (Kraken's stock Persian model misread
   20–30% of the same type).
 
+## 4. Next
+
 ### Letterpress type (1930s–60s) — training set in progress (ahead of phases 3–4)
 - **Problem:** Tesseract misreads 6–12% of letters on a 1963 poetry printing and 6–8% on a 1932 prose printing
   (two hand-checked pages each). Most errors are dots (ی→ب, ن→ت, پ→د), گ read as ک, bold titles garbled, and specks
@@ -174,6 +193,20 @@ flowchart LR
   two-column verse.
 - Couplets laid out as verse in the EPUB.
 
+### Ragged lines end paragraphs (open, 2026-11-14)
+- **Problem:** paragraphs are rebuilt partly from whether a line reaches the left margin. In a typed PDF whose
+  lines are not justified (ragged), many lines stop short mid-sentence, and each one ends a paragraph. Seen on a
+  short exported story (11 pages, typed from a weblog edition): 10 of its 25 paragraphs end mid-sentence, all in
+  the middle of a page, none at a page break. A reader sees a sentence cut in two by a paragraph gap.
+- **Approach (to investigate):** decide per book whether the text is justified (the share of full-width lines
+  among lines that don't end a sentence). In a ragged book, a short line ends a paragraph only with sentence-final
+  punctuation, a dialogue marker, a vertical gap or an indent on the next line, never by its length alone.
+- **Measure:** paragraphs ending without sentence punctuation, on this story and on the justified books in the
+  scorecard (which must not change).
+- **Also seen there: missing commas.** The PDF's own text has 182 Persian commas; the EPUB has 85. Whether OCR
+  misses them or a later step drops them is to find out. (Its Latin commas, OCR reading `،` as `,`, are fixed:
+  DESIGN.md.)
+
 ### Readers' marks in scans (open)
 - **Problem:** scans of library copies carry earlier readers' handwriting: notes in the margins and between
   lines, underlining, arrows. OCR reads it as Persian-looking nonsense words inside the lines of text, and a note
@@ -194,27 +227,6 @@ flowchart LR
      edition, recorded as such. Until then the gap marker stays.
 - **Measure:** on checked pages from both books, nonsense words that reach the text and real words wrongly
   dropped or marked.
-
-### Unusual fonts (open)
-Decorative fonts defeat Tesseract. `convert` warns (mean confidence below 70) but has no fallback. Findings on one
-book (a handwriting-style font, confidence 55): no Tesseract setting helped (resolution, binarization,
-`ara`/`fas+ara`, `--psm 6`: word recall 37–45%); the PDF's own stored text, rebuilt from character positions, had
-**every letter right** but stray spaces inside about 1 word in 5. Options: an opt-in text-layer fallback (perfect
-letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple.
-
-### Ragged lines end paragraphs (open, 2026-11-14)
-- **Problem:** paragraphs are rebuilt partly from whether a line reaches the left margin. In a typed PDF whose
-  lines are not justified (ragged), many lines stop short mid-sentence, and each one ends a paragraph. Seen on a
-  short exported story (11 pages, typed from a weblog edition): 10 of its 25 paragraphs end mid-sentence, all in
-  the middle of a page, none at a page break. A reader sees a sentence cut in two by a paragraph gap.
-- **Approach (to investigate):** decide per book whether the text is justified (the share of full-width lines
-  among lines that don't end a sentence). In a ragged book, a short line ends a paragraph only with sentence-final
-  punctuation, a dialogue marker, a vertical gap or an indent on the next line, never by its length alone.
-- **Measure:** paragraphs ending without sentence punctuation, on this story and on the justified books in the
-  scorecard (which must not change).
-- **Also seen there: missing commas.** The PDF's own text has 182 Persian commas; the EPUB has 85. Whether OCR
-  misses them or a later step drops them is to find out. (Its Latin commas, OCR reading `،` as `,`, are fixed:
-  DESIGN.md.)
 
 ### Planned, by stage
 - **Input:** a folder of page images instead of a PDF, for scans: old books are often only available as page
@@ -237,7 +249,7 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
 - **Readers:** check the EPUBs in Thorium Reader (Readium) and fix what renders wrong there: page direction, the
   embedded font, the page list, the TOC.
 
-## 3. Later
+## 5. Later
 - Typewritten books (none found yet).
 - Arabic, Urdu and Hebrew, as configuration where possible.
 - Side outputs: searchable PDF, Markdown/HTML/DOCX, hOCR/ALTO; fixed-layout EPUB as a fallback where reflow fails.
@@ -246,3 +258,12 @@ letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Defe
   Farsi TTS voice (Azure's neural voices) or aligned from a recording. Farsi doesn't write short vowels or the
   ezafe, so a voice misreads some words; verse needs vowel marks or a pronunciation list. Try first: DAISY
   Pipeline 2's EPUB 3 enhancer (TTS), Storyteller (aligns a recording with Whisper).
+
+## 6. Open decisions
+
+### Unusual fonts: a fallback, or none
+Decorative fonts defeat Tesseract. `convert` warns (mean confidence below 70) but has no fallback. Findings on one
+book (a handwriting-style font, confidence 55): no Tesseract setting helped (resolution, binarization,
+`ara`/`fas+ara`, `--psm 6`: word recall 37–45%); the PDF's own stored text, rebuilt from character positions, had
+**every letter right** but stray spaces inside about 1 word in 5. Options: an opt-in text-layer fallback (perfect
+letters, spacing glitches, brings back per-PDF rules), or opt-in AI vision. Deferred to keep the pipeline simple.
