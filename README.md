@@ -4,7 +4,8 @@
 </p>
 
 <p align="center">
-  The engine behind <a href="https://farsiepub.org/">FarsiEPUB</a>: it turns RTL PDFs into EPUB books, Farsi first.
+  The engine behind <a href="https://farsiepub.org/">FarsiEPUB</a>.<br>
+  It turns RTL PDFs into EPUB books, Farsi first.
 </p>
 
 <p align="center">
